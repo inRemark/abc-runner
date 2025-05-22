@@ -3,7 +3,7 @@ package utils
 import "fmt"
 
 var AppName = "redis-runner"
-var Version = "1.0.0"
+var Version = "0.0.1"
 var ReleaseAt = "2025-05-21"
 
 func PrintVersion() {
