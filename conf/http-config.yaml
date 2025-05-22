@@ -1,0 +1,9 @@
+http:
+  url: "http://localhost:8080"
+  method: "GET"
+  content_type: "application/json"
+  benchmark:
+    total: 100000       # 10000 requests default
+    parallels: 50        # 2 parallel default
+    data_size: 512      # 3 bytes default
+
