@@ -25,18 +25,20 @@ func commandExe() {
 	version := flag.Bool("version", false, "version info")
 	flag.Parse()
 
-	if flag.NArg() < 1 {
-		fmt.Println("Please specify a command")
-		utils.PrintHelpUsage()
-		return
-	}
-
 	if *help {
 		showHelpUsage()
+		return
 	}
 
 	if *version {
 		utils.PrintVersion()
+		return
+	}
+
+	if flag.NArg() < 1 {
+		fmt.Println("Please specify a command")
+		utils.PrintHelpUsage()
+		return
 	}
 
 	subCmd := flag.Arg(0)
