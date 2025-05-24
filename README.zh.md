@@ -1,10 +1,10 @@
 # redis-runner
 
-## About
+## 关于
 
 a benchmark tools for redis.
 
-## Features
+## 特性
 
 - support redis cluster mode use `--cluster`
 - support redis sentinel and standalone mode default
@@ -13,7 +13,7 @@ a benchmark tools for redis.
 - support ttl use `-ttl <option>`
 - support read percentage use `-R <option>`
 
-## Usage
+## 用法
 
 ```bash
 ./redis-runner-macos-arm64 redis --cluster -h localhost -p 6371 -a pwd@redis -n 100000 -c 10 -d 64 -r 0 -R 50 -ttl 120 -t set_get_random
@@ -33,7 +33,7 @@ rps: 65490, avg: 0.121ms, min: 0.015ms, p90: 0.200ms, p95: 0.250ms, p99: 0.495ms
 Completed.
 ```
 
-## Options
+## 指令和参数
 
 ```bash
 ./redis-runner-macos-arm64 --help
@@ -62,3 +62,6 @@ Usage: redis-runner http [arguments]
   -n            Total number of requests (default 10000)
   -c            Number of parallel connections (default 50)
 ```
+
+
+
