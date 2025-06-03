@@ -1,5 +1,7 @@
 # redis-runner
 
+[English](README.md) | [中文](README_zh.md)
+
 ## About
 
 a benchmark tools for redis.

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"redis-runner/app/run"
+	"redis-runner/app/runner"
 	"time"
 )
 
@@ -30,7 +30,7 @@ func HttpCommand(args []string) {
 		"address": "eath",
 	}
 	InitHttpClient(*co)
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(*n, *c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(*n, *c, func() (bool, bool, time.Duration) {
 		if *method == "GET" || *method == "Get" || *method == "get" {
 			return HttpRequest(*url, http.MethodGet, headers, bodies)
 		} else if *method == "POST" || *method == "Post" || *method == "post" {

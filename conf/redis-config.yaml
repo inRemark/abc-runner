@@ -1,13 +1,13 @@
 redis:
   mode: "standalone"    # Options: standalone, sentinel, cluster
   benchmark:
-    total: 10000       # 10000 requests default
-    parallels: 50        # 2 parallel default
-    random_keys: 0         # 0% random and 100% sequential default
-    read_percent: 50     # 50% read and 50 write default
-    data_size: 3      # 3 bytes default
-    ttl: 120            # 300 seconds default
-    case: "set_get_random" # Options: set_get_random, set, get, del, pub, sub
+    total: 10000              # 10000 requests default
+    parallels: 50             # 2 parallel default
+    random_keys: 50           # 0:Incremental key, >0:random key range is [0, r]
+    read_percent: 50          # 50% read and 50 write default
+    data_size: 3              # 3 bytes default
+    ttl: 120                  # 120 seconds default
+    case: "set_get_random"    # operations: set_get_random, set, get, del, pub, sub
   pool:
     pool_size: 10
     min_idle: 2

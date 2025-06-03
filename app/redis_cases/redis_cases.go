@@ -2,7 +2,7 @@ package redisCases
 
 import (
 	"log"
-	"redis-runner/app/run"
+	"redis-runner/app/runner"
 	"redis-runner/app/utils"
 	"sync"
 	"time"
@@ -44,7 +44,7 @@ func Start(tc string) {
 }
 
 func doSetGetRandomCase(printType, mode string, n, c, r, d, R, ttl int) {
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(n, c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
 		return DoSetGetRandomOperation(mode, n, r, d, R, ttl)
 	})
 	metrics := utils.CalculateStatistics(rts)
@@ -53,7 +53,7 @@ func doSetGetRandomCase(printType, mode string, n, c, r, d, R, ttl int) {
 }
 
 func doSetCase(printType, mode string, n, c, r, d, R, ttl int) {
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(n, c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
 		return DoSetOperation(mode, n, r, d, R, ttl)
 	})
 	metrics := utils.CalculateStatistics(rts)
@@ -62,7 +62,7 @@ func doSetCase(printType, mode string, n, c, r, d, R, ttl int) {
 }
 
 func doGetCase(printType, mode string, n, c int) {
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(n, c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
 		return DoGetOperation(mode)
 	})
 	metrics := utils.CalculateStatistics(rts)
@@ -71,7 +71,7 @@ func doGetCase(printType, mode string, n, c int) {
 }
 
 func doDelCase(printType, mode string, n, c, r int) {
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(n, c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
 		return DoDeleteOperation(mode, n, r)
 	})
 	metrics := utils.CalculateStatistics(rts)
@@ -80,7 +80,7 @@ func doDelCase(printType, mode string, n, c, r int) {
 }
 
 func doPubCase(printType, mode string, n, c, d int) {
-	okCount, failCount, readCount, writeCount, rps, rts := run.OperationRun(n, c, func() (bool, bool, time.Duration) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
 		return DoPubOperation(mode, d)
 	})
 	metrics := utils.CalculateStatistics(rts)
