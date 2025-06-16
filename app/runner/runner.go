@@ -63,6 +63,6 @@ func OperationRun(n, c int, operationFunc OperationFunc) (okCount, failCount, re
 		rts = append(rts, localSlice...)
 	}
 
-	fmt.Printf("\rProgress: %d / %d, %.2f%%\n", int(readCount)+int(writeCount), n, 100.0)
+	fmt.Printf("\rProgress: %d / %d, %.2f%% \n", int(readCount)+int(writeCount), n, 100.0)
 	return okCount, failCount, readCount, writeCount, rps, rts
 }

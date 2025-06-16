@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"redis-runner/app/http_cases"
+	kafkaCases "redis-runner/app/kafka_cases"
 	redisCases "redis-runner/app/redis_cases"
 	"redis-runner/app/utils"
 )
@@ -57,6 +58,8 @@ func subCommandExe(subCmd string, args []string) bool {
 		redisCases.RedisCommand(args)
 	case "http":
 		httpCases.HttpCommand(args)
+	case "kafka":
+		kafkaCases.KafkaCommand(args)
 	default:
 		fmt.Printf("Unknown sub command: %s\n", subCmd)
 	}

@@ -1,0 +1,27 @@
+brokers:
+  - "192.168.0.62:9092"
+  - "192.168.0.62:9092"
+  - "192.168.0.62:9092"
+topic: "my_topic"
+producer:
+  write_timeout: "10s"
+  read_timeout: "10s"
+  acks: "all"     # 0,1, all/-1
+  max_attempts: 5
+consumer:
+  group_id: "my-consumer-group"
+  initial_offset: "latest" # 可选值: earliest / latest
+  min_bytes: 1024          # 最小拉取数据量 (bytes)
+  max_bytes: 1048576       # 最大拉取数据量 (bytes)
+  read_timeout: "10s"      # 拉取消息超时时间
+  write_timeout: "10s"     # 写入消息超时时间
+tls:
+  enabled: false
+  cert_file: "/path/to/cert.pem"
+  key_file: "/path/to/key.pem"
+  ca_file: "/path/to/ca.pem"
+sasl:
+  enabled: false
+  username: "user"
+  password: "password"
+  mechanism: "PLAIN"       # 可选值: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
