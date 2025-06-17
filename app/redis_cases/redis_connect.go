@@ -4,30 +4,29 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 )
 
 var ctx = context.Background()
+var redisCmd redis.Cmdable
 var redisDb *redis.Client
 var redisCluster *redis.ClusterClient
 var redisConfigs *RedisConfig
 
 func standalone(config *RedisConfig) *redis.Client {
-	redisDb = redis.NewClient(&redis.Options{
+	standalone := redis.NewClient(&redis.Options{
 		Addr:         config.Standalone.Addr,
 		DB:           config.Standalone.Db,
 		Password:     config.Standalone.Password,
 		PoolSize:     config.Pool.PoolSize,
 		MinIdleConns: config.Pool.MinIdle,
 	})
-	return redisDb
+	return standalone
 }
 
 func sentinel(config *RedisConfig) *redis.Client {
-
 	sentinel := redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:    config.Sentinel.MasterName,
 		SentinelAddrs: config.Sentinel.Addrs,
@@ -49,38 +48,38 @@ func cluster(config *RedisConfig) *redis.ClusterClient {
 
 	return cluster
 }
-func ConfigConnect() {
-	var err error
-	redisConfigs, err = LoadConfig()
-	if err != nil {
-		log.Fatalf("redis-config load failed: %v", err)
+func ConfigConnect(redisConfigs *RedisConfig) {
+	if redisConfigs.BenchMark.Case == "sub" {
+		clientSub(redisConfigs)
+	} else {
+		client(redisConfigs)
 	}
-	connect(redisConfigs)
 }
 
-func CommandConnect(mode, h, a string, p, db int) {
-	addr := h + ":" + strconv.Itoa(p)
-	redisConfigs := new(RedisConfig)
-	redisConfigs.Pool.PoolSize = 10
-	redisConfigs.Pool.MinIdle = 10
-	redisConfigs.Mode = mode
+func client(redisConfigs *RedisConfig) {
+	if redisConfigs.Mode == "cluster" {
+		redisCmd = cluster(redisConfigs)
+	} else {
+		if redisConfigs.Mode == "standalone" {
+			redisCmd = standalone(redisConfigs)
+		} else if redisConfigs.Mode == "sentinel" {
+			redisCmd = sentinel(redisConfigs)
+		}
+	}
+	_, err := redisCmd.Ping(ctx).Result()
+	if err != nil {
+		log.Fatalf("redis client connect failed: %v", err)
+	}
 
-	redisConfigs.Standalone.Addr = addr
-	redisConfigs.Standalone.Password = a
-	redisConfigs.Standalone.Db = db
-
-	redisConfigs.Cluster.Addrs = []string{addr}
-	redisConfigs.Cluster.Password = a
-	connect(redisConfigs)
+	log.Printf("redis client connect successfully")
 }
 
-func connect(redisConfigs *RedisConfig) {
-
+func clientSub(redisConfigs *RedisConfig) {
 	if redisConfigs.Mode == "cluster" {
 		redisCluster = cluster(redisConfigs)
 		_, err := redisCluster.Ping(ctx).Result()
 		if err != nil {
-			log.Fatalf("redis connect failed: %v", err)
+			log.Fatalf("redis sub client connect failed: %v", err)
 		}
 	} else {
 		if redisConfigs.Mode == "standalone" {
@@ -90,74 +89,75 @@ func connect(redisConfigs *RedisConfig) {
 		}
 		_, err := redisDb.Ping(ctx).Result()
 		if err != nil {
-			log.Fatalf("redis connect failed: %v", err)
+			log.Fatalf("redis sub client connect failed: %v", err)
 		}
 	}
-
 	log.Printf("redis connect successfully")
 }
 
-func Get(mode string, key string) (result string) {
-	if mode == "cluster" {
-		val, err := redisCluster.Get(ctx, key).Result()
-		if err != nil {
-			return ""
-		}
-		return val
-	} else {
-		val, err := redisDb.Get(ctx, key).Result()
-		if err != nil {
-			return ""
-		}
-		return val
+func Get(key string) (result string) {
+	val, err := redisCmd.Get(ctx, key).Result()
+	if err != nil {
+		return ""
 	}
+	return val
 }
 
-func Set(mode string, key string, value interface{}, duration time.Duration) {
-	if mode == "cluster" {
-		redisCluster.Set(ctx, key, value, duration)
-	} else {
-		redisDb.Set(ctx, key, value, duration)
-	}
+func Set(key string, value interface{}, duration time.Duration) {
+	redisCmd.Set(ctx, key, value, duration)
 }
 
-func Del(mode string, key string) {
-	if mode == "cluster" {
-		redisCluster.Del(ctx, key)
-	} else {
-		redisDb.Del(ctx, key)
-	}
+func Del(key string) {
+	redisCmd.Del(ctx, key)
 }
 
-func Pub(mode string, value interface{}) {
-	channelName := "mychannel"
-	if mode == "cluster" {
-		err := redisCluster.Publish(ctx, channelName, value).Err()
-		if err != nil {
-			fmt.Printf("Failed to publish message cluster:  %v \n", err)
-			return
-		}
-	} else {
-		err := redisDb.Publish(ctx, channelName, value).Err()
-		if err != nil {
-			fmt.Printf("Failed to publish message standalone: %v \n", err)
-			return
-		}
+func HSet(key, field string, value interface{}) {
+	redisCmd.HSet(ctx, key, field, value)
+}
+
+func HSetTNX(key, field string, value interface{}) {
+	redisCmd.HSetNX(ctx, key, field, value)
+}
+
+func HGet(key string, field string) interface{} {
+	return redisCmd.HGet(ctx, key, field)
+}
+
+func HGetAll() {
+
+}
+
+func Pub(value interface{}) {
+	channelName := "my_channel"
+	err := redisCmd.Publish(ctx, channelName, value).Err()
+	if err != nil {
+		fmt.Printf("Failed to publish message cluster:  %v \n", err)
+		return
 	}
 }
 
 func Sub(mode string, index int) {
-	channelName := "mychannel"
+	channelName := "my_channel"
 	if mode == "cluster" {
-		pubsub := redisCluster.Subscribe(ctx, channelName)
-		defer pubsub.Close()
-		for msg := range pubsub.Channel() {
+		sub := redisCluster.Subscribe(ctx, channelName)
+		defer func(sub *redis.PubSub) {
+			err := sub.Close()
+			if err != nil {
+				log.Fatalf("redis connect failed: %v", err)
+			}
+		}(sub)
+		for msg := range sub.Channel() {
 			fmt.Printf("Received_message_%d: %s \n", index, msg.Payload)
 		}
 	} else {
-		pubsub := redisDb.Subscribe(ctx, channelName)
-		defer pubsub.Close()
-		for msg := range pubsub.Channel() {
+		sub := redisDb.Subscribe(ctx, channelName)
+		defer func(sub *redis.PubSub) {
+			err := sub.Close()
+			if err != nil {
+				log.Fatalf("redis connect failed: %v", err)
+			}
+		}(sub)
+		for msg := range sub.Channel() {
 			fmt.Printf("Received_message_%d: %s \n", index, msg.Payload)
 		}
 	}

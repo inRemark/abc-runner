@@ -3,6 +3,7 @@ package redisCases
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -27,9 +28,8 @@ func RedisCommand(args []string) {
 	}
 
 	if *config {
-		tc := *t
 		fmt.Println("Execute using configuration and result in log file...")
-		Start(tc)
+		Start()
 		return
 	}
 
@@ -49,23 +49,39 @@ func RedisCommand(args []string) {
 	fmt.Printf("Redis Info: mode:%s, host:%s, port:%d, password:%s, total:%d, parallel:%d, dataSize:%d, random:%d, readPercent:%d, ttl:%d\n",
 		mode, *h, *p, *a, *n, *c, *d, *r, *R, *ttl)
 
-	CommandConnect(mode, *h, *a, *p, *db)
+	addr := *h + ":" + strconv.Itoa(*p)
+	redisConfigs := new(RedisConfig)
+	redisConfigs.BenchMark.Case = *t
+	redisConfigs.Mode = mode
+	if mode == "cluster" {
+		redisConfigs.Cluster.Addrs = []string{addr}
+		redisConfigs.Cluster.Password = *a
+	} else {
+		redisConfigs.Standalone.Addr = addr
+		redisConfigs.Standalone.Password = *a
+		redisConfigs.Standalone.Db = *db
+	}
+	redisConfigs.Pool.PoolSize = 10
+	redisConfigs.Pool.MinIdle = 10
+
+	ConfigConnect(redisConfigs)
+
 	if strings.ToLower(*t) == "set_get_random" {
-		DoSetGetRandomCaseCommand(mode, *n, *c, *r, *d, *R, *ttl)
+		SetGetRandomCaseCommand(*n, *c, *r, *d, *R, *ttl)
 	}
 	if strings.ToLower(*t) == "get" {
-		DoGetCaseCommand(mode, *n, *c)
+		GetCaseCommand(*n, *c)
 	}
 	if strings.ToLower(*t) == "set" {
-		DoSetCaseCommand(mode, *n, *c, *r, *d, *R, *ttl)
+		SetCaseCommand(*n, *c, *r, *d, *R, *ttl)
 	}
 	if strings.ToLower(*t) == "del" {
-		DoDelCaseCommand(mode, *n, *c, *r)
+		DelCaseCommand(*n, *c, *r)
 	}
 	if strings.ToLower(*t) == "pub" {
-		DoPubCaseCommand(mode, *n, *c, *d)
+		PubCaseCommand(*n, *c, *d)
 	}
 	if strings.ToLower(*t) == "sub" {
-		DoSubCaseCommand(mode, *c)
+		SubCaseCommand(mode, *c)
 	}
 }

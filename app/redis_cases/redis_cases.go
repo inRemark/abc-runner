@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-func Start(tc string) {
-	ConfigConnect()
+func Start() {
 	var err error
-	redisConfigs, err := LoadConfig()
+	redisConfigs, err = LoadConfig()
 	if err != nil {
 		log.Fatalf("redis-config load failed: %v", err)
 	}
+	ConfigConnect(redisConfigs)
 	mode, n, c, r, d, R, ttl, testCase := redisConfigs.Mode,
 		redisConfigs.BenchMark.Total,
 		redisConfigs.BenchMark.Parallels,
@@ -26,69 +26,44 @@ func Start(tc string) {
 
 	switch testCase {
 	case "set_get_random":
-		doSetGetRandomCase(mode, "logs", n, c, r, d, R, ttl)
+		doSetGetRandomCase("logs", n, c, r, d, R, ttl)
 	case "set":
-		doSetCase(mode, "logs", n, c, r, d, R, ttl)
+		doSetStringCase("logs", n, c, r, d, R, ttl)
 	case "get":
-		doGetCase(mode, "logs", n, c)
+		doGetStringCase("logs", n, c)
 	case "del":
-		doDelCase(mode, "logs", n, c, r)
+		doDelCase("logs", n, c, r)
 	case "pub":
-		doPubCase(mode, "logs", n, c, d)
+		doPubCase("logs", n, c, d)
 	case "sub":
-		doSubCase(mode, c)
+		SubCaseCommand(mode, c)
 	case "default":
 	default:
-		doGetCase(mode, "logs", n, c)
+		doGetStringCase("logs", n, c)
 	}
 }
 
-func doSetGetRandomCase(printType, mode string, n, c, r, d, R, ttl int) {
-	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
-		return DoSetGetRandomOperation(mode, n, r, d, R, ttl)
-	})
-	metrics := utils.CalculateStatistics(rts)
-	metrics.RPS = rps
-	printSummary(printType, n, c, R, d, ttl, okCount, failCount, readCount, writeCount, metrics)
+func SetGetRandomCaseCommand(n, c, r, d, R, ttl int) {
+	doSetGetRandomCase("console", n, c, r, d, R, ttl)
 }
 
-func doSetCase(printType, mode string, n, c, r, d, R, ttl int) {
-	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
-		return DoSetOperation(mode, n, r, d, R, ttl)
-	})
-	metrics := utils.CalculateStatistics(rts)
-	metrics.RPS = rps
-	printSummary(printType, n, c, R, d, ttl, okCount, failCount, readCount, writeCount, metrics)
+func SetCaseCommand(n, c, r, d, R, ttl int) {
+	doSetStringCase("console", n, c, r, d, R, ttl)
 }
 
-func doGetCase(printType, mode string, n, c int) {
-	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
-		return DoGetOperation(mode)
-	})
-	metrics := utils.CalculateStatistics(rts)
-	metrics.RPS = rps
-	printSummary(printType, n, c, 100, 0, 0, okCount, failCount, readCount, writeCount, metrics)
+func GetCaseCommand(n, c int) {
+	doGetStringCase("console", n, c)
 }
 
-func doDelCase(printType, mode string, n, c, r int) {
-	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
-		return DoDeleteOperation(mode, n, r)
-	})
-	metrics := utils.CalculateStatistics(rts)
-	metrics.RPS = rps
-	printSummary(printType, n, c, 0, 0, 0, okCount, failCount, readCount, writeCount, metrics)
+func DelCaseCommand(n, c, r int) {
+	doDelCase("console", n, c, r)
 }
 
-func doPubCase(printType, mode string, n, c, d int) {
-	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
-		return DoPubOperation(mode, d)
-	})
-	metrics := utils.CalculateStatistics(rts)
-	metrics.RPS = rps
-	printSummary(printType, n, c, 0, d, 0, okCount, failCount, readCount, writeCount, metrics)
+func PubCaseCommand(n, c, d int) {
+	doPubCase("console", n, c, d)
 }
 
-func doSubCase(mode string, c int) {
+func SubCaseCommand(mode string, c int) {
 	var wg sync.WaitGroup
 	for i := 1; i <= c; i++ {
 		wg.Add(1)
@@ -100,26 +75,47 @@ func doSubCase(mode string, c int) {
 	wg.Wait()
 }
 
-func DoSetGetRandomCaseCommand(mode string, n, c, r, d, R, ttl int) {
-	doSetGetRandomCase("console", mode, n, c, r, d, R, ttl)
+func doSetGetRandomCase(printType string, n, c, r, d, R, ttl int) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
+		return DoSetGetStringRandomOperation(n, r, d, R, ttl)
+	})
+	metrics := utils.CalculateStatistics(rts)
+	metrics.RPS = rps
+	printSummary(printType, n, c, R, d, ttl, okCount, failCount, readCount, writeCount, metrics)
 }
 
-func DoSetCaseCommand(mode string, n, c, r, d, R, ttl int) {
-	doSetCase("console", mode, n, c, r, d, R, ttl)
+func doSetStringCase(printType string, n, c, r, d, R, ttl int) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
+		return DoSetStringOperation(n, r, d, R, ttl)
+	})
+	metrics := utils.CalculateStatistics(rts)
+	metrics.RPS = rps
+	printSummary(printType, n, c, R, d, ttl, okCount, failCount, readCount, writeCount, metrics)
 }
 
-func DoGetCaseCommand(mode string, n, c int) {
-	doGetCase("console", mode, n, c)
+func doGetStringCase(printType string, n, c int) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
+		return DoGetStringOperation()
+	})
+	metrics := utils.CalculateStatistics(rts)
+	metrics.RPS = rps
+	printSummary(printType, n, c, 100, 0, 0, okCount, failCount, readCount, writeCount, metrics)
 }
 
-func DoDelCaseCommand(mode string, n, c, r int) {
-	doDelCase("console", mode, n, c, r)
+func doDelCase(printType string, n, c, r int) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
+		return DoDeleteOperation(n, r)
+	})
+	metrics := utils.CalculateStatistics(rts)
+	metrics.RPS = rps
+	printSummary(printType, n, c, 0, 0, 0, okCount, failCount, readCount, writeCount, metrics)
 }
 
-func DoPubCaseCommand(mode string, n, c, d int) {
-	doPubCase("console", mode, n, c, d)
-}
-
-func DoSubCaseCommand(mode string, c int) {
-	doSubCase(mode, c)
+func doPubCase(printType string, n, c, d int) {
+	okCount, failCount, readCount, writeCount, rps, rts := runner.OperationRun(n, c, func() (bool, bool, time.Duration) {
+		return DoPubOperation(d)
+	})
+	metrics := utils.CalculateStatistics(rts)
+	metrics.RPS = rps
+	printSummary(printType, n, c, 0, d, 0, okCount, failCount, readCount, writeCount, metrics)
 }
