@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"redis-runner/app/http_cases"
+	httpCases "redis-runner/app/http_cases"
 	kafkaCases "redis-runner/app/kafka_cases"
 	redisCases "redis-runner/app/redis_cases"
 	"redis-runner/app/utils"

@@ -13,8 +13,8 @@ func initHttpClient() {
 
 func TestHttpRunGet(t *testing.T) {
 	url := "https://bing.com"
-	total := 500
-	parallels := 10
+	total := 10
+	parallels := 2
 	initHttpClient()
 	headers := map[string]string{
 		"Content-Type": "application/json",

@@ -22,4 +22,5 @@ vendor
 */vendor
 build/*
 logs
+.qoder
 
