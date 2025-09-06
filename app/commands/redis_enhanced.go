@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"redis-runner/app/adapters/redis"
+	redisconfig "redis-runner/app/adapters/redis/config"
 	"redis-runner/app/core/command"
 	"redis-runner/app/core/config"
 	"redis-runner/app/core/interfaces"
@@ -93,14 +94,24 @@ func (h *RedisCommandHandler) loadConfiguration(args []string) error {
 	// 检查是否使用配置文件
 	if h.hasConfigFlag(args) {
 		log.Println("Loading Redis configuration from file...")
-		sources := config.CreateRedisConfigSources("conf/redis.yaml", nil)
-		return configManager.LoadConfiguration(sources...)
+		// 使用新的Redis配置加载器
+		config, err := redisconfig.LoadRedisConfigFromFile("conf/redis.yaml")
+		if err != nil {
+			return err
+		}
+		configManager.SetConfig(config)
+		return nil
 	}
 
 	// 使用命令行参数
 	log.Println("Loading Redis configuration from command line...")
-	sources := config.CreateRedisConfigSources("", args)
-	return configManager.LoadConfiguration(sources...)
+	// 使用新的Redis配置加载器
+	config, err := redisconfig.LoadRedisConfigFromArgs(args)
+	if err != nil {
+		return err
+	}
+	configManager.SetConfig(config)
+	return nil
 }
 
 // hasConfigFlag 检查是否有config标志
@@ -117,7 +128,20 @@ func (h *RedisCommandHandler) hasConfigFlag(args []string) bool {
 func (h *RedisCommandHandler) connectRedis(ctx context.Context) error {
 	cfg := h.GetConfigManager().GetConfig()
 
-	log.Printf("Connecting to Redis in %s mode...", cfg.(*config.RedisConfig).Mode)
+	// 提取Redis配置
+	var redisConfig *redisconfig.RedisConfig
+	if adapter, ok := cfg.(*redisconfig.RedisConfigAdapter); ok {
+		redisConfig = adapter.GetRedisConfig()
+	} else {
+		// 如果不是适配器，尝试转换
+		var err error
+		redisConfig, err = redisconfig.ExtractRedisConfig(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to extract Redis config: %w", err)
+		}
+	}
+
+	log.Printf("Connecting to Redis in %s mode...", redisConfig.GetMode())
 
 	if err := h.adapter.Connect(ctx, cfg); err != nil {
 		return err

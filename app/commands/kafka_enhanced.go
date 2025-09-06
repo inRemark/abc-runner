@@ -96,6 +96,8 @@ func (k *KafkaCommandHandler) loadConfiguration(args []string) error {
 	// 检查是否使用配置文件
 	if k.hasConfigFlag(args) {
 		log.Println("Loading Kafka configuration from file...")
+		// TODO: 实现Kafka配置从文件加载
+		// 这里可以实现Kafka配置适配器，类似于Redis
 		sources := config.CreateKafkaConfigSources("conf/kafka.yaml", nil)
 		return configManager.LoadConfiguration(sources...)
 	}
@@ -103,6 +105,8 @@ func (k *KafkaCommandHandler) loadConfiguration(args []string) error {
 	// 使用命令行参数创建配置
 	log.Println("Loading Kafka configuration from command line...")
 	kafkaConfig := k.createConfigFromArgs(args)
+	// 这里需要将Kafka配置适配为统一接口
+	// TODO: 实现KafkaConfigAdapter
 	configManager.SetConfig(kafkaConfig)
 	return nil
 }

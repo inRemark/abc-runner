@@ -96,6 +96,8 @@ func (h *HttpCommandHandler) loadConfiguration(args []string) error {
 	// 检查是否使用配置文件
 	if h.hasConfigFlag(args) {
 		log.Println("Loading HTTP configuration from file...")
+		// TODO: 实现HTTP配置从文件加载
+		// 这里可以实现HTTP配置适配器，类似于Redis
 		sources := config.CreateHttpConfigSources("conf/http.yaml", nil)
 		return configManager.LoadConfiguration(sources...)
 	}
@@ -103,6 +105,8 @@ func (h *HttpCommandHandler) loadConfiguration(args []string) error {
 	// 使用命令行参数创建配置
 	log.Println("Loading HTTP configuration from command line...")
 	httpConfig := h.createConfigFromArgs(args)
+	// 这里需要将HTTP配置适配为统一接口
+	// TODO: 实现HttpConfigAdapter
 	configManager.SetConfig(httpConfig)
 	return nil
 }

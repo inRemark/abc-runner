@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"redis-runner/app/core/base"
-	"redis-runner/app/core/config"
+	redisconfig "redis-runner/app/adapters/redis/config"
 	"redis-runner/app/core/interfaces"
 
 	"github.com/go-redis/redis/v8"
@@ -20,7 +20,7 @@ type RedisAdapter struct {
 	clusterClient    *redis.ClusterClient
 	standaloneClient *redis.Client
 	mode             string
-	config           *config.RedisConfig
+	config           *redisconfig.RedisConfig
 	mutex            sync.RWMutex
 }
 
@@ -33,9 +33,17 @@ func NewRedisAdapter() *RedisAdapter {
 
 // Connect 初始化连接
 func (r *RedisAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
-	redisConfig, ok := cfg.(*config.RedisConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for Redis adapter")
+	// 提取Redis配置
+	var redisConfig *redisconfig.RedisConfig
+	if adapter, ok := cfg.(*redisconfig.RedisConfigAdapter); ok {
+		redisConfig = adapter.GetRedisConfig()
+	} else {
+		// 如果不是适配器，尝试转换
+		var err error
+		redisConfig, err = redisconfig.ExtractRedisConfig(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to extract Redis config: %w", err)
+		}
 	}
 
 	if err := r.ValidateConfig(cfg); err != nil {
@@ -43,7 +51,7 @@ func (r *RedisAdapter) Connect(ctx context.Context, cfg interfaces.Config) error
 	}
 
 	r.config = redisConfig
-	r.mode = redisConfig.Mode
+	r.mode = redisConfig.GetMode()
 
 	var client redis.Cmdable
 	var err error
@@ -213,11 +221,13 @@ func (r *RedisAdapter) executeSetGetRandom(ctx context.Context, operation interf
 }
 
 // createStandaloneClient 创建单机客户端
-func (r *RedisAdapter) createStandaloneClient(config *config.RedisConfig) (redis.Cmdable, error) {
+func (r *RedisAdapter) createStandaloneClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
+	standalone := config.GetStandaloneConfig()
+	
 	client := redis.NewClient(&redis.Options{
-		Addr:         config.Standalone.Addr,
-		Password:     config.Standalone.Password,
-		DB:           config.Standalone.Db,
+		Addr:         standalone.Addr,
+		Password:     standalone.Password,
+		DB:           standalone.Db,
 		PoolSize:     config.Pool.GetPoolSize(),
 		MinIdleConns: config.Pool.GetMinIdle(),
 		MaxRetries:   3,
@@ -230,12 +240,14 @@ func (r *RedisAdapter) createStandaloneClient(config *config.RedisConfig) (redis
 }
 
 // createSentinelClient 创建哨兵客户端
-func (r *RedisAdapter) createSentinelClient(config *config.RedisConfig) (redis.Cmdable, error) {
+func (r *RedisAdapter) createSentinelClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
+	sentinel := config.GetSentinelConfig()
+	
 	client := redis.NewFailoverClient(&redis.FailoverOptions{
-		MasterName:    config.Sentinel.MasterName,
-		SentinelAddrs: config.Sentinel.Addrs,
-		Password:      config.Sentinel.Password,
-		DB:            config.Sentinel.Db,
+		MasterName:    sentinel.MasterName,
+		SentinelAddrs: sentinel.Addrs,
+		Password:      sentinel.Password,
+		DB:            sentinel.Db,
 		PoolSize:      config.Pool.GetPoolSize(),
 		MinIdleConns:  config.Pool.GetMinIdle(),
 		MaxRetries:    3,
@@ -248,10 +260,12 @@ func (r *RedisAdapter) createSentinelClient(config *config.RedisConfig) (redis.C
 }
 
 // createClusterClient 创建集群客户端
-func (r *RedisAdapter) createClusterClient(config *config.RedisConfig) (redis.Cmdable, error) {
+func (r *RedisAdapter) createClusterClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
+	cluster := config.GetClusterConfig()
+	
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        config.Cluster.Addrs,
-		Password:     config.Cluster.Password,
+		Addrs:        cluster.Addrs,
+		Password:     cluster.Password,
 		PoolSize:     config.Pool.GetPoolSize(),
 		MinIdleConns: config.Pool.GetMinIdle(),
 		MaxRetries:   3,

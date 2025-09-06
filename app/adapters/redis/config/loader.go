@@ -371,7 +371,7 @@ func (d *DefaultConfigSource) Priority() int {
 }
 
 // CreateStandardLoader 创建标准配置加载器
-func CreateStandardLoader(configPath string, args map[string]string) ConfigLoader {
+func CreateStandardLoader(configPath string, args []string) ConfigLoader {
 	loader := NewMultiSourceConfigLoader()
 
 	// 添加默认配置源（最低优先级）
@@ -402,14 +402,14 @@ func CreateStandardLoader(configPath string, args map[string]string) ConfigLoade
 
 	// 添加命令行参数配置源（最高优先级）
 	if len(args) > 0 {
-		loader.AddSource(NewArgConfigSource(args))
+		loader.AddSource(NewCommandLineConfigSource(args))
 	}
 
 	return loader
 }
 
 // LoadConfigWithOverrides 加载配置并应用覆盖
-func LoadConfigWithOverrides(configPath string, args map[string]string, overrides map[string]interface{}) (*RedisConfig, error) {
+func LoadConfigWithOverrides(configPath string, args []string, overrides map[string]interface{}) (*RedisConfig, error) {
 	loader := CreateStandardLoader(configPath, args)
 	config, err := loader.Load()
 	if err != nil {
