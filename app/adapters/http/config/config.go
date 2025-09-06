@@ -7,6 +7,30 @@ import (
 	"redis-runner/app/core/interfaces"
 )
 
+// LoadDefaultHttpConfig 加载默认HTTP配置
+func LoadDefaultHttpConfig() *HttpAdapterConfig {
+	return &HttpAdapterConfig{
+		Protocol: "http",
+		Connection: HttpConnectionConfig{
+			BaseURL:         "http://localhost:8080",
+			Timeout:         30 * time.Second,
+			MaxIdleConns:    10,
+			MaxConnsPerHost: 10,
+			IdleConnTimeout: 90 * time.Second,
+		},
+		Benchmark: HttpBenchmarkConfig{
+			Total:     1000,
+			Parallels: 10,
+			Method:    "GET",
+			Path:      "/",
+			Headers:   make(map[string]string),
+		},
+		Auth: HttpAuthConfig{
+			Type: "none",
+		},
+	}
+}
+
 // HttpAdapterConfig HTTP适配器配置
 type HttpAdapterConfig struct {
 	// 基础连接配置

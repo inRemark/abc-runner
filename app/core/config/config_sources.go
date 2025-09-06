@@ -1,13 +1,73 @@
 package config
 
 import (
-	"fmt"
+	"log"
 
 	"redis-runner/app/core/interfaces"
 	redisconfig "redis-runner/app/adapters/redis/config"
+	httpconfig "redis-runner/app/adapters/http/config"
+	kafkaconfig "redis-runner/app/adapters/kafka/config"
 )
 
-// 简化版本的配置源实现，用于支持新架构
+// CreateRedisConfigSources 创建Redis配置源列表
+func CreateRedisConfigSources(yamlFile string, args []string) []ConfigSource {
+	sources := []ConfigSource{}
+	
+	// YAML文件配置（最高优先级）
+	if yamlFile != "" {
+		sources = append(sources, NewRedisYAMLConfigSource(yamlFile))
+	}
+	
+	// 环境变量配置
+	sources = append(sources, NewRedisEnvironmentConfigSource("REDIS_RUNNER"))
+	
+	// 命令行参数配置（最低优先级）
+	if args != nil {
+		sources = append(sources, NewRedisCommandLineConfigSource(args))
+	}
+	
+	return sources
+}
+
+// CreateHttpConfigSources 创建HTTP配置源列表
+func CreateHttpConfigSources(yamlFile string, args []string) []ConfigSource {
+	sources := []ConfigSource{}
+	
+	// YAML文件配置（最高优先级）
+	if yamlFile != "" {
+		sources = append(sources, NewHttpYAMLConfigSource(yamlFile))
+	}
+	
+	// 环境变量配置
+	sources = append(sources, NewHttpEnvironmentConfigSource("HTTP_RUNNER"))
+	
+	// 命令行参数配置（最低优先级）
+	if args != nil {
+		sources = append(sources, NewHttpCommandLineConfigSource(args))
+	}
+	
+	return sources
+}
+
+// CreateKafkaConfigSources 创建Kafka配置源列表
+func CreateKafkaConfigSources(yamlFile string, args []string) []ConfigSource {
+	sources := []ConfigSource{}
+	
+	// YAML文件配置（最高优先级）
+	if yamlFile != "" {
+		sources = append(sources, NewKafkaYAMLConfigSource(yamlFile))
+	}
+	
+	// 环境变量配置
+	sources = append(sources, NewKafkaEnvironmentConfigSource("KAFKA_RUNNER"))
+	
+	// 命令行参数配置（最低优先级）
+	if args != nil {
+		sources = append(sources, NewKafkaCommandLineConfigSource(args))
+	}
+	
+	return sources
+}
 
 // NewRedisCommandLineConfigSource 创建Redis命令行配置源
 func NewRedisCommandLineConfigSource(args []string) ConfigSource {
@@ -32,8 +92,7 @@ func NewRedisYAMLConfigSource(filePath string) ConfigSource {
 
 // NewHttpCommandLineConfigSource 创建HTTP命令行配置源
 func NewHttpCommandLineConfigSource(args []string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "http",
+	return &HttpConfigSourceImpl{
 		args:     args,
 		priority: 3,
 	}
@@ -41,8 +100,7 @@ func NewHttpCommandLineConfigSource(args []string) ConfigSource {
 
 // NewHttpEnvironmentConfigSource 创建HTTP环境变量配置源
 func NewHttpEnvironmentConfigSource(prefix string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "http",
+	return &HttpConfigSourceImpl{
 		prefix:   prefix,
 		priority: 2,
 	}
@@ -50,8 +108,7 @@ func NewHttpEnvironmentConfigSource(prefix string) ConfigSource {
 
 // NewHttpYAMLConfigSource 创建HTTP YAML配置源
 func NewHttpYAMLConfigSource(filePath string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "http",
+	return &HttpConfigSourceImpl{
 		filePath: filePath,
 		priority: 1,
 	}
@@ -59,8 +116,7 @@ func NewHttpYAMLConfigSource(filePath string) ConfigSource {
 
 // NewKafkaCommandLineConfigSource 创建Kafka命令行配置源
 func NewKafkaCommandLineConfigSource(args []string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "kafka",
+	return &KafkaConfigSourceImpl{
 		args:     args,
 		priority: 3,
 	}
@@ -68,8 +124,7 @@ func NewKafkaCommandLineConfigSource(args []string) ConfigSource {
 
 // NewKafkaEnvironmentConfigSource 创建Kafka环境变量配置源
 func NewKafkaEnvironmentConfigSource(prefix string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "kafka",
+	return &KafkaConfigSourceImpl{
 		prefix:   prefix,
 		priority: 2,
 	}
@@ -77,8 +132,7 @@ func NewKafkaEnvironmentConfigSource(prefix string) ConfigSource {
 
 // NewKafkaYAMLConfigSource 创建Kafka YAML配置源
 func NewKafkaYAMLConfigSource(filePath string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "kafka",
+	return &KafkaConfigSourceImpl{
 		filePath: filePath,
 		priority: 1,
 	}
@@ -108,9 +162,8 @@ func (r *RedisConfigSourceBridge) Load() (interfaces.Config, error) {
 	return redisconfig.NewRedisConfigAdapter(redisConfig), nil
 }
 
-// DummyConfigSource 临时的配置源实现（用于其他协议）
-type DummyConfigSource struct {
-	protocol string
+// HttpConfigSourceImpl HTTP配置源实现
+type HttpConfigSourceImpl struct {
 	args     []string
 	prefix   string
 	filePath string
@@ -118,20 +171,79 @@ type DummyConfigSource struct {
 }
 
 // Priority 获取优先级
-func (d *DummyConfigSource) Priority() int {
-	return d.priority
+func (h *HttpConfigSourceImpl) Priority() int {
+	return h.priority
 }
 
 // CanLoad 检查是否可以加载
-func (d *DummyConfigSource) CanLoad() bool {
-	// 简化实现，总是返回true
+func (h *HttpConfigSourceImpl) CanLoad() bool {
+	if h.filePath != "" {
+		// 简化实现，暂时总是返回true
+		return true
+	}
 	return true
 }
 
 // Load 加载配置
-func (d *DummyConfigSource) Load() (interfaces.Config, error) {
-	// 简化实现，返回错误提示暂未实现
-	return nil, fmt.Errorf("config source for %s not fully implemented yet", d.protocol)
+func (h *HttpConfigSourceImpl) Load() (interfaces.Config, error) {
+	if h.filePath != "" {
+		// TODO: 实现YAML文件加载
+		log.Printf("HTTP YAML config loading not implemented yet: %s", h.filePath)
+		return httpconfig.LoadDefaultHttpConfig(), nil
+	}
+	
+	if h.args != nil {
+		// TODO: 实现命令行参数解析
+		log.Println("HTTP command line config parsing not implemented yet")
+		return httpconfig.LoadDefaultHttpConfig(), nil
+	}
+	
+	// 环境变量配置
+	// TODO: 实现环境变量加载
+	log.Println("HTTP environment config loading not implemented yet")
+	return httpconfig.LoadDefaultHttpConfig(), nil
+}
+
+// KafkaConfigSourceImpl Kafka配置源实现
+type KafkaConfigSourceImpl struct {
+	args     []string
+	prefix   string
+	filePath string
+	priority int
+}
+
+// Priority 获取优先级
+func (k *KafkaConfigSourceImpl) Priority() int {
+	return k.priority
+}
+
+// CanLoad 检查是否可以加载
+func (k *KafkaConfigSourceImpl) CanLoad() bool {
+	if k.filePath != "" {
+		// 简化实现，暂时总是返回true
+		return true
+	}
+	return true
+}
+
+// Load 加载配置
+func (k *KafkaConfigSourceImpl) Load() (interfaces.Config, error) {
+	if k.filePath != "" {
+		// TODO: 实现YAML文件加载
+		log.Printf("Kafka YAML config loading not implemented yet: %s", k.filePath)
+		return kafkaconfig.LoadDefaultKafkaConfig(), nil
+	}
+	
+	if k.args != nil {
+		// TODO: 实现命令行参数解析
+		log.Println("Kafka command line config parsing not implemented yet")
+		return kafkaconfig.LoadDefaultKafkaConfig(), nil
+	}
+	
+	// 环境变量配置
+	// TODO: 实现环境变量加载
+	log.Println("Kafka environment config loading not implemented yet")
+	return kafkaconfig.LoadDefaultKafkaConfig(), nil
 }
 
 // ConfigSource 配置源接口

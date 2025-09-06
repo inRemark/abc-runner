@@ -7,6 +7,48 @@ import (
 	"redis-runner/app/core/interfaces"
 )
 
+// LoadDefaultKafkaConfig 加载默认Kafka配置
+func LoadDefaultKafkaConfig() *KafkaAdapterConfig {
+	return &KafkaAdapterConfig{
+		Protocol: "kafka",
+		Brokers:  []string{"localhost:9092"},
+		ClientID: "redis-runner",
+		Version:  "2.6.0",
+		TopicConfigs: []TopicConfig{
+			{
+				Name:       "test-topic",
+				Partitions: 1,
+				Replicas:   1,
+			},
+		},
+		Producer: ProducerConfig{
+			BatchSize:    16384,
+			BatchTimeout: time.Millisecond * 100,
+			RetryMax:     3,
+			RequiredAcks: 1,
+			Compression:  "snappy",
+		},
+		Consumer: ConsumerConfig{
+			GroupID:          "test-group",
+			AutoOffsetReset:  "earliest",
+			CommitInterval:   time.Second * 1,
+			SessionTimeout:   time.Second * 30,
+			HeartbeatTimeout: time.Second * 3,
+		},
+		Benchmark: KafkaBenchmarkConfig{
+			Total:       1000,
+			Parallels:   3,
+			MessageSize: 1024,
+			TestType:    "produce",
+		},
+		Performance: PerformanceConfig{
+			ConnectionPoolSize: 10,
+			ProducerPoolSize:   5,
+			ConsumerPoolSize:   5,
+		},
+	}
+}
+
 // KafkaAdapterConfig Kafka适配器配置
 type KafkaAdapterConfig struct {
 	// 基础连接配置

@@ -4,66 +4,257 @@
 
 ## About
 
-a benchmark tools for redis.
+A unified performance testing tool for Redis, HTTP, and Kafka protocols.
+
+⚠️ **Breaking Change Notice**: This version (v3.0.0) introduces breaking changes. See [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md) for upgrade instructions.
 
 ## Features
 
-- support redis cluster mode use `--cluster`
-- support redis sentinel and standalone mode default
-- global self increasing key when r=0, random key when r>0
-- operation set_get_random, set, get, pub, sub use `-t <option>`
-- support ttl use `-ttl <option>`
-- support read percentage use `-R <option>`
+### Redis Testing
+- Support for Redis cluster, sentinel, and standalone modes
+- Multiple test cases: set_get_random, set_only, get_only, incr, append, etc.
+- Configurable read/write ratios and TTL
+- Global self-increasing or random key generation
 
-## Usage
+### HTTP Testing  
+- Support for GET, POST, PUT, DELETE methods
+- Custom headers and request bodies
+- Connection pooling and keep-alive
+- Duration-based and request-count-based testing
+
+### Kafka Testing
+- Producer and consumer performance testing
+- Support for multiple brokers and topics
+- Configurable message sizes and compression
+- Mixed produce/consume workloads
+
+## Quick Start
+
+### Installation
 
 ```bash
-./redis-runner-macos-arm64 redis --cluster -h localhost -p 6371 -a pwd@redis -n 100000 -c 10 -d 64 -r 0 -R 50 -ttl 120 -t set_get_random
+# Build from source
+go build -o redis-runner .
+
+# Or download pre-built binaries from releases
 ```
 
-```bash
-Redis Info: mode:cluster, host:localhost, port:6371, password:pwd@redis, total:100000, parallel:10, dataSize:64, random:0, readPercent:50, ttl:120
-Progress: 100000 / 100000, 100.00%
+### Basic Usage
 
-All 100000 request have completed. 
-Parameters: 
-Total: 100000, Parallel: 10, ReadPercent: 50 DataSize: 64, TTL: 120
-Statistics: 
-Read count: 49687, Write count: 50313, Generated keys: 50149, repeat Keys:0
-Summary: 
-rps: 65490, avg: 0.121ms, min: 0.015ms, p90: 0.200ms, p95: 0.250ms, p99: 0.495ms, max: 18.672ms
-Completed.
+```bash
+# Show help
+./redis-runner --help
+
+# Redis performance test
+./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+
+# HTTP load test
+./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+
+# Kafka performance test
+./redis-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
 ```
 
-## Options
+### Using Aliases
 
 ```bash
-./redis-runner-macos-arm64 --help
-Usage: redis-runner [--help] [--version] <command> [options]
-Sub Commands:
+# Short aliases for quick testing
+./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
+./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
+./redis-runner k --broker localhost:9092 -n 100      # Kafka
+```
 
-  redis      Redis client benchmark 
-  http       HTTP client benchmark
+## Command Reference
 
-Use tool help <command> for more information about a command.
+### Global Options
 
-Usage: redis-runner redis [options]
-  --cluster     redis cluster mode (default false)
-  -h            Server hostname (default 127.0.0.1) 
-  -p            Server port (default 6379)
-  -a            Password for Redis Auth
-  -n            Total number of requests (default 100000)
-  -c            Number of parallel connections (default 50)
-  -d            Data size of SET/GET value in bytes (default 3)
-  -r            Read operation percent (default 100%)
-  -ttl          TTL in seconds (default 300)
+```bash
+./redis-runner --help                 # Show help
+./redis-runner --version              # Show version
+```
 
-Usage: redis-runner http [arguments]
-  -url          Server url (default http://localhost:8080)
-  -m            Method get/post (default get)
-  -n            Total number of requests (default 10000)
-  -c            Number of parallel connections (default 50)
+### Redis Commands
+
+```bash
+# Basic Redis test
+./redis-runner redis -h <host> -p <port> -n <requests> -c <connections>
+
+# Redis with authentication
+./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+
+# Redis cluster mode
+./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+
+# Custom test case with read ratio
+./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
+
+# Using configuration file
+./redis-runner redis --config conf/redis.yaml
+```
+
+### HTTP Commands
+
+```bash
+# Basic HTTP GET test
+./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+
+# HTTP POST with body
+./redis-runner http --url http://api.example.com/users \n  --method POST --body '{"name":"test"}' \n  --content-type application/json -n 1000 -c 20
+
+# Duration-based test
+./redis-runner http --url http://localhost:8080 --duration 60s -c 100
+
+# Custom headers
+./redis-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
+```
+
+### Kafka Commands
+
+```bash
+# Basic producer test
+./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+
+# Consumer test
+./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id my-group -n 1000
+
+# Mixed produce/consume test
+./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic high-throughput --test-type produce_consume \n  --message-size 4096 --duration 60s -c 8
+
+# High-performance test with compression
+./redis-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
+```
+
+## Configuration Files
+
+You can use YAML configuration files for complex setups:
+
+### Redis Configuration (conf/redis.yaml)
+
+```yaml
+protocol: redis
+connection:
+  host: localhost
+  port: 6379
+  mode: standalone  # standalone, cluster, sentinel
+  timeout: 30s
+
+benchmark:
+  total: 10000
+  parallels: 50
+  test_case: "set_get_random"
+  data_size: 64
+  read_ratio: 0.5
+```
+
+### HTTP Configuration (conf/http.yaml)
+
+```yaml
+protocol: http
+connection:
+  base_url: "http://localhost:8080"
+  timeout: 30s
+  max_conns_per_host: 50
+
+benchmark:
+  total: 10000
+  parallels: 50
+  method: "GET"
+  path: "/api/test"
+  headers:
+    "Content-Type": "application/json"
+    "Authorization": "Bearer token"
+```
+
+### Kafka Configuration (conf/kafka.yaml)
+
+```yaml
+protocol: kafka
+brokers: ["localhost:9092"]
+topic_configs:
+  - name: "test-topic"
+    partitions: 3
+
+producer:
+  batch_size: 16384
+  compression: "snappy"
+  required_acks: 1
+
+consumer:
+  group_id: "test-group"
+  auto_offset_reset: "earliest"
+
+benchmark:
+  total: 10000
+  parallels: 5
+  message_size: 1024
+  test_type: "produce"
+```
+
+## Migration from v2.x
+
+This version introduces breaking changes. Key changes:
+
+- `redis-enhanced` → `redis`
+- `http-enhanced` → `http`  
+- `kafka-enhanced` → `kafka`
+- Simplified command structure
+- Unified configuration format
+
+See the [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md) for detailed upgrade instructions.
+
+## Examples
+
+### Redis Performance Testing
+
+```bash
+# Basic performance test
+./redis-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
+
+# Cluster mode with authentication
+./redis-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
+
+# Custom test patterns
+./redis-runner redis -t incr -n 50000 -c 100  # Counter operations
+./redis-runner redis -t lpush_lpop -n 10000 -c 50  # List operations
+```
+
+### HTTP Load Testing
+
+```bash
+# API endpoint testing
+./redis-runner http --url http://api.example.com/health -n 10000 -c 100
+
+# POST with JSON payload
+./redis-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
+
+# Load testing with ramp-up
+./redis-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
+```
+
+### Kafka Performance Testing
+
+```bash
+# Producer throughput test
+./redis-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
+
+# Consumer lag test
+./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
+
+# End-to-end latency test
+./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
 ```
 
 ## License
+
 [MIT](LICENSE)
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+## Support
+
+For questions and support:
+- Check the [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md)
+- Review command help: `./redis-runner <command> --help`
+- Open an issue for bug reports or feature requests

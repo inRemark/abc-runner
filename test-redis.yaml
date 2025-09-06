@@ -1,0 +1,12 @@
+protocol: redis
+connection:
+  host: localhost
+  port: 6379
+  mode: standalone
+  timeout: 30s
+
+benchmark:
+  total: 10
+  parallels: 1
+  test_case: "get"
+  data_size: 64
