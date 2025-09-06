@@ -4,34 +4,29 @@ import (
 	"fmt"
 
 	"redis-runner/app/core/interfaces"
+	redisconfig "redis-runner/app/adapters/redis/config"
 )
 
 // 简化版本的配置源实现，用于支持新架构
 
 // NewRedisCommandLineConfigSource 创建Redis命令行配置源
 func NewRedisCommandLineConfigSource(args []string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "redis",
-		args:     args,
-		priority: 3, // 最高优先级
+	return &RedisConfigSourceBridge{
+		source: redisconfig.NewCommandLineConfigSource(args),
 	}
 }
 
 // NewRedisEnvironmentConfigSource 创建Redis环境变量配置源
 func NewRedisEnvironmentConfigSource(prefix string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "redis",
-		prefix:   prefix,
-		priority: 2,
+	return &RedisConfigSourceBridge{
+		source: redisconfig.NewEnvConfigSource(prefix),
 	}
 }
 
 // NewRedisYAMLConfigSource 创建Redis YAML配置源
 func NewRedisYAMLConfigSource(filePath string) ConfigSource {
-	return &DummyConfigSource{
-		protocol: "redis",
-		filePath: filePath,
-		priority: 1, // 最低优先级
+	return &RedisConfigSourceBridge{
+		source: redisconfig.NewYAMLConfigSource(filePath),
 	}
 }
 
@@ -89,7 +84,31 @@ func NewKafkaYAMLConfigSource(filePath string) ConfigSource {
 	}
 }
 
-// DummyConfigSource 临时的配置源实现
+// RedisConfigSourceBridge Redis配置源桥接器
+type RedisConfigSourceBridge struct {
+	source redisconfig.ConfigSource
+}
+
+// Priority 获取优先级
+func (r *RedisConfigSourceBridge) Priority() int {
+	return r.source.Priority()
+}
+
+// CanLoad 检查是否可以加载
+func (r *RedisConfigSourceBridge) CanLoad() bool {
+	return r.source.CanLoad()
+}
+
+// Load 加载配置并适配为统一接口
+func (r *RedisConfigSourceBridge) Load() (interfaces.Config, error) {
+	redisConfig, err := r.source.Load()
+	if err != nil {
+		return nil, err
+	}
+	return redisconfig.NewRedisConfigAdapter(redisConfig), nil
+}
+
+// DummyConfigSource 临时的配置源实现（用于其他协议）
 type DummyConfigSource struct {
 	protocol string
 	args     []string
@@ -121,3 +140,6 @@ type ConfigSource interface {
 	CanLoad() bool
 	Load() (interfaces.Config, error)
 }
+
+// redisconfig.ConfigSource 接口定义
+// 为了类型安全，我们需要确保Redis适配器中的ConfigSource接口与这里兼容

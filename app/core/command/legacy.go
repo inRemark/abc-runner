@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
-	httpCases "redis-runner/app/http_cases"
-	kafkaCases "redis-runner/app/kafka_cases"
-	redisCases "redis-runner/app/redis_cases"
 )
 
 // LegacyCommandWrapper 传统版本命令包装器
@@ -46,15 +42,15 @@ func (w *LegacyCommandWrapper) ExecuteCommand(ctx context.Context, args []string
 	// 显示弃用警告
 	w.showDeprecationWarning()
 
-	// 调用传统函数
-	w.legacyFunc(args)
-	return nil
+	// 显示迁移提示并退出
+	w.showMigrationError()
+	return fmt.Errorf("legacy command '%s' is no longer supported", w.protocol)
 }
 
 // showDeprecationWarning 显示弃用警告
 func (w *LegacyCommandWrapper) showDeprecationWarning() {
 	fmt.Printf("\n%s\n", strings.Repeat("⚠", 50))
-	fmt.Printf("WARNING: Using DEPRECATED command '%s'\n", w.GetCommandName())
+	fmt.Printf("WARNING: DEPRECATED command '%s' has been REMOVED\n", w.GetCommandName())
 	fmt.Printf("Please migrate to the enhanced version: '%s-enhanced'\n", w.protocol)
 	fmt.Printf("Enhanced version provides:\n")
 	fmt.Printf("  ✓ Better performance with connection pooling\n")
@@ -63,6 +59,24 @@ func (w *LegacyCommandWrapper) showDeprecationWarning() {
 	fmt.Printf("  ✓ Improved error handling and retry mechanisms\n")
 	fmt.Printf("Migration guide: https://docs.redis-runner.com/migration\n")
 	fmt.Printf("%s\n\n", strings.Repeat("⚠", 50))
+}
+
+// showMigrationError 显示迁移错误信息
+func (w *LegacyCommandWrapper) showMigrationError() {
+	fmt.Printf("\n%s\n", strings.Repeat("❌", 30))
+	fmt.Printf("ERROR: Legacy command '%s' has been REMOVED\n", w.protocol)
+	fmt.Printf("\nThe old architecture has been migrated to a unified framework.\n")
+	fmt.Printf("\nTo continue using %s testing:\n", w.protocol)
+	fmt.Printf("\n1. Use the enhanced command:\n")
+	fmt.Printf("   redis-runner %s-enhanced --config conf/%s.yaml\n", w.protocol, w.protocol)
+	fmt.Printf("\n2. Or use the short alias:\n")
+	fmt.Printf("   redis-runner %c --config conf/%s.yaml\n", w.protocol[0], w.protocol)
+	fmt.Printf("\n3. Migrate your configuration files:\n")
+	fmt.Printf("   ./tools/migrate_config.sh conf/%s.yaml\n", w.protocol)
+	fmt.Printf("\nFor help:\n")
+	fmt.Printf("  redis-runner %s-enhanced --help\n", w.protocol)
+	fmt.Printf("  See migration guide: MIGRATION_GUIDE.md\n")
+	fmt.Printf("%s\n\n", strings.Repeat("❌", 30))
 }
 
 // GetUsage 获取使用说明
@@ -139,27 +153,27 @@ func CreateLegacyWrappers() map[string]*LegacyCommandWrapper {
 	// Redis传统版本包装器
 	redisWrapper := NewLegacyCommandWrapper(
 		"redis",
-		"Redis performance testing (DEPRECATED: use redis-enhanced)",
+		"Redis performance testing (REMOVED: use redis-enhanced)",
 		"redis",
-		redisCases.RedisCommand,
+		nil, // 不再调用老函数
 	)
 	wrappers["redis"] = redisWrapper
 
 	// HTTP传统版本包装器
 	httpWrapper := NewLegacyCommandWrapper(
 		"http",
-		"HTTP load testing (DEPRECATED: use http-enhanced)",
+		"HTTP load testing (REMOVED: use http-enhanced)",
 		"http",
-		httpCases.HttpCommand,
+		nil, // 不再调用老函数
 	)
 	wrappers["http"] = httpWrapper
 
 	// Kafka传统版本包装器
 	kafkaWrapper := NewLegacyCommandWrapper(
 		"kafka",
-		"Kafka performance testing (DEPRECATED: use kafka-enhanced)",
+		"Kafka performance testing (REMOVED: use kafka-enhanced)",
 		"kafka",
-		kafkaCases.KafkaCommand,
+		nil, // 不再调用老函数
 	)
 	wrappers["kafka"] = kafkaWrapper
 

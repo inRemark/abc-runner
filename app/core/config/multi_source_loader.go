@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"redis-runner/app/core/interfaces"
+	redisconfig "redis-runner/app/adapters/redis/config"
 )
 
 // EnvironmentConfigSource 环境变量配置源
@@ -24,13 +25,12 @@ func NewEnvironmentConfigSource(prefix string) *EnvironmentConfigSource {
 
 // Load 从环境变量加载配置
 func (e *EnvironmentConfigSource) Load() (interfaces.Config, error) {
-	config := &RedisConfig{
-		Protocol: "redis",
-		Mode:     e.getEnvString("MODE", "standalone"),
-	}
-	
+	config := redisconfig.NewDefaultRedisConfig()
+	config.Protocol = "redis"
+	config.Mode = e.getEnvString("MODE", "standalone")
+
 	// 基准测试配置
-	config.BenchMark = BenchmarkConfigImpl{
+	config.BenchMark = redisconfig.BenchmarkConfigImpl{
 		Total:       e.getEnvInt("TOTAL", 100000),
 		Parallels:   e.getEnvInt("PARALLELS", 50),
 		DataSize:    e.getEnvInt("DATA_SIZE", 3),
@@ -39,38 +39,38 @@ func (e *EnvironmentConfigSource) Load() (interfaces.Config, error) {
 		RandomKeys:  e.getEnvInt("RANDOM_KEYS", 0),
 		Case:        e.getEnvString("CASE", "get"),
 	}
-	
+
 	// 连接池配置
-	config.Pool = PoolConfigImpl{
+	config.Pool = redisconfig.PoolConfigImpl{
 		PoolSize: e.getEnvInt("POOL_SIZE", 10),
 		MinIdle:  e.getEnvInt("MIN_IDLE", 2),
 	}
-	
+
 	// 根据模式设置连接配置
 	switch config.Mode {
 	case "standalone":
-		config.Standalone = StandAloneInfo{
+		config.Standalone = redisconfig.StandAloneInfo{
 			Addr:     e.getEnvString("ADDR", "127.0.0.1:6379"),
 			Password: e.getEnvString("PASSWORD", ""),
 			Db:       e.getEnvInt("DB", 0),
 		}
 	case "cluster":
 		addrs := e.getEnvString("ADDRS", "127.0.0.1:6371,127.0.0.1:6372,127.0.0.1:6373")
-		config.Cluster = ClusterInfo{
+		config.Cluster = redisconfig.ClusterInfo{
 			Addrs:    strings.Split(addrs, ","),
 			Password: e.getEnvString("PASSWORD", ""),
 		}
 	case "sentinel":
 		addrs := e.getEnvString("SENTINEL_ADDRS", "127.0.0.1:26371,127.0.0.1:26372,127.0.0.1:26373")
-		config.Sentinel = SentinelInfo{
+		config.Sentinel = redisconfig.SentinelInfo{
 			MasterName: e.getEnvString("MASTER_NAME", "mymaster"),
 			Addrs:      strings.Split(addrs, ","),
 			Password:   e.getEnvString("PASSWORD", ""),
 			Db:         e.getEnvInt("DB", 0),
 		}
 	}
-	
-	return config, nil
+
+	return redisconfig.NewRedisConfigAdapter(config), nil
 }
 
 // CanLoad 检查是否可以从环境变量加载
@@ -120,21 +120,20 @@ func NewCommandLineConfigSource(args []string) *CommandLineConfigSource {
 
 // Load 从命令行参数加载配置
 func (c *CommandLineConfigSource) Load() (interfaces.Config, error) {
-	config := &RedisConfig{
-		Protocol: "redis",
-		Mode:     "standalone",
-	}
-	
+	config := redisconfig.NewDefaultRedisConfig()
+	config.Protocol = "redis"
+	config.Mode = "standalone"
+
 	// 解析命令行参数
 	argMap := c.parseArgs()
-	
+
 	// 解析模式
 	if cluster, exists := argMap["cluster"]; exists && cluster == "true" {
 		config.Mode = "cluster"
 	}
-	
+
 	// 基准测试配置
-	config.BenchMark = BenchmarkConfigImpl{
+	config.BenchMark = redisconfig.BenchmarkConfigImpl{
 		Total:       c.getIntArg(argMap, "n", 100000),
 		Parallels:   c.getIntArg(argMap, "c", 50),
 		DataSize:    c.getIntArg(argMap, "d", 3),
@@ -143,35 +142,35 @@ func (c *CommandLineConfigSource) Load() (interfaces.Config, error) {
 		RandomKeys:  c.getIntArg(argMap, "r", 0),
 		Case:        c.getStringArg(argMap, "t", "get"),
 	}
-	
+
 	// 连接池配置
-	config.Pool = PoolConfigImpl{
+	config.Pool = redisconfig.PoolConfigImpl{
 		PoolSize: 10,
 		MinIdle:  2,
 	}
-	
+
 	// 连接配置
 	host := c.getStringArg(argMap, "h", "127.0.0.1")
 	port := c.getIntArg(argMap, "p", 6379)
 	password := c.getStringArg(argMap, "a", "")
 	db := c.getIntArg(argMap, "db", 0)
-	
+
 	addr := fmt.Sprintf("%s:%d", host, port)
-	
+
 	if config.Mode == "cluster" {
-		config.Cluster = ClusterInfo{
+		config.Cluster = redisconfig.ClusterInfo{
 			Addrs:    []string{addr},
 			Password: password,
 		}
 	} else {
-		config.Standalone = StandAloneInfo{
+		config.Standalone = redisconfig.StandAloneInfo{
 			Addr:     addr,
 			Password: password,
 			Db:       db,
 		}
 	}
-	
-	return config, nil
+
+	return redisconfig.NewRedisConfigAdapter(config), nil
 }
 
 // CanLoad 检查是否可以从命令行加载
@@ -187,19 +186,19 @@ func (c *CommandLineConfigSource) Priority() int {
 // parseArgs 解析命令行参数
 func (c *CommandLineConfigSource) parseArgs() map[string]string {
 	argMap := make(map[string]string)
-	
+
 	for i := 0; i < len(c.Args); i++ {
 		arg := c.Args[i]
 		if strings.HasPrefix(arg, "-") {
 			key := strings.TrimPrefix(arg, "-")
 			key = strings.TrimPrefix(key, "-") // 处理 --flag 格式
-			
+
 			// 布尔标志
 			if key == "cluster" || key == "config" {
 				argMap[key] = "true"
 				continue
 			}
-			
+
 			// 键值对
 			if i+1 < len(c.Args) && !strings.HasPrefix(c.Args[i+1], "-") {
 				argMap[key] = c.Args[i+1]
@@ -207,7 +206,7 @@ func (c *CommandLineConfigSource) parseArgs() map[string]string {
 			}
 		}
 	}
-	
+
 	return argMap
 }
 
@@ -242,13 +241,13 @@ func NewConfigValidator() *ConfigValidator {
 	validator := &ConfigValidator{
 		rules: make([]ValidationRule, 0),
 	}
-	
+
 	// 添加默认验证规则
 	validator.AddRule(validateProtocol)
 	validator.AddRule(validateMode)
 	validator.AddRule(validateConnection)
 	validator.AddRule(validateBenchmark)
-	
+
 	return validator
 }
 
@@ -273,20 +272,21 @@ func validateProtocol(config interfaces.Config) error {
 	if protocol == "" {
 		return fmt.Errorf("protocol cannot be empty")
 	}
-	
+
 	supportedProtocols := []string{"redis"}
 	for _, supported := range supportedProtocols {
 		if protocol == supported {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("unsupported protocol: %s", protocol)
 }
 
 // validateMode 验证模式
 func validateMode(config interfaces.Config) error {
-	if redisConfig, ok := config.(*RedisConfig); ok {
+	// 通过适配器提取Redis配置
+	if redisConfig, err := redisconfig.ExtractRedisConfig(config); err == nil {
 		supportedModes := []string{"standalone", "sentinel", "cluster"}
 		for _, mode := range supportedModes {
 			if redisConfig.Mode == mode {
@@ -304,18 +304,18 @@ func validateConnection(config interfaces.Config) error {
 	if connConfig == nil {
 		return fmt.Errorf("connection config cannot be nil")
 	}
-	
+
 	addresses := connConfig.GetAddresses()
 	if len(addresses) == 0 {
 		return fmt.Errorf("at least one address must be specified")
 	}
-	
+
 	for _, addr := range addresses {
 		if addr == "" {
 			return fmt.Errorf("address cannot be empty")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -325,23 +325,23 @@ func validateBenchmark(config interfaces.Config) error {
 	if benchConfig == nil {
 		return fmt.Errorf("benchmark config cannot be nil")
 	}
-	
+
 	if benchConfig.GetTotal() <= 0 {
 		return fmt.Errorf("total requests must be positive")
 	}
-	
+
 	if benchConfig.GetParallels() <= 0 {
 		return fmt.Errorf("parallel connections must be positive")
 	}
-	
+
 	if benchConfig.GetDataSize() <= 0 {
 		return fmt.Errorf("data size must be positive")
 	}
-	
+
 	readPercent := benchConfig.GetReadPercent()
 	if readPercent < 0 || readPercent > 100 {
 		return fmt.Errorf("read percent must be between 0 and 100")
 	}
-	
+
 	return nil
 }
