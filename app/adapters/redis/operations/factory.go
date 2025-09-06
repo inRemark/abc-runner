@@ -11,8 +11,8 @@ type OperationFactory struct {
 	mutex      sync.RWMutex
 }
 
-// OperationRegistry 操作注册器接口
-type OperationRegistry interface {
+// RedisOperationRegistry Redis操作注册器接口
+type RedisOperationRegistry interface {
 	Register(operationType OperationType, factory func() Operation)
 	Create(operationType OperationType) (Operation, error)
 	ListSupportedOperations() []OperationType

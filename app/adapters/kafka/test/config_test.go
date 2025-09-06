@@ -34,7 +34,7 @@ func TestKafkaAdapterConfig_Validate(t *testing.T) {
 					ProducerPoolSize:   5,
 					ConsumerPoolSize:   5,
 				},
-				Benchmark: config.BenchmarkConfig{
+				Benchmark: config.KafkaBenchmarkConfig{
 					DefaultTopic: "test-topic",
 					Total:        1000,
 					Parallels:    10,

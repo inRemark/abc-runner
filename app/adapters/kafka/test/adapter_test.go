@@ -172,7 +172,7 @@ func createTestConfig() *kafkaConfig.KafkaAdapterConfig {
 			ConsumerPoolSize:   5,
 			MetricsInterval:    10 * time.Second,
 		},
-		Benchmark: kafkaConfig.BenchmarkConfig{
+		Benchmark: kafkaConfig.KafkaBenchmarkConfig{
 			DefaultTopic:       "test_topic",
 			MessageSizeRange:   kafkaConfig.MessageSizeRange{Min: 100, Max: 1000},
 			BatchSizes:         []int{1, 10, 100},

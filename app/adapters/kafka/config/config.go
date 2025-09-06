@@ -10,9 +10,11 @@ import (
 // KafkaAdapterConfig Kafka适配器配置
 type KafkaAdapterConfig struct {
 	// 基础连接配置
-	Brokers  []string `yaml:"brokers" json:"brokers"`     // Broker地址列表
-	ClientID string   `yaml:"client_id" json:"client_id"` // 客户端ID
-	Version  string   `yaml:"version" json:"version"`     // Kafka版本
+	Protocol     string        `yaml:"protocol" json:"protocol"`           // 协议类型
+	Brokers      []string      `yaml:"brokers" json:"brokers"`             // Broker地址列表
+	ClientID     string        `yaml:"client_id" json:"client_id"`         // 客户端ID
+	Version      string        `yaml:"version" json:"version"`             // Kafka版本
+	TopicConfigs []TopicConfig `yaml:"topic_configs" json:"topic_configs"` // 主题配置
 
 	// 生产者配置
 	Producer ProducerConfig `yaml:"producer" json:"producer"`
@@ -27,7 +29,14 @@ type KafkaAdapterConfig struct {
 	Performance PerformanceConfig `yaml:"performance" json:"performance"`
 
 	// 基准测试配置
-	Benchmark BenchmarkConfig `yaml:"benchmark" json:"benchmark"`
+	Benchmark KafkaBenchmarkConfig `yaml:"benchmark" json:"benchmark"`
+}
+
+// TopicConfig 主题配置
+type TopicConfig struct {
+	Name       string `yaml:"name" json:"name"`             // 主题名称
+	Partitions int    `yaml:"partitions" json:"partitions"` // 分区数
+	Replicas   int    `yaml:"replicas" json:"replicas"`     // 副本数
 }
 
 // ProducerConfig 生产者配置
@@ -35,8 +44,11 @@ type ProducerConfig struct {
 	Acks                string        `yaml:"acks" json:"acks"`                       // 确认模式: "0", "1", "all"
 	Retries             int           `yaml:"retries" json:"retries"`                 // 重试次数
 	BatchSize           int           `yaml:"batch_size" json:"batch_size"`           // 批处理大小
+	BatchTimeout        time.Duration `yaml:"batch_timeout" json:"batch_timeout"`     // 批处理超时时间
 	LingerMs            time.Duration `yaml:"linger_ms" json:"linger_ms"`             // 批处理等待时间
 	Compression         string        `yaml:"compression" json:"compression"`         // 压缩算法: none, gzip, snappy, lz4, zstd
+	RetryMax            int           `yaml:"retry_max" json:"retry_max"`             // 最大重试次数
+	RequiredAcks        int           `yaml:"required_acks" json:"required_acks"`     // 所需确认数
 	IdempotenceEnabled  bool          `yaml:"idempotence" json:"idempotence"`         // 幂等性保证
 	MaxInFlightRequests int           `yaml:"max_in_flight" json:"max_in_flight"`     // 最大未确认请求数
 	RequestTimeout      time.Duration `yaml:"request_timeout" json:"request_timeout"` // 请求超时
@@ -48,9 +60,11 @@ type ProducerConfig struct {
 type ConsumerConfig struct {
 	GroupID            string        `yaml:"group_id" json:"group_id"`                         // 消费者组ID
 	AutoOffsetReset    string        `yaml:"auto_offset_reset" json:"auto_offset_reset"`       // 自动偏移重置: earliest, latest
+	CommitInterval     time.Duration `yaml:"commit_interval" json:"commit_interval"`           // 提交间隔
+	SessionTimeout     time.Duration `yaml:"session_timeout" json:"session_timeout"`           // 会话超时
+	HeartbeatTimeout   time.Duration `yaml:"heartbeat_timeout" json:"heartbeat_timeout"`       // 心跳超时
 	EnableAutoCommit   bool          `yaml:"enable_auto_commit" json:"enable_auto_commit"`     // 启用自动提交
 	AutoCommitInterval time.Duration `yaml:"auto_commit_interval" json:"auto_commit_interval"` // 自动提交间隔
-	SessionTimeout     time.Duration `yaml:"session_timeout" json:"session_timeout"`           // 会话超时
 	HeartbeatInterval  time.Duration `yaml:"heartbeat_interval" json:"heartbeat_interval"`     // 心跳间隔
 	MaxPollRecords     int           `yaml:"max_poll_records" json:"max_poll_records"`         // 最大拉取记录数
 	FetchMinBytes      int           `yaml:"fetch_min_bytes" json:"fetch_min_bytes"`           // 最小拉取字节数
@@ -93,8 +107,8 @@ type PerformanceConfig struct {
 	MetricsInterval    time.Duration `yaml:"metrics_interval" json:"metrics_interval"`         // 指标收集间隔
 }
 
-// BenchmarkConfig 基准测试配置
-type BenchmarkConfig struct {
+// KafkaBenchmarkConfig 基准测试配置
+type KafkaBenchmarkConfig struct {
 	DefaultTopic      string           `yaml:"default_topic" json:"default_topic"`           // 默认主题
 	MessageSizeRange  MessageSizeRange `yaml:"message_size_range" json:"message_size_range"` // 消息大小范围
 	BatchSizes        []int            `yaml:"batch_sizes" json:"batch_sizes"`               // 批处理大小列表
@@ -106,6 +120,8 @@ type BenchmarkConfig struct {
 	ReadPercent       int              `yaml:"read_percent" json:"read_percent"`             // 读操作百分比
 	RandomKeys        int              `yaml:"random_keys" json:"random_keys"`               // 随机键范围
 	TestCase          string           `yaml:"test_case" json:"test_case"`                   // 测试用例
+	TestType          string           `yaml:"test_type" json:"test_type"`                   // 测试类型
+	MessageSize       int              `yaml:"message_size" json:"message_size"`             // 消息大小
 	Timeout           time.Duration    `yaml:"timeout" json:"timeout"`                       // 超时时间
 }
 

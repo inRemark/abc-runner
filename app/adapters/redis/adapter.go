@@ -357,3 +357,8 @@ func (r *RedisAdapter) Subscribe(ctx context.Context, channels ...string) *redis
 	}
 	return nil
 }
+
+// GetMetricsCollector 获取指标收集器
+func (r *RedisAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+	return r.BaseAdapter.GetMetricsCollector()
+}

@@ -2,7 +2,7 @@ package config
 
 import (
 	"time"
-	
+
 	"redis-runner/app/core/interfaces"
 )
 
@@ -69,43 +69,44 @@ func (p *PoolConfigImpl) GetConnectionTimeout() time.Duration {
 }
 
 // BenchmarkConfig 基准测试配置实现
+// 为KafkaBenchmarkConfig实现BenchmarkConfig接口
 
-// GetTotal 获取总请求数
-func (b *BenchmarkConfig) GetTotal() int {
+// GetTotal 获取总数
+func (b *KafkaBenchmarkConfig) GetTotal() int {
 	return b.Total
 }
 
 // GetParallels 获取并发数
-func (b *BenchmarkConfig) GetParallels() int {
+func (b *KafkaBenchmarkConfig) GetParallels() int {
 	return b.Parallels
 }
 
 // GetDataSize 获取数据大小
-func (b *BenchmarkConfig) GetDataSize() int {
+func (b *KafkaBenchmarkConfig) GetDataSize() int {
 	return b.DataSize
 }
 
 // GetTTL 获取生存时间
-func (b *BenchmarkConfig) GetTTL() time.Duration {
+func (b *KafkaBenchmarkConfig) GetTTL() time.Duration {
 	return b.TTL
 }
 
 // GetReadPercent 获取读操作百分比
-func (b *BenchmarkConfig) GetReadPercent() int {
+func (b *KafkaBenchmarkConfig) GetReadPercent() int {
 	return b.ReadPercent
 }
 
 // GetRandomKeys 获取随机键范围
-func (b *BenchmarkConfig) GetRandomKeys() int {
+func (b *KafkaBenchmarkConfig) GetRandomKeys() int {
 	return b.RandomKeys
 }
 
 // GetTestCase 获取测试用例
-func (b *BenchmarkConfig) GetTestCase() string {
+func (b *KafkaBenchmarkConfig) GetTestCase() string {
 	return b.TestCase
 }
 
 // GetTimeout 获取超时时间
-func (b *BenchmarkConfig) GetTimeout() time.Duration {
+func (b *KafkaBenchmarkConfig) GetTimeout() time.Duration {
 	return b.Timeout
 }

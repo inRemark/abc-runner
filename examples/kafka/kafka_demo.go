@@ -43,7 +43,7 @@ func main() {
 			ConsumerPoolSize:   1,
 		},
 		
-		Benchmark: config.BenchmarkConfig{
+		Benchmark: config.KafkaBenchmarkConfig{
 			DefaultTopic: "demo-topic",
 			Total:        10,
 			Parallels:    1,

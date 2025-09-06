@@ -14,9 +14,9 @@ import (
 
 // DefaultKeyGenerator 默认键生成器实现
 type DefaultKeyGenerator struct {
-	counter      int64
+	counter       int64
 	generatedKeys []string
-	mutex        sync.RWMutex
+	mutex         sync.RWMutex
 }
 
 // NewDefaultKeyGenerator 创建默认键生成器
@@ -30,11 +30,11 @@ func NewDefaultKeyGenerator() *DefaultKeyGenerator {
 func (g *DefaultKeyGenerator) GenerateKey(operationType string, index int64) string {
 	keyNum := atomic.AddInt64(&g.counter, 1) - 1
 	key := fmt.Sprintf("%s:i:%d", operationType, keyNum)
-	
+
 	g.mutex.Lock()
 	g.generatedKeys = append(g.generatedKeys, key)
 	g.mutex.Unlock()
-	
+
 	return key
 }
 
@@ -43,15 +43,15 @@ func (g *DefaultKeyGenerator) GenerateRandomKey(operationType string, maxRange i
 	if maxRange <= 0 {
 		return g.GenerateKey(operationType, 0)
 	}
-	
+
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomNum := r.Intn(maxRange)
 	key := fmt.Sprintf("%s:r:%d", operationType, randomNum)
-	
+
 	g.mutex.Lock()
 	g.generatedKeys = append(g.generatedKeys, key)
 	g.mutex.Unlock()
-	
+
 	return key
 }
 
@@ -59,7 +59,7 @@ func (g *DefaultKeyGenerator) GenerateRandomKey(operationType string, maxRange i
 func (g *DefaultKeyGenerator) GetGeneratedKeys() []string {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
-	
+
 	result := make([]string, len(g.generatedKeys))
 	copy(result, g.generatedKeys)
 	return result
@@ -69,11 +69,11 @@ func (g *DefaultKeyGenerator) GetGeneratedKeys() []string {
 func (g *DefaultKeyGenerator) GetRandomFromGenerated() string {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
-	
+
 	if len(g.generatedKeys) == 0 {
 		return "default:key:0"
 	}
-	
+
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return g.generatedKeys[r.Intn(len(g.generatedKeys))]
 }
@@ -82,7 +82,7 @@ func (g *DefaultKeyGenerator) GetRandomFromGenerated() string {
 func (g *DefaultKeyGenerator) Reset() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	
+
 	g.counter = 0
 	g.generatedKeys = make([]string, 0)
 }
@@ -178,7 +178,7 @@ func (r *OperationRegistry) GetFactory(operationType string) (interfaces.Operati
 func (r *OperationRegistry) GetSupportedOperations() []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	operations := make([]string, 0, len(r.factories))
 	for opType := range r.factories {
 		operations = append(operations, opType)
@@ -192,7 +192,7 @@ func (r *OperationRegistry) CreateOperation(operationType string, params map[str
 	if !exists {
 		return interfaces.Operation{}, fmt.Errorf("unsupported operation type: %s", operationType)
 	}
-	
+
 	return factory.CreateOperation(params)
 }
 
@@ -202,26 +202,26 @@ func (r *OperationRegistry) ValidateOperation(operationType string, params map[s
 	if !exists {
 		return fmt.Errorf("unsupported operation type: %s", operationType)
 	}
-	
+
 	return factory.ValidateParams(params)
 }
 
 // RetryConfig 重试配置
 type RetryConfig struct {
-	MaxRetries     int
-	InitialDelay   time.Duration
-	MaxDelay       time.Duration
-	BackoffFactor  float64
+	MaxRetries      int
+	InitialDelay    time.Duration
+	MaxDelay        time.Duration
+	BackoffFactor   float64
 	RetryableErrors []string
 }
 
 // DefaultRetryConfig 默认重试配置
 func DefaultRetryConfig() *RetryConfig {
 	return &RetryConfig{
-		MaxRetries:     3,
-		InitialDelay:   100 * time.Millisecond,
-		MaxDelay:       5 * time.Second,
-		BackoffFactor:  2.0,
+		MaxRetries:    3,
+		InitialDelay:  100 * time.Millisecond,
+		MaxDelay:      5 * time.Second,
+		BackoffFactor: 2.0,
 		RetryableErrors: []string{
 			"timeout",
 			"connection refused",
@@ -237,7 +237,7 @@ func (r *RetryConfig) IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
 	for _, retryableErr := range r.RetryableErrors {
 		if contains(errStr, retryableErr) {
@@ -288,14 +288,14 @@ func (p *ProgressTracker) Update(increment int64) {
 func (p *ProgressTracker) GetProgress() (current, total int64, percentage float64, eta time.Duration) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	
+
 	current = p.current
 	total = p.total
-	
+
 	if total > 0 {
 		percentage = float64(current) / float64(total) * 100
 	}
-	
+
 	if current > 0 {
 		elapsed := time.Since(p.startTime)
 		rate := float64(current) / elapsed.Seconds()
@@ -304,7 +304,7 @@ func (p *ProgressTracker) GetProgress() (current, total int64, percentage float6
 			eta = time.Duration(remaining/rate) * time.Second
 		}
 	}
-	
+
 	return
 }
 

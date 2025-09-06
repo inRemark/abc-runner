@@ -11,19 +11,21 @@ import (
 
 // BaseAdapter 协议适配器基础实现
 type BaseAdapter struct {
-	protocol     string
-	config       interfaces.Config
-	connected    bool
-	connMutex    sync.RWMutex
-	metrics      map[string]interface{}
-	metricsMutex sync.RWMutex
+	protocol         string
+	config           interfaces.Config
+	connected        bool
+	connMutex        sync.RWMutex
+	metrics          map[string]interface{}
+	metricsMutex     sync.RWMutex
+	metricsCollector interfaces.MetricsCollector // 新增字段
 }
 
 // NewBaseAdapter 创建基础适配器
 func NewBaseAdapter(protocol string) *BaseAdapter {
 	return &BaseAdapter{
-		protocol: protocol,
-		metrics:  make(map[string]interface{}),
+		protocol:         protocol,
+		metrics:          make(map[string]interface{}),
+		metricsCollector: NewDefaultMetricsCollector(), // 初始化
 	}
 }
 
@@ -54,6 +56,16 @@ func (b *BaseAdapter) GetConfig() interfaces.Config {
 // SetConfig 设置配置
 func (b *BaseAdapter) SetConfig(config interfaces.Config) {
 	b.config = config
+}
+
+// GetMetricsCollector 获取指标收集器
+func (b *BaseAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+	return b.metricsCollector
+}
+
+// SetMetricsCollector 设置指标收集器
+func (b *BaseAdapter) SetMetricsCollector(collector interfaces.MetricsCollector) {
+	b.metricsCollector = collector
 }
 
 // UpdateMetric 更新指标

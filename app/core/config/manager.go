@@ -126,3 +126,107 @@ func LoadFromEnv(prefix string) (interfaces.Config, error) {
 	source := NewEnvironmentConfigSource(prefix)
 	return source.Load()
 }
+
+// CreateRedisConfigSources 创建Redis配置源
+func CreateRedisConfigSources(configFile string, args []string) []ConfigSource {
+	sources := make([]ConfigSource, 0)
+	
+	// 1. 命令行参数（最高优先级）
+	if len(args) > 0 {
+		sources = append(sources, NewRedisCommandLineConfigSource(args))
+	}
+	
+	// 2. 环境变量
+	sources = append(sources, NewRedisEnvironmentConfigSource("REDIS"))
+	
+	// 3. YAML配置文件（最低优先级）
+	if configFile != "" {
+		sources = append(sources, NewRedisYAMLConfigSource(configFile))
+	} else {
+		// 尝试默认路径
+		defaultPaths := []string{
+			"conf/redis.yaml",
+			"redis.yaml",
+		}
+		for _, path := range defaultPaths {
+			yamlSource := NewRedisYAMLConfigSource(path)
+			if yamlSource.CanLoad() {
+				sources = append(sources, yamlSource)
+				break
+			}
+		}
+	}
+	
+	return sources
+}
+
+// CreateHttpConfigSources 创建HTTP配置源
+func CreateHttpConfigSources(configFile string, args []string) []ConfigSource {
+	sources := make([]ConfigSource, 0)
+	
+	// 1. 命令行参数（最高优先级）
+	if len(args) > 0 {
+		sources = append(sources, NewHttpCommandLineConfigSource(args))
+	}
+	
+	// 2. 环境变量
+	sources = append(sources, NewHttpEnvironmentConfigSource("HTTP"))
+	
+	// 3. YAML配置文件（最低优先级）
+	if configFile != "" {
+		sources = append(sources, NewHttpYAMLConfigSource(configFile))
+	} else {
+		// 尝试默认路径
+		defaultPaths := []string{
+			"conf/http.yaml",
+			"http.yaml",
+		}
+		for _, path := range defaultPaths {
+			yamlSource := NewHttpYAMLConfigSource(path)
+			if yamlSource.CanLoad() {
+				sources = append(sources, yamlSource)
+				break
+			}
+		}
+	}
+	
+	return sources
+}
+
+// CreateKafkaConfigSources 创建Kafka配置源
+func CreateKafkaConfigSources(configFile string, args []string) []ConfigSource {
+	sources := make([]ConfigSource, 0)
+	
+	// 1. 命令行参数（最高优先级）
+	if len(args) > 0 {
+		sources = append(sources, NewKafkaCommandLineConfigSource(args))
+	}
+	
+	// 2. 环境变量
+	sources = append(sources, NewKafkaEnvironmentConfigSource("KAFKA"))
+	
+	// 3. YAML配置文件（最低优先级）
+	if configFile != "" {
+		sources = append(sources, NewKafkaYAMLConfigSource(configFile))
+	} else {
+		// 尝试默认路径
+		defaultPaths := []string{
+			"conf/kafka.yaml",
+			"kafka.yaml",
+		}
+		for _, path := range defaultPaths {
+			yamlSource := NewKafkaYAMLConfigSource(path)
+			if yamlSource.CanLoad() {
+				sources = append(sources, yamlSource)
+				break
+			}
+		}
+	}
+	
+	return sources
+}
+
+// SetConfig 设置配置（向后兼容）
+func (m *ConfigManager) SetConfig(config interfaces.Config) {
+	m.config = config
+}

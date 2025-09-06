@@ -308,12 +308,7 @@ type ConfigLoader struct {
 	sources []ConfigSource
 }
 
-// ConfigSource 配置源接口
-type ConfigSource interface {
-	Load() (interfaces.Config, error)
-	CanLoad() bool
-	Priority() int
-}
+// 使用config_sources.go中定义的ConfigSource接口
 
 // YAMLConfigSource YAML文件配置源
 type YAMLConfigSource struct {

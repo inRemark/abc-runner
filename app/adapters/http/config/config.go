@@ -120,6 +120,12 @@ type HttpBenchmarkConfig struct {
 	DisableCompression bool          `yaml:"disable_compression" json:"disable_compression"` // 禁用压缩
 	EnableHTTP2        bool          `yaml:"enable_http2" json:"enable_http2"`               // 启用HTTP/2
 	UserAgent          string        `yaml:"user_agent" json:"user_agent"`                   // User-Agent
+	
+	// 新增字段支持命令行配置
+	Method      string            `yaml:"method" json:"method"`           // HTTP方法
+	Path        string            `yaml:"path" json:"path"`               // 请求路径
+	Headers     map[string]string `yaml:"headers" json:"headers"`         // 请求头
+	QueryParams map[string]string `yaml:"query_params" json:"query_params"` // 查询参数
 }
 
 // 实现interfaces.Config接口
