@@ -1,0 +1,148 @@
+http:
+  # 连接配置
+  connection:
+    base_url: "http://cn.bing.com"
+    timeout: 30s
+    keep_alive: 90s
+    max_idle_conns: 50
+    max_conns_per_host: 20
+    idle_conn_timeout: 90s
+    disable_compression: false
+    
+    # TLS配置
+    tls:
+      insecure_skip_verify: false
+      min_version: "1.2"
+      max_version: "1.3"
+      cert_file: ""
+      key_file: ""
+      ca_file: ""
+      server_name: ""
+      client_auth: false
+      cipher_suites: []
+      prefer_server_cipher_suites: true
+      session_tickets_disabled: false
+      renegotiation: "once"
+  
+  # 认证配置
+  auth:
+    type: "none"  # none, basic, bearer, oauth2, mutual_tls
+    username: ""
+    password: ""
+    token: ""
+    
+  # 文件上传配置
+  upload:
+    enable: false
+    max_file_size: "100MB"
+    allowed_types:
+      - "image/*"
+      - "application/pdf"
+      - "text/plain"
+    upload_field: "file"
+    chunk_size: "1MB"
+    concurrent_uploads: 3
+    enable_compression: true
+    compression_level: 6
+    generate_thumbnails: false
+    virus_scan: false
+    temp_dir: "/tmp/upload"
+    cleanup_interval: "1h"
+    preserve_filename: true
+    
+  # 请求模板配置
+  requests:
+    - method: "GET"
+      path: "/api/users"
+      headers:
+        Accept: "application/json"
+      weight: 40
+      
+    - method: "POST"
+      path: "/api/users"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        name: "{{random.name}}"
+        email: "{{random.email}}"
+      weight: 25
+      
+    - method: "PUT"
+      path: "/api/users/{{random.id}}"
+      headers:
+        Content-Type: "application/json"
+      body:
+        name: "{{random.name}}"
+      weight: 10
+      
+    - method: "PATCH"
+      path: "/api/users/{{random.id}}"
+      headers:
+        Content-Type: "application/json"
+      body:
+        status: "{{random.status}}"
+      weight: 10
+      
+    - method: "DELETE"
+      path: "/api/users/{{random.id}}"
+      weight: 5
+      
+    - method: "HEAD"
+      path: "/api/users/{{random.id}}"
+      weight: 5
+      
+    - method: "OPTIONS"
+      path: "/api/users"
+      weight: 3
+      
+    # 文件上传请求示例
+    - method: "POST"
+      path: "/api/upload"
+      content_type: "multipart/form-data"
+      upload:
+        files:
+          - field: "document"
+            path: "/path/to/test/files"
+            pattern: "*.pdf"
+          - field: "image"
+            path: "/path/to/test/images"
+            pattern: "*.jpg"
+        form_data:
+          title: "{{random.title}}"
+          description: "{{random.description}}"
+      weight: 2
+  
+  # 基准测试配置
+  benchmark:
+    total: 100000
+    parallels: 50
+    duration: "5m"
+    ramp_up: "30s"
+    data_size: 1024
+    ttl: 0s
+    read_percent: 70
+    random_keys: 0
+    test_case: "mixed_operations"
+    timeout: 30s
+    
+    # HTTP特定配置
+    follow_redirects: true
+    max_redirects: 10
+    disable_compression: false
+    enable_http2: true
+    user_agent: "redis-runner-http-client/1.0"
+
+  # 报告配置
+  reports:
+    enabled: true
+    formats: ["console", "json", "text"]   # 支持的格式: console, json, csv, text, all
+    output_dir: "./reports"               # 报告输出目录
+    file_prefix: "http_loadtest"          # 报告文件前缀
+    include_detailed_metrics: true        # 包含HTTP详细指标
+    include_status_codes: true            # 包含状态码统计
+    include_response_times: true          # 包含响应时间分析
+    include_network_metrics: true         # 包含网络指标(连接时间、DNS等)
+    include_timestamp: true               # 文件名包含时间戳
+    enable_console_report: true           # 启用控制台详细报告
+    overwrite_existing: false             # 是否覆盖已存在文件

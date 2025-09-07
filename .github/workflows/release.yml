@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.25.x
+
+    - name: Install dependencies
+      run: go mod tidy
+
+    - name: Build all platforms
+      run: make build-all
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          bin/redis-runner-*
+        body_path: config/CHANGELOG.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

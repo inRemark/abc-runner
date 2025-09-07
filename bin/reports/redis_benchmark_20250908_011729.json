@@ -1,0 +1,51 @@
+{
+  "base_metrics": {
+    "avg_latency": 62799,
+    "duration": 44251167,
+    "error_rate": 0,
+    "failed_ops": 0,
+    "max_latency": 788958,
+    "min_latency": 17000,
+    "p90_latency": 93750,
+    "p95_latency": 111208,
+    "p99_latency": 158542,
+    "read_ops": 1000,
+    "rps": 22598,
+    "success_ops": 1000,
+    "total_ops": 1000,
+    "write_ops": 0
+  },
+  "metadata": {
+    "format": "json",
+    "generated_by": "redis-runner",
+    "version": "3.0.0"
+  },
+  "protocol": "redis",
+  "protocol_metrics": {
+    "connection_pool": {
+      "connected": true,
+      "mode": "standalone"
+    },
+    "detailed_metrics": {
+      "avg_latency": 62799,
+      "duration": 42751417,
+      "error_rate": 0,
+      "failed_ops": 0,
+      "max_latency": 788958,
+      "min_latency": 17000,
+      "p90_latency": 93750,
+      "p95_latency": 111208,
+      "p99_latency": 158542,
+      "read_ops": 1000,
+      "rps": 23391,
+      "success_ops": 1000,
+      "total_ops": 1000,
+      "write_ops": 0
+    },
+    "server_info": {
+      "adapter_type": "redis",
+      "protocol": "redis"
+    }
+  },
+  "timestamp": "2025-09-08T01:17:29+08:00"
+}

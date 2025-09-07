@@ -1,0 +1,27 @@
+# Redis配置示例 - 单机模式
+redis:
+  mode: "standalone"
+  benchmark:
+    total: 10000
+    parallels: 50
+    random_keys: 50
+    read_percent: 50
+    data_size: 64
+    ttl: 120
+    case: "set_get_random"
+  pool:
+    pool_size: 10
+    min_idle: 2
+  standalone:
+    addr: "127.0.0.1:6379"
+    password: ""
+    db: 0
+  reports:
+    enabled: true
+    formats: ["console", "json", "csv"]
+    output_dir: "./reports"
+    file_prefix: "redis_benchmark"
+    include_protocol_metrics: true
+    include_timestamp: true
+    enable_console_report: true
+    overwrite_existing: false

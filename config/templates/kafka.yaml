@@ -1,0 +1,91 @@
+kafka:
+  # 基础连接配置
+  brokers:
+    - "192.168.0.62:9092"
+    - "192.168.0.62:9093"
+    - "192.168.0.62:9094"
+  client_id: "redis-runner-kafka-client"
+  version: "2.8.0"
+  
+  # 生产者配置
+  producer:
+    acks: "all"                    # 0, 1, all
+    retries: 3
+    batch_size: 16384              # 16KB
+    linger_ms: "5ms"               # 批处理等待时间
+    compression: "snappy"          # none, gzip, snappy, lz4, zstd
+    idempotence: true              # 幂等性保证
+    max_in_flight: 5               # 最大未确认请求数
+    request_timeout: "30s"
+    write_timeout: "10s"
+    read_timeout: "10s"
+    
+  # 消费者配置
+  consumer:
+    group_id: "redis-runner-group"
+    auto_offset_reset: "latest"    # earliest, latest
+    enable_auto_commit: true
+    auto_commit_interval: "1s"
+    session_timeout: "30s"
+    heartbeat_interval: "3s"
+    max_poll_records: 500
+    fetch_min_bytes: 1024          # 1KB
+    fetch_max_bytes: 52428800      # 50MB
+    fetch_max_wait: "500ms"
+    read_timeout: "10s"
+    write_timeout: "10s"
+    initial_offset: "latest"
+    
+  # 安全配置
+  security:
+    tls:
+      enabled: false
+      cert_file: "/etc/kafka/ssl/client.crt"
+      key_file: "/etc/kafka/ssl/client.key"  
+      ca_file: "/etc/kafka/ssl/ca.crt"
+      verify_ssl: true
+      server_name: "kafka.example.com"
+    sasl:
+      enabled: false
+      mechanism: "SCRAM-SHA-512"   # PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+      username: "${KAFKA_USER}"
+      password: "${KAFKA_PASSWORD}"
+      
+  # 性能配置
+  performance:
+    connection_pool_size: 10
+    producer_pool_size: 5
+    consumer_pool_size: 5
+    metrics_interval: "5s"
+    
+  # 基准测试配置
+  benchmark:
+    default_topic: "benchmark-topic"
+    message_size_range:
+      min: 100
+      max: 10240
+    batch_sizes: [1, 10, 100, 1000]
+    partition_strategy: "round_robin"  # round_robin, hash, random
+    total: 100000
+    parallels: 50
+    data_size: 1024
+    ttl: 0
+    read_percent: 50
+    random_keys: 10000
+    test_case: "produce"
+    timeout: "30s"
+
+  # 报告配置
+  reports:
+    enabled: true
+    formats: ["console", "json", "csv"]     # 支持的格式: console, json, csv, text, all
+    output_dir: "./reports"                # 报告输出目录
+    file_prefix: "kafka_performance"       # 报告文件前缀
+    include_producer_metrics: true         # 包含生产者指标
+    include_consumer_metrics: true         # 包含消费者指标
+    include_partition_metrics: true        # 包含分区指标
+    include_throughput_metrics: true       # 包含吞吐量指标
+    include_lag_monitoring: true           # 包含消费者滞后监控
+    include_timestamp: true                # 文件名包含时间戳
+    enable_console_report: true            # 启用控制台详细报告
+    overwrite_existing: false              # 是否覆盖已存在文件

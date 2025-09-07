@@ -1,0 +1,42 @@
+redis:
+  mode: "standalone"    # Options: standalone, sentinel, cluster
+  benchmark:
+    total: 10000              # 10000 requests default
+    parallels: 50             # 2 parallel default
+    random_keys: 50           # 0:Incremental key, >0:random key range is [0, r]
+    read_percent: 50          # 50% read and 50 write default
+    data_size: 3              # 3 bytes default
+    ttl: 120                  # 120 seconds default
+    case: "set_get_random"    # operations: set_get_random, set, get, del, pub, sub
+  pool:
+    pool_size: 10
+    min_idle: 2
+  standalone:
+    addr: 127.0.0.1:6379
+    password: "pwd@redis"
+    db: 0
+  sentinel:
+    master_name: "mymaster"
+    addrs:
+      - "127.0.0.1:26371"
+      - "127.0.0.1:26372"
+      - "127.0.0.1:26373"
+    password: "pwd@redis"
+    db: 0
+  cluster:
+    addrs:
+      - "127.0.0.1:6371"
+      - "127.0.0.1:6372"
+      - "127.0.0.1:6373"
+    password: "pwd@redis"
+
+  # 报告配置
+  reports:
+    enabled: true
+    formats: ["console", "json", "csv"]  # 支持的格式: console, json, csv, text, all
+    output_dir: "./reports"              # 报告输出目录
+    file_prefix: "redis_benchmark"       # 报告文件前缀
+    include_protocol_metrics: true       # 包含Redis特定指标
+    include_timestamp: true              # 文件名包含时间戳
+    enable_console_report: true          # 启用控制台详细报告
+    overwrite_existing: false            # 是否覆盖已存在文件

@@ -1,0 +1,25 @@
+# HTTP配置示例 - 基本GET请求测试
+http:
+  connection:
+    base_url: "http://httpbin.org"
+    timeout: 30s
+  benchmark:
+    total: 10000
+    parallels: 50
+    test_case: "get_requests"
+  requests:
+    - method: "GET"
+      path: "/get"
+      headers:
+        Accept: "application/json"
+      weight: 100
+  reports:
+    enabled: true
+    formats: ["console", "json"]
+    output_dir: "./reports"
+    file_prefix: "http_loadtest"
+    include_detailed_metrics: true
+    include_status_codes: true
+    include_timestamp: true
+    enable_console_report: true
+    overwrite_existing: false
