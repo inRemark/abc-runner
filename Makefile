@@ -91,7 +91,7 @@ integration-test:
 clean:
 	@echo "Cleaning build artifacts..."
 	$(GO_CLEAN)
-	rm -rf $(OUTPUT_DIR)
+	rm -rf $(OUTPUT_DIR)/*
 	rm -f coverage.out coverage.html
 	@echo "Clean completed!"
 
@@ -136,11 +136,36 @@ release: clean deps build-all
 	@echo "Creating release v$(VERSION)..."
 	@mkdir -p releases/v$(VERSION)
 	@cp $(OUTPUT_DIR)/$(BINARY_NAME)-* releases/v$(VERSION)/
-	@cp -r $(CONFIG_DIR) releases/v$(VERSION)/
-	@cp -r $(DOCS_DIR) releases/v$(VERSION)/
+	@mkdir -p releases/v$(VERSION)/config
+	@cp config/templates/*.yaml releases/v$(VERSION)/config/
 	@cp README.md releases/v$(VERSION)/
 	@cp LICENSE releases/v$(VERSION)/
 	@echo "Release v$(VERSION) created in releases/v$(VERSION)/"
+	
+	@echo "Creating release archives..."
+	@cd releases && \
+	for platform in $(PLATFORMS); do \
+		OS=$$(echo $$platform | cut -d'/' -f1); \
+		ARCH=$$(echo $$platform | cut -d'/' -f2); \
+		ARCHIVE_NAME="$(BINARY_NAME)-v$(VERSION)-$$OS-$$ARCH"; \
+		FOLDER_NAME="$(BINARY_NAME)-v$(VERSION)-$$OS-$$ARCH"; \
+		if [ "$$OS" = "windows" ]; then \
+			mkdir -p temp_extract/$$FOLDER_NAME && \
+			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config/ v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME/ && \
+			cd temp_extract && \
+			zip -r ../$$ARCHIVE_NAME.zip $$FOLDER_NAME && \
+			cd .. && \
+			rm -rf temp_extract; \
+		else \
+			mkdir -p temp_extract/$$FOLDER_NAME && \
+			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config/ v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME/ && \
+			cd temp_extract && \
+			tar -czf ../$$ARCHIVE_NAME.tar.gz $$FOLDER_NAME && \
+			cd .. && \
+			rm -rf temp_extract; \
+		fi; \
+	done
+	@echo "Release archives created in releases/"
 
 # 帮助
 .PHONY: help
@@ -155,7 +180,7 @@ help:
 	@echo "  make clean        Clean build artifacts"
 	@echo "  make deps         Install dependencies"
 	@echo "  make install      Install the binary"
-	@echo "  make release      Create a release"
+	@echo "  make release      Create a release with archives"
 	@echo ""
 	@echo "Targets:"
 	@echo "  all             - Clean, install dependencies, and build"
@@ -173,5 +198,5 @@ help:
 	@echo "  install         - Install the binary"
 	@echo "  docs            - Generate documentation"
 	@echo "  config          - Copy configuration templates"
-	@echo "  release         - Create a release"
+	@echo "  release         - Create a release with platform-specific archives"
 	@echo "  help            - Show this help message"

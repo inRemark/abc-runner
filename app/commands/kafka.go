@@ -144,7 +144,7 @@ Performance Options:
   --consumer-pool <size>   Consumer pool size (default: 5)
 
 Configuration File:
-  --config conf/kafka.yaml
+  --config config/templates/kafka.yaml
 
 Test Types:
   produce           Only produce messages
@@ -169,7 +169,7 @@ Examples:
     --test-type produce_consume --duration 60s -c 8
 
   # Load test with configuration file
-  redis-runner kafka --config conf/kafka.yaml
+  redis-runner kafka --config config/templates/kafka.yaml
 
   # Performance test with compression
   redis-runner kafka --broker localhost:9092 --topic perf-test \\
@@ -186,7 +186,7 @@ func (k *KafkaSimpleHandler) loadConfiguration(args []string) error {
 	if k.hasConfigFlag(args) {
 		log.Println("Loading Kafka configuration from file...")
 		// 使用多源配置加载器
-		sources := config.CreateKafkaConfigSources("conf/kafka.yaml", nil)
+		sources := config.CreateKafkaConfigSources("config/templates/kafka.yaml", nil)
 		return k.configManager.LoadConfiguration(sources...)
 	}
 

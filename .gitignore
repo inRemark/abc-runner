@@ -20,8 +20,10 @@ gopath/
 */DS_Store
 vendor
 */vendor
+bin/*
 build/*
 reports/*
+releases/*
 logs
 .qoder
 

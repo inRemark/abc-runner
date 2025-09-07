@@ -31,11 +31,43 @@
 - 可配置的消息大小和压缩
 - 混合生产和消费工作负载
 
+## 打包和分发
+
+### 发布包
+
+预构建的发布包可从[发布页面](https://github.com/your-org/redis-runner/releases)下载。每个发布包含：
+
+- 针对macOS、Linux和Windows平台的二进制文件
+- 配置文件模板
+- 文档和许可证文件
+
+### 从源码构建
+
+```
+# 克隆仓库
+git clone https://github.com/your-org/redis-runner.git
+cd redis-runner
+
+# 为当前平台构建
+make build
+
+# 为所有支持的平台构建
+make build-all
+
+# 创建发布包
+make release
+
+# 创建指定版本的发布包
+VERSION=1.0.0 make release
+```
+
+有关打包过程的详细信息，请参阅[打包指南](docs/packaging-guide.md)。
+
 ## 快速开始
 
 ### 安装
 
-```bash
+```
 # 从源码构建
 go build -o redis-runner .
 
@@ -44,7 +76,7 @@ go build -o redis-runner .
 
 ### 基本用法
 
-```bash
+```
 # 显示帮助
 ./redis-runner --help
 
@@ -60,7 +92,7 @@ go build -o redis-runner .
 
 ### 使用别名
 
-```bash
+```
 # 快速测试的短别名
 ./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
 ./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
@@ -71,14 +103,14 @@ go build -o redis-runner .
 
 ### 全局选项
 
-```bash
+```
 ./redis-runner --help                 # 显示帮助
 ./redis-runner --version              # 显示版本
 ```
 
 ### Redis命令
 
-```bash
+```
 # 基本Redis测试
 ./redis-runner redis -h <host> -p <port> -n <requests> -c <connections>
 
@@ -92,7 +124,7 @@ go build -o redis-runner .
 ./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # 使用配置文件
-./redis-runner redis --config conf/redis.yaml
+./redis-runner redis --config config/templates/redis.yaml
 ```
 
 支持的Redis测试用例 (`-t` 选项):
@@ -124,7 +156,7 @@ go build -o redis-runner .
 
 ### HTTP命令
 
-```bash
+```
 # 基本HTTP GET测试
 ./redis-runner http --url http://localhost:8080 -n 10000 -c 50
 
@@ -140,7 +172,7 @@ go build -o redis-runner .
 
 ### Kafka命令
 
-```bash
+```
 # 基本生产者测试
 ./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
@@ -158,9 +190,9 @@ go build -o redis-runner .
 
 您可以使用YAML配置文件进行复杂设置：
 
-### Redis配置 (conf/redis.yaml)
+### Redis配置 (config/templates/redis.yaml)
 
-```yaml
+```
 protocol: redis
 connection:
   host: localhost
@@ -176,9 +208,9 @@ benchmark:
   read_ratio: 0.5
 ```
 
-### HTTP配置 (conf/http.yaml)
+### HTTP配置 (config/templates/http.yaml)
 
-```yaml
+```
 protocol: http
 connection:
   base_url: "http://localhost:8080"
@@ -195,9 +227,9 @@ benchmark:
     "Authorization": "Bearer token"
 ```
 
-### Kafka配置 (conf/kafka.yaml)
+### Kafka配置 (config/templates/kafka.yaml)
 
-```yaml
+```
 protocol: kafka
 brokers: ["localhost:9092"]
 topic_configs:
@@ -249,7 +281,7 @@ benchmark:
 
 ### Redis性能测试
 
-```bash
+```
 # 基本性能测试
 ./redis-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
 
@@ -263,7 +295,7 @@ benchmark:
 
 ### HTTP负载测试
 
-```bash
+```
 # API端点测试
 ./redis-runner http --url http://api.example.com/health -n 10000 -c 100
 
@@ -276,7 +308,7 @@ benchmark:
 
 ### Kafka性能测试
 
-```bash
+```
 # 生产者吞吐量测试
 ./redis-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
 

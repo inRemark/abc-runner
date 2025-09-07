@@ -21,7 +21,7 @@ func CreateRedisConfigSources(configFile string, args []string) []RedisConfigSou
 	} else {
 		// 尝试默认路径
 		defaultPaths := []string{
-			"conf/redis.yaml",
+			"config/templates/redis.yaml",
 			"redis.yaml",
 		}
 		for _, path := range defaultPaths {

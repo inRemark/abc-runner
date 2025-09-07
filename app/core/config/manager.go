@@ -92,7 +92,7 @@ func CreateDefaultSources(configFile string, args []string) []ConfigSource {
 	} else {
 		// 尝试默认路径
 		defaultPaths := []string{
-			"conf/redis.yaml",
+			"config/templates/redis.yaml",
 			"conf/redis-config.yaml",
 			"redis.yaml",
 			"config.yaml",

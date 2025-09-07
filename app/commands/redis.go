@@ -127,7 +127,7 @@ Options:
   --read-ratio <ratio>  Read/write ratio (0-100, default: 50)
 
 Configuration File:
-  --config conf/redis.yaml
+  --config config/templates/redis.yaml
 
 Test Cases:
   set_get_random       Random SET and GET operations (default)
@@ -168,7 +168,7 @@ Examples:
   redis-runner redis -h localhost -p 6379 --duration 60s -c 100
 
   # Cluster test with configuration file
-  redis-runner redis --config conf/redis.yaml
+  redis-runner redis --config config/templates/redis.yaml
 
   # Custom test case with read-heavy workload
   redis-runner redis -t set_get_random -n 50000 -c 100 --read-ratio 80
@@ -192,7 +192,7 @@ func (h *RedisSimpleHandler) loadConfiguration(args []string) error {
 	// 检查是否使用配置文件
 	if h.hasConfigFlag(args) {
 		log.Println("Loading Redis configuration from file...")
-		config, err := redisconfig.LoadRedisConfigFromFile("conf/redis.yaml")
+		config, err := redisconfig.LoadRedisConfigFromFile("config/templates/redis.yaml")
 		if err != nil {
 			return err
 		}

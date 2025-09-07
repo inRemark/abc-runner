@@ -127,7 +127,7 @@ Options:
   --config <file>       Configuration file path
 
 Configuration File:
-  --config conf/http.yaml
+  --config config/templates/http.yaml
 
 Load Patterns:
   --ramp-up <duration>  Ramp-up time to reach target connections
@@ -150,7 +150,7 @@ Examples:
     --header "X-API-Key:secret"
 
   # Load test with configuration file
-  redis-runner http --config conf/http.yaml
+  redis-runner http --config config/templates/http.yaml
 
   # Stress test with ramp-up
   redis-runner http --url http://localhost:8080 \\
@@ -167,7 +167,7 @@ func (h *HttpSimpleHandler) loadConfiguration(args []string) error {
 	if h.hasConfigFlag(args) {
 		log.Println("Loading HTTP configuration from file...")
 		// 使用多源配置加载器
-		sources := config.CreateHttpConfigSources("conf/http.yaml", nil)
+		sources := config.CreateHttpConfigSources("config/templates/http.yaml", nil)
 		return h.configManager.LoadConfiguration(sources...)
 	}
 

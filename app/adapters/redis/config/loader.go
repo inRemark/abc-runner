@@ -384,7 +384,7 @@ func CreateStandardLoader(configPath string, args []string) ConfigLoader {
 
 	// 尝试查找配置文件
 	configPaths := []string{
-		"conf/redis.yaml",
+		"config/templates/redis.yaml",
 		"config/redis.yaml",
 		"redis.yaml",
 		filepath.Join(os.Getenv("HOME"), ".redis-runner", "redis.yaml"),

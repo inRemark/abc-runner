@@ -113,7 +113,7 @@ func LoadHTTPConfig(path string) (*HttpAdapterConfig, error) {
 
 // LoadHTTPConfigDefault 加载默认路径的HTTP配置
 func LoadHTTPConfigDefault() (*HttpAdapterConfig, error) {
-	return LoadHTTPConfig("conf/http.yaml")
+	return LoadHTTPConfig("config/templates/http.yaml")
 }
 
 // mergeConfig 合并配置

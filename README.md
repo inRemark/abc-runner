@@ -92,7 +92,7 @@ go build -o redis-runner .
 ./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # Using configuration file
-./redis-runner redis --config conf/redis.yaml
+./redis-runner redis --config config/templates/redis.yaml
 ```
 
 Supported Redis test cases (`-t` option):
@@ -158,7 +158,7 @@ Supported Redis test cases (`-t` option):
 
 You can use YAML configuration files for complex setups:
 
-### Redis Configuration (conf/redis.yaml)
+### Redis Configuration (config/templates/redis.yaml)
 
 ```yaml
 protocol: redis
@@ -176,7 +176,7 @@ benchmark:
   read_ratio: 0.5
 ```
 
-### HTTP Configuration (conf/http.yaml)
+### HTTP Configuration (config/templates/http.yaml)
 
 ```yaml
 protocol: http
@@ -195,7 +195,7 @@ benchmark:
     "Authorization": "Bearer token"
 ```
 
-### Kafka Configuration (conf/kafka.yaml)
+### Kafka Configuration (config/templates/kafka.yaml)
 
 ```yaml
 protocol: kafka
@@ -232,6 +232,38 @@ For detailed documentation, please see the following resources:
 - [Kafka Testing Guide](docs/usage/kafka.md) - Kafka-specific features and usage
 - [Contributing Guide](docs/development/contributing.md) - Guidelines for contributing
 - [Extending redis-runner](docs/development/extending.md) - How to extend the tool
+
+## Packaging and Distribution
+
+### Release Packages
+
+Pre-built release packages are available for download from the [releases page](https://github.com/your-org/redis-runner/releases). Each release includes:
+
+- Platform-specific binaries for macOS, Linux, and Windows
+- Configuration file templates
+- Documentation and license files
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/redis-runner.git
+cd redis-runner
+
+# Build for current platform
+make build
+
+# Build for all supported platforms
+make build-all
+
+# Create release packages
+make release
+
+# Create release packages with specific version
+VERSION=1.0.0 make release
+```
+
+For detailed information about the packaging process, see [Packaging Guide](docs/packaging-guide.md).
 
 ## Migration from v0.0.x
 
