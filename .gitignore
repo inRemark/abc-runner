@@ -16,14 +16,13 @@ __debug_bin
 gopath/
 
 .DS_Store
-*.DS_Store
-*/DS_Store
+.qoder
 vendor
-*/vendor
+logs
 bin/*
 build/*
 reports/*
 releases/*
-logs
-.qoder
+
+
 
