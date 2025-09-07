@@ -133,12 +133,32 @@ Test Cases:
   set_get_random       Random SET and GET operations (default)
   set_only             Only SET operations
   get_only             Only GET operations
+  del                  Delete operations (DEL)
+  incr                 Counter increment operations (INCR)
+  decr                 Counter decrement operations (DECR)
+  lpush                List push to left operations (LPUSH)
+  rpush                List push to right operations (RPUSH)
+  lpop                 List pop from left operations (LPOP)
+  rpop                 List pop from right operations (RPOP)
   lpush_lpop           List operations (LPUSH/LPOP)
+  sadd                 Set add operations (SADD)
+  srem                 Set remove operations (SREM)
+  smembers             Set members operations (SMEMBERS)
   sadd_smembers        Set operations (SADD/SMEMBERS)
+  sismember            Set is member operations (SISMEMBER)
+  zadd                 Sorted set add operations (ZADD)
+  zrem                 Sorted set remove operations (ZREM)
+  zrange               Sorted set range operations (ZRANGE)
   zadd_zrange          Sorted set operations (ZADD/ZRANGE)
+  zrank                Sorted set rank operations (ZRANK)
+  hset                 Hash set operations (HSET)
+  hget                 Hash get operations (HGET)
   hset_hget            Hash operations (HSET/HGET)
-  incr                 Counter operations (INCR)
-  append               String append operations
+  hmset                Hash multi set operations (HMSET)
+  hmget                Hash multi get operations (HMGET)
+  hgetall              Hash get all operations (HGETALL)
+  pub                  Publish operations (PUBLISH)
+  sub                  Subscribe operations (SUBSCRIBE)
 
 Examples:
   # Basic test
@@ -153,8 +173,14 @@ Examples:
   # Custom test case with read-heavy workload
   redis-runner redis -t set_get_random -n 50000 -c 100 --read-ratio 80
 
-  # Set operations only
-  redis-runner redis -t set_only -n 10000 -c 50 -d 1024
+  # Counter operations test
+  redis-runner redis -t incr -n 10000 -c 50 -d 10
+
+  # List operations test
+  redis-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
+
+  # Set operations test
+  redis-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
 
 For more information: https://docs.redis-runner.com/redis`
 

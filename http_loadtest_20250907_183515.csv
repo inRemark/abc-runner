@@ -1,2 +1,0 @@
-timestamp,total_requests,successful_requests,failed_requests,rps,avg_latency_ms,p95_latency_ms,p99_latency_ms,error_rate
-2025-09-07T18:35:15+08:00,5,0,5,8,0.000,0.000,0.000,100.00

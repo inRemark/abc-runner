@@ -5,19 +5,19 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
-
+	"os"
 	"redis-runner/app/commands"
-	"redis-runner/app/utils"
+	"time"
 )
 
 // 全局变量
 var (
 	commandRouter *SimpleCommandRouter
+	logFile       *os.File
 )
 
 func main() {
-	utils.LogConfig()
+	initLogging()
 	defer closeLogFile()
 
 	// 初始化简化命令系统
@@ -31,17 +31,54 @@ func main() {
 	}
 }
 
+// initLogging 初始化日志配置
+func initLogging() {
+	// 创建日志目录
+	if err := os.MkdirAll("logs", 0755); err != nil {
+		log.Printf("Warning: failed to create logs directory: %v", err)
+		return
+	}
+
+	// 生成日志文件名
+	timestamp := time.Now().Format("20060102")
+	base := fmt.Sprintf("logs/record_%s", timestamp)
+	logFileName := base + "_1.log"
+	seq := 1
+
+	// 检查文件是否存在，如果存在则递增序号
+	for {
+		if _, err := os.Stat(logFileName); os.IsNotExist(err) {
+			break
+		}
+		logFileName = fmt.Sprintf("%s_%d.log", base, seq)
+		seq++
+	}
+
+	// 打开日志文件
+	var err error
+	logFile, err = os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("Warning: failed to open log file: %v", err)
+		return
+	}
+
+	// 设置日志输出到文件
+	log.SetOutput(logFile)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.Println("=== Application started ===")
+}
+
 // initializeCommandSystem 初始化简化命令系统
 func initializeCommandSystem() error {
 	log.Println("Initializing simplified command system...")
-	
+
 	commandRouter = NewSimpleCommandRouter()
-	
+
 	// 注册基础命令处理器
 	if err := registerCommandHandlers(); err != nil {
 		return fmt.Errorf("failed to register command handlers: %w", err)
 	}
-	
+
 	log.Println("Command system initialized successfully")
 	return nil
 }
@@ -52,17 +89,17 @@ func registerCommandHandlers() error {
 	redisHandler := commands.NewRedisCommandHandler()
 	commandRouter.RegisterCommand("redis", redisHandler)
 	commandRouter.RegisterAlias("r", "redis")
-	
+
 	// 注册HTTP命令
 	httpHandler := commands.NewHttpCommandHandler()
 	commandRouter.RegisterCommand("http", httpHandler)
 	commandRouter.RegisterAlias("h", "http")
-	
+
 	// 注册Kafka命令
 	kafkaHandler := commands.NewKafkaCommandHandler()
 	commandRouter.RegisterCommand("kafka", kafkaHandler)
 	commandRouter.RegisterAlias("k", "kafka")
-	
+
 	return nil
 }
 
@@ -89,8 +126,6 @@ func executeCommand() error {
 	return commandRouter.Execute(ctx, subCmd, args)
 }
 
-
-
 // handleGlobalFlags 处理全局标志
 func handleGlobalFlags() bool {
 	help := flag.Bool("help", false, "show help information")
@@ -103,7 +138,7 @@ func handleGlobalFlags() bool {
 	}
 
 	if *version {
-		utils.PrintVersion()
+		showVersion()
 		return true
 	}
 
@@ -153,6 +188,14 @@ func showGlobalHelp() {
 	fmt.Println("Use \"redis-runner <command> --help\" for more information about a command.")
 }
 
+// showVersion 显示版本信息
+func showVersion() {
+	version := "0.0.1"
+	releaseDate := "2025-05-21"
+	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Release date: %s\n", releaseDate)
+}
+
 // SimpleCommandRouter 简化的命令路由器
 type SimpleCommandRouter struct {
 	commands map[string]CommandHandler
@@ -191,23 +234,24 @@ func (r *SimpleCommandRouter) Execute(ctx context.Context, command string, args 
 	if target, exists := r.aliases[command]; exists {
 		command = target
 	}
-	
+
 	// 查找命令处理器
 	handler, exists := r.commands[command]
 	if !exists {
 		return fmt.Errorf("unknown command: %s", command)
 	}
-	
+
 	// 执行命令
 	return handler.Execute(ctx, args)
 }
 
 // closeLogFile 关闭日志文件
 func closeLogFile() {
-	if utils.LogFile() != nil {
-		err := utils.LogFile().Close()
+	if logFile != nil {
+		log.Println("=== Application shutdown ===")
+		err := logFile.Close()
 		if err != nil {
-			log.Printf("failed to close log file: %v", err)
+			fmt.Printf("failed to close log file: %v\n", err)
 		}
 	}
 }
