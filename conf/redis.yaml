@@ -29,3 +29,14 @@ redis:
       - "127.0.0.1:6372"
       - "127.0.0.1:6373"
     password: "pwd@redis"
+
+  # 报告配置
+  reports:
+    enabled: true
+    formats: ["console", "json", "csv"]  # 支持的格式: console, json, csv, text, all
+    output_dir: "./reports"              # 报告输出目录
+    file_prefix: "redis_benchmark"       # 报告文件前缀
+    include_protocol_metrics: true       # 包含Redis特定指标
+    include_timestamp: true              # 文件名包含时间戳
+    enable_console_report: true          # 启用控制台详细报告
+    overwrite_existing: false            # 是否覆盖已存在文件

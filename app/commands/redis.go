@@ -2,8 +2,12 @@ package commands
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +16,7 @@ import (
 	redisconfig "redis-runner/app/adapters/redis/config"
 	"redis-runner/app/core/config"
 	"redis-runner/app/core/interfaces"
+	"redis-runner/app/core/reports"
 	"redis-runner/app/core/runner"
 	"redis-runner/app/core/utils"
 )
@@ -24,6 +29,8 @@ type RedisSimpleHandler struct {
 	keyGenerator      *utils.DefaultKeyGenerator
 	metricsCollector  interfaces.MetricsCollector
 	runner            *runner.EnhancedRunner
+	reportManager     *reports.ReportManager
+	reportArgs        *reports.ReportArgs
 }
 
 // NewRedisCommandHandler 创建Redis命令处理器（统一接口）
@@ -48,24 +55,37 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 	log.Println("Starting Redis benchmark...")
 
-	// 1. 加载配置
-	if err := h.loadConfiguration(args); err != nil {
+	// 1. 解析报告参数
+	var err error
+	h.reportArgs, err = reports.ParseReportArgs(args)
+	if err != nil {
+		return fmt.Errorf("failed to parse report arguments: %w", err)
+	}
+
+	// 移除报告参数，只保留业务参数
+	businessArgs := reports.RemoveReportArgs(args)
+
+	// 2. 加载配置
+	if err := h.loadConfiguration(businessArgs); err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// 2. 连接Redis
+	// 3. 连接Redis
 	if err := h.connectRedis(ctx); err != nil {
 		return fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 	defer h.adapter.Close()
 
-	// 3. 设置指标收集器
+	// 4. 设置指标收集器
 	h.metricsCollector = h.adapter.GetMetricsCollector()
 
-	// 4. 注册操作
+	// 5. 初始化报告管理器
+	h.initializeReportManager()
+
+	// 6. 注册操作
 	h.registerOperations()
 
-	// 5. 创建运行引擎
+	// 7. 创建运行引擎
 	h.runner = runner.NewEnhancedRunner(
 		h.adapter,
 		h.configManager.GetConfig(),
@@ -74,13 +94,13 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 		h.operationRegistry,
 	)
 
-	// 6. 执行基准测试
+	// 8. 执行基准测试
 	metrics, err := h.runner.RunBenchmark(ctx)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	// 7. 输出结果
+	// 9. 输出结果
 	h.printResults(metrics)
 
 	log.Println("Redis benchmark completed successfully")
@@ -89,7 +109,7 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (h *RedisSimpleHandler) GetHelp() string {
-	return `Usage: redis-runner redis [options]
+	baseHelp := `Usage: redis-runner redis [options]
 
 Redis Performance Testing Tool
 
@@ -137,6 +157,8 @@ Examples:
   redis-runner redis -t set_only -n 10000 -c 50 -d 1024
 
 For more information: https://docs.redis-runner.com/redis`
+
+	return reports.AddReportArgsToHelp(baseHelp)
 }
 
 // loadConfiguration 加载配置
@@ -170,6 +192,16 @@ func (h *RedisSimpleHandler) hasConfigFlag(args []string) bool {
 		}
 	}
 	return false
+}
+
+// initializeReportManager 初始化报告管理器
+func (h *RedisSimpleHandler) initializeReportManager() {
+	if h.reportArgs == nil {
+		h.reportArgs = reports.DefaultReportArgs()
+	}
+
+	reportConfig := h.reportArgs.ToReportConfig("redis")
+	h.reportManager = reports.NewReportManager("redis", h.metricsCollector, reportConfig)
 }
 
 // connectRedis 连接Redis
@@ -264,6 +296,9 @@ func (h *RedisSimpleHandler) printResults(metrics *interfaces.Metrics) {
 		}
 	}
 
+	// 生成详细报告
+	h.generateDetailedReports(metrics)
+
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println("REDIS BENCHMARK COMPLETED")
 	fmt.Println(strings.Repeat("=", 60))
@@ -275,9 +310,31 @@ func (h *RedisSimpleHandler) getRedisMetrics() map[string]interface{} {
 		return nil
 	}
 
-	// 这里应该从Redis适配器获取特定指标
-	// 为了保持兼容性，先返回空
-	return nil
+	// 从适配器获取Redis特定指标
+	redisAdapter := h.adapter
+	if redisAdapter == nil {
+		return nil
+	}
+
+	// 获取Redis客户端的状态信息
+	redisInfo := make(map[string]interface{})
+
+	// 获取连接池状态
+	if poolStats := h.getConnectionPoolStats(redisAdapter); poolStats != nil {
+		redisInfo["connection_pool"] = poolStats
+	}
+
+	// 获取Redis的INFO信息（如果可能）
+	if serverInfo := h.getRedisServerInfo(redisAdapter); serverInfo != nil {
+		redisInfo["server_info"] = serverInfo
+	}
+
+	// 获取操作统计
+	if exportedMetrics := h.metricsCollector.Export(); exportedMetrics != nil {
+		redisInfo["detailed_metrics"] = exportedMetrics
+	}
+
+	return redisInfo
 }
 
 // validateArgs 验证参数
@@ -337,4 +394,204 @@ func (h *RedisSimpleHandler) validateArgs(args []string) error {
 		}
 	}
 	return nil
+}
+
+// getConnectionPoolStats 获取连接池统计
+func (h *RedisSimpleHandler) getConnectionPoolStats(adapter *redis.RedisAdapter) map[string]interface{} {
+	poolStats := make(map[string]interface{})
+
+	// 这里可以添加具体的连接池统计代码
+	// 由于RedisAdapter的内部结构，这里使用适配器的公共方法
+	poolStats["mode"] = adapter.GetMode()
+	poolStats["connected"] = adapter.IsConnected()
+
+	return poolStats
+}
+
+// getRedisServerInfo 获取Redis服务器信息
+func (h *RedisSimpleHandler) getRedisServerInfo(adapter *redis.RedisAdapter) map[string]interface{} {
+	serverInfo := make(map[string]interface{})
+
+	// 添加基本服务器信息
+	serverInfo["protocol"] = "redis"
+	serverInfo["adapter_type"] = "redis"
+
+	return serverInfo
+}
+
+// generateDetailedReports 生成详细报告
+func (h *RedisSimpleHandler) generateDetailedReports(metrics *interfaces.Metrics) {
+	// 使用统一报告管理器
+	if h.reportManager != nil {
+		// 设置Redis特定指标
+		h.reportManager.SetProtocolMetrics(h.getRedisMetrics())
+
+		// 生成所有报告
+		if err := h.reportManager.GenerateReports(); err != nil {
+			fmt.Printf("Warning: Failed to generate reports: %v\n", err)
+		}
+		return
+	}
+
+	// 备用方案：使用原有的报告生成逻辑
+	// 检查指标收集器是否支持报告生成
+	if h.metricsCollector == nil {
+		fmt.Println("\nWARNING: Metrics collector not available for detailed reporting")
+		return
+	}
+
+	fmt.Println("\n" + strings.Repeat("-", 60))
+	fmt.Println("DETAILED REDIS PERFORMANCE REPORT")
+	fmt.Println(strings.Repeat("-", 60))
+
+	// 生成控制台详细报告
+	h.generateConsoleReport()
+
+	// 生成JSON报告文件
+	h.generateJSONReport()
+
+	// 生成CSV报告文件
+	h.generateCSVReport()
+
+	fmt.Println("\n" + strings.Repeat("-", 60))
+	fmt.Println("Report Generation Completed")
+	fmt.Println(strings.Repeat("-", 60))
+}
+
+// generateConsoleReport 生成控制台报告
+func (h *RedisSimpleHandler) generateConsoleReport() {
+	// 使用Redis指标报告器生成详细控制台报告
+	if exportedMetrics := h.metricsCollector.Export(); exportedMetrics != nil {
+		fmt.Println("\n=== Console Detailed Report ===")
+
+		// 显示详细指标
+		for key, value := range exportedMetrics {
+			switch key {
+			case "rps":
+				fmt.Printf("Requests per Second: %v\n", value)
+			case "avg_latency":
+				if latency, ok := value.(int64); ok {
+					fmt.Printf("Average Latency: %.3f ms\n", float64(latency)/float64(time.Millisecond))
+				}
+			case "p95_latency":
+				if latency, ok := value.(int64); ok {
+					fmt.Printf("P95 Latency: %.3f ms\n", float64(latency)/float64(time.Millisecond))
+				}
+			case "p99_latency":
+				if latency, ok := value.(int64); ok {
+					fmt.Printf("P99 Latency: %.3f ms\n", float64(latency)/float64(time.Millisecond))
+				}
+			case "error_rate":
+				fmt.Printf("Error Rate: %.2f%%\n", value)
+			case "duration":
+				if duration, ok := value.(int64); ok {
+					fmt.Printf("Total Duration: %.3f seconds\n", float64(duration)/float64(time.Second))
+				}
+			}
+		}
+	}
+}
+
+// generateJSONReport 生成JSON报告
+func (h *RedisSimpleHandler) generateJSONReport() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Warning: Failed to generate JSON report: %v\n", r)
+		}
+	}()
+
+	filename := fmt.Sprintf("redis_benchmark_%s.json", time.Now().Format("20060102_150405"))
+
+	// 构建报告数据
+	reportData := map[string]interface{}{
+		"timestamp":     time.Now().Format(time.RFC3339),
+		"protocol":      "redis",
+		"base_metrics":  h.metricsCollector.Export(),
+		"redis_metrics": h.getRedisMetrics(),
+	}
+
+	// 将数据序列化为JSON
+	jsonData, err := json.MarshalIndent(reportData, "", "  ")
+	if err != nil {
+		fmt.Printf("Warning: Failed to marshal JSON report: %v\n", err)
+		return
+	}
+
+	// 写入文件
+	err = ioutil.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		fmt.Printf("Warning: Failed to write JSON report to %s: %v\n", filename, err)
+		return
+	}
+
+	fmt.Printf("JSON report saved to: %s\n", filename)
+}
+
+// generateCSVReport 生成CSV报告
+func (h *RedisSimpleHandler) generateCSVReport() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Warning: Failed to generate CSV report: %v\n", r)
+		}
+	}()
+
+	filename := fmt.Sprintf("redis_benchmark_%s.csv", time.Now().Format("20060102_150405"))
+
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Printf("Warning: Failed to create CSV report file %s: %v\n", filename, err)
+		return
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// 写入CSV头部
+	header := []string{"timestamp", "total_ops", "success_ops", "failed_ops", "rps", "avg_latency_ms", "p95_latency_ms", "p99_latency_ms", "error_rate"}
+	if err := writer.Write(header); err != nil {
+		fmt.Printf("Warning: Failed to write CSV header: %v\n", err)
+		return
+	}
+
+	// 获取指标数据
+	metrics := h.metricsCollector.Export()
+
+	// 写入数据行（安全处理类型断言）
+	record := []string{
+		time.Now().Format(time.RFC3339),
+		fmt.Sprintf("%v", h.getMetricValue(metrics, "total_ops")),
+		fmt.Sprintf("%v", h.getMetricValue(metrics, "success_ops")),
+		fmt.Sprintf("%v", h.getMetricValue(metrics, "failed_ops")),
+		fmt.Sprintf("%v", h.getMetricValue(metrics, "rps")),
+		fmt.Sprintf("%.3f", h.getLatencyInMs(metrics, "avg_latency")),
+		fmt.Sprintf("%.3f", h.getLatencyInMs(metrics, "p95_latency")),
+		fmt.Sprintf("%.3f", h.getLatencyInMs(metrics, "p99_latency")),
+		fmt.Sprintf("%.2f", h.getMetricValue(metrics, "error_rate")),
+	}
+
+	if err := writer.Write(record); err != nil {
+		fmt.Printf("Warning: Failed to write CSV record: %v\n", err)
+		return
+	}
+
+	fmt.Printf("CSV report saved to: %s\n", filename)
+}
+
+// getMetricValue 安全获取指标值
+func (h *RedisSimpleHandler) getMetricValue(metrics map[string]interface{}, key string) interface{} {
+	if value, exists := metrics[key]; exists {
+		return value
+	}
+	return 0
+}
+
+// getLatencyInMs 获取延迟值（毫秒）
+func (h *RedisSimpleHandler) getLatencyInMs(metrics map[string]interface{}, key string) float64 {
+	if value, exists := metrics[key]; exists {
+		if latency, ok := value.(int64); ok {
+			return float64(latency) / float64(time.Millisecond)
+		}
+	}
+	return 0.0
 }

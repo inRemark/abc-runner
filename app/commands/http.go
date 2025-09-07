@@ -2,8 +2,12 @@ package commands
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +16,7 @@ import (
 	httpConfig "redis-runner/app/adapters/http/config"
 	"redis-runner/app/core/config"
 	"redis-runner/app/core/interfaces"
+	"redis-runner/app/core/reports"
 	"redis-runner/app/core/runner"
 	"redis-runner/app/core/utils"
 )
@@ -24,6 +29,8 @@ type HttpSimpleHandler struct {
 	keyGenerator      *utils.DefaultKeyGenerator
 	metricsCollector  interfaces.MetricsCollector
 	runner            *runner.EnhancedRunner
+	reportManager     *reports.ReportManager
+	reportArgs        *reports.ReportArgs
 }
 
 // NewHttpCommandHandler 创建HTTP命令处理器（统一接口）
@@ -48,24 +55,37 @@ func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 	log.Println("Starting HTTP load test...")
 
-	// 1. 加载配置
-	if err := h.loadConfiguration(args); err != nil {
+	// 1. 解析报告参数
+	var err error
+	h.reportArgs, err = reports.ParseReportArgs(args)
+	if err != nil {
+		return fmt.Errorf("failed to parse report arguments: %w", err)
+	}
+
+	// 移除报告参数，只保留业务参数
+	businessArgs := reports.RemoveReportArgs(args)
+
+	// 2. 加载配置
+	if err := h.loadConfiguration(businessArgs); err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// 2. 连接HTTP服务
+	// 3. 连接HTTP服务
 	if err := h.connectHttp(ctx); err != nil {
 		return fmt.Errorf("failed to connect to HTTP service: %w", err)
 	}
 	defer h.adapter.Close()
 
-	// 3. 设置指标收集器
+	// 4. 设置指标收集器
 	h.metricsCollector = h.adapter.GetMetricsCollector()
 
-	// 4. 注册操作
+	// 5. 初始化报告管理器
+	h.initializeReportManager()
+
+	// 6. 注册操作
 	h.registerOperations()
 
-	// 5. 创建运行引擎
+	// 7. 创建运行引擎
 	h.runner = runner.NewEnhancedRunner(
 		h.adapter,
 		h.configManager.GetConfig(),
@@ -74,13 +94,13 @@ func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
 		h.operationRegistry,
 	)
 
-	// 6. 执行基准测试
+	// 8. 执行基准测试
 	metrics, err := h.runner.RunBenchmark(ctx)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	// 7. 输出结果
+	// 9. 输出结果
 	h.printResults(metrics)
 
 	log.Println("HTTP load test completed successfully")
@@ -89,7 +109,7 @@ func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (h *HttpSimpleHandler) GetHelp() string {
-	return `Usage: redis-runner http [options]
+	baseHelp := `Usage: redis-runner http [options]
 
 HTTP Load Testing Tool
 
@@ -137,6 +157,8 @@ Examples:
     --duration 5m -c 200 --ramp-up 30s
 
 For more information: https://docs.redis-runner.com/http`
+
+	return reports.AddReportArgsToHelp(baseHelp)
 }
 
 // loadConfiguration 加载配置
@@ -164,6 +186,16 @@ func (h *HttpSimpleHandler) hasConfigFlag(args []string) bool {
 		}
 	}
 	return false
+}
+
+// initializeReportManager 初始化报告管理器
+func (h *HttpSimpleHandler) initializeReportManager() {
+	if h.reportArgs == nil {
+		h.reportArgs = reports.DefaultReportArgs()
+	}
+
+	reportConfig := h.reportArgs.ToReportConfig("http")
+	h.reportManager = reports.NewReportManager("http", h.metricsCollector, reportConfig)
 }
 
 // createConfigFromArgs 从命令行参数创建配置
@@ -404,6 +436,9 @@ func (h *HttpSimpleHandler) printResults(metrics *interfaces.Metrics) {
 		}
 	}
 
+	// 生成详细报告
+	h.generateHttpReports()
+
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println("HTTP LOAD TEST COMPLETED")
 	fmt.Println(strings.Repeat("=", 60))
@@ -415,8 +450,32 @@ func (h *HttpSimpleHandler) getHttpMetrics() map[string]interface{} {
 		return nil
 	}
 
-	// TODO: 这里应该从HTTP适配器获取特定指标, 为了保持兼容性，先返回空
-	return nil
+	// 从HTTP适配器获取特定指标
+	httpAdapter := h.adapter
+	if httpAdapter == nil {
+		return nil
+	}
+
+	// 获取HTTP指标收集器的特定数据
+	httpInfo := make(map[string]interface{})
+
+	// 获取HTTP适配器的特定指标
+	if reporter := httpAdapter.GetMetricsReporter(); reporter != nil {
+		// 获取HTTP特定指标
+		if httpCollector := httpAdapter.GetMetricsCollector(); httpCollector != nil {
+			if exportedMetrics := httpCollector.Export(); exportedMetrics != nil {
+				httpInfo["detailed_metrics"] = exportedMetrics
+			}
+		}
+
+		// 获取连接状态
+		httpInfo["connection_status"] = map[string]interface{}{
+			"connected": httpAdapter.IsConnected(),
+			"protocol":  "http",
+		}
+	}
+
+	return httpInfo
 }
 
 // validateArgs 验证参数
@@ -478,4 +537,186 @@ func (h *HttpSimpleHandler) validateArgs(args []string) error {
 		}
 	}
 	return nil
+}
+
+// generateHttpReports 生成HTTP详细报告
+func (h *HttpSimpleHandler) generateHttpReports() {
+	// 使用统一报告管理器
+	if h.reportManager != nil {
+		// 设置HTTP特定指标
+		h.reportManager.SetProtocolMetrics(h.getHttpMetrics())
+
+		// 生成所有报告
+		if err := h.reportManager.GenerateReports(); err != nil {
+			fmt.Printf("Warning: Failed to generate reports: %v\n", err)
+		}
+		return
+	}
+
+	// 备用方案：使用原有的报告生成逻辑
+	// 检查HTTP适配器是否支持报告生成
+	if h.adapter == nil {
+		fmt.Println("\nWARNING: HTTP adapter not available for detailed reporting")
+		return
+	}
+
+	fmt.Println("\n" + strings.Repeat("-", 60))
+	fmt.Println("DETAILED HTTP PERFORMANCE REPORT")
+	fmt.Println(strings.Repeat("-", 60))
+
+	// 生成控制台详细报告
+	h.generateHttpConsoleReport()
+
+	// 生成HTTP报告文件
+	h.generateHttpJSONReport()
+
+	// 生成CSV报告
+	h.generateHttpCSVReport()
+
+	fmt.Println("\n" + strings.Repeat("-", 60))
+	fmt.Println("HTTP Report Generation Completed")
+	fmt.Println(strings.Repeat("-", 60))
+}
+
+// generateHttpConsoleReport 生成HTTP控制台报告
+func (h *HttpSimpleHandler) generateHttpConsoleReport() {
+	// 使用HTTP适配器的报告生成器
+	if reporter := h.adapter.GetMetricsReporter(); reporter != nil {
+		fmt.Println("\n=== HTTP Detailed Console Report ===")
+		report := reporter.GenerateReport()
+		fmt.Println(report)
+	} else {
+		// 备用方案：使用简单报告
+		fmt.Println("\n=== HTTP Basic Metrics ===")
+		if exportedMetrics := h.metricsCollector.Export(); exportedMetrics != nil {
+			// 显示基本指标
+			for key, value := range exportedMetrics {
+				switch key {
+				case "rps":
+					fmt.Printf("Requests per Second: %v\n", value)
+				case "total_ops":
+					fmt.Printf("Total Requests: %v\n", value)
+				case "success_ops":
+					fmt.Printf("Successful Requests: %v\n", value)
+				case "failed_ops":
+					fmt.Printf("Failed Requests: %v\n", value)
+				case "avg_latency":
+					if latency, ok := value.(int64); ok {
+						fmt.Printf("Average Latency: %.3f ms\n", float64(latency)/float64(time.Millisecond))
+					}
+				case "error_rate":
+					fmt.Printf("Error Rate: %.2f%%\n", value)
+				}
+			}
+		}
+	}
+}
+
+// generateHttpJSONReport 生成HTTP JSON报告
+func (h *HttpSimpleHandler) generateHttpJSONReport() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Warning: Failed to generate HTTP JSON report: %v\n", r)
+		}
+	}()
+
+	filename := fmt.Sprintf("http_loadtest_%s.json", time.Now().Format("20060102_150405"))
+
+	// 构建报告数据
+	reportData := map[string]interface{}{
+		"timestamp":    time.Now().Format(time.RFC3339),
+		"protocol":     "http",
+		"base_metrics": h.metricsCollector.Export(),
+		"http_metrics": h.getHttpMetrics(),
+	}
+
+	// 添加HTTP特定报告
+	if reporter := h.adapter.GetMetricsReporter(); reporter != nil {
+		reportData["detailed_report"] = reporter.GenerateJSONReport()
+	}
+
+	// 将数据序列化为JSON
+	jsonData, err := json.MarshalIndent(reportData, "", "  ")
+	if err != nil {
+		fmt.Printf("Warning: Failed to marshal HTTP JSON report: %v\n", err)
+		return
+	}
+
+	// 写入文件
+	err = ioutil.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		fmt.Printf("Warning: Failed to write HTTP JSON report to %s: %v\n", filename, err)
+		return
+	}
+
+	fmt.Printf("HTTP JSON report saved to: %s\n", filename)
+}
+
+// generateHttpCSVReport 生成HTTP CSV报告
+func (h *HttpSimpleHandler) generateHttpCSVReport() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Warning: Failed to generate HTTP CSV report: %v\n", r)
+		}
+	}()
+
+	filename := fmt.Sprintf("http_loadtest_%s.csv", time.Now().Format("20060102_150405"))
+
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Printf("Warning: Failed to create HTTP CSV report file %s: %v\n", filename, err)
+		return
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// 写入CSV头部
+	header := []string{"timestamp", "total_requests", "successful_requests", "failed_requests", "rps", "avg_latency_ms", "p95_latency_ms", "p99_latency_ms", "error_rate"}
+	if err := writer.Write(header); err != nil {
+		fmt.Printf("Warning: Failed to write HTTP CSV header: %v\n", err)
+		return
+	}
+
+	// 获取指标数据
+	metrics := h.metricsCollector.Export()
+
+	// 写入数据行（安全处理）
+	record := []string{
+		time.Now().Format(time.RFC3339),
+		fmt.Sprintf("%v", h.getHttpMetricValue(metrics, "total_ops")),
+		fmt.Sprintf("%v", h.getHttpMetricValue(metrics, "success_ops")),
+		fmt.Sprintf("%v", h.getHttpMetricValue(metrics, "failed_ops")),
+		fmt.Sprintf("%v", h.getHttpMetricValue(metrics, "rps")),
+		fmt.Sprintf("%.3f", h.getHttpLatencyInMs(metrics, "avg_latency")),
+		fmt.Sprintf("%.3f", h.getHttpLatencyInMs(metrics, "p95_latency")),
+		fmt.Sprintf("%.3f", h.getHttpLatencyInMs(metrics, "p99_latency")),
+		fmt.Sprintf("%.2f", h.getHttpMetricValue(metrics, "error_rate")),
+	}
+
+	if err := writer.Write(record); err != nil {
+		fmt.Printf("Warning: Failed to write HTTP CSV record: %v\n", err)
+		return
+	}
+
+	fmt.Printf("HTTP CSV report saved to: %s\n", filename)
+}
+
+// getHttpMetricValue 安全获取HTTP指标值
+func (h *HttpSimpleHandler) getHttpMetricValue(metrics map[string]interface{}, key string) interface{} {
+	if value, exists := metrics[key]; exists {
+		return value
+	}
+	return 0
+}
+
+// getHttpLatencyInMs 获取HTTP延迟值（毫秒）
+func (h *HttpSimpleHandler) getHttpLatencyInMs(metrics map[string]interface{}, key string) float64 {
+	if value, exists := metrics[key]; exists {
+		if latency, ok := value.(int64); ok {
+			return float64(latency) / float64(time.Millisecond)
+		}
+	}
+	return 0.0
 }
