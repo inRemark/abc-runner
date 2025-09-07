@@ -21,6 +21,7 @@ gopath/
 vendor
 */vendor
 build/*
+reports/*
 logs
 .qoder
 
