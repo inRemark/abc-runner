@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"redis-runner/app/commands"
+	"time"
 )
 
 // 全局变量
@@ -44,7 +44,7 @@ func initLogging() {
 	base := fmt.Sprintf("logs/record_%s", timestamp)
 	logFileName := base + "_1.log"
 	seq := 1
-	
+
 	// 检查文件是否存在，如果存在则递增序号
 	for {
 		if _, err := os.Stat(logFileName); os.IsNotExist(err) {
@@ -71,14 +71,14 @@ func initLogging() {
 // initializeCommandSystem 初始化简化命令系统
 func initializeCommandSystem() error {
 	log.Println("Initializing simplified command system...")
-	
+
 	commandRouter = NewSimpleCommandRouter()
-	
+
 	// 注册基础命令处理器
 	if err := registerCommandHandlers(); err != nil {
 		return fmt.Errorf("failed to register command handlers: %w", err)
 	}
-	
+
 	log.Println("Command system initialized successfully")
 	return nil
 }
@@ -89,17 +89,17 @@ func registerCommandHandlers() error {
 	redisHandler := commands.NewRedisCommandHandler()
 	commandRouter.RegisterCommand("redis", redisHandler)
 	commandRouter.RegisterAlias("r", "redis")
-	
+
 	// 注册HTTP命令
 	httpHandler := commands.NewHttpCommandHandler()
 	commandRouter.RegisterCommand("http", httpHandler)
 	commandRouter.RegisterAlias("h", "http")
-	
+
 	// 注册Kafka命令
 	kafkaHandler := commands.NewKafkaCommandHandler()
 	commandRouter.RegisterCommand("kafka", kafkaHandler)
 	commandRouter.RegisterAlias("k", "kafka")
-	
+
 	return nil
 }
 
@@ -234,13 +234,13 @@ func (r *SimpleCommandRouter) Execute(ctx context.Context, command string, args 
 	if target, exists := r.aliases[command]; exists {
 		command = target
 	}
-	
+
 	// 查找命令处理器
 	handler, exists := r.commands[command]
 	if !exists {
 		return fmt.Errorf("unknown command: %s", command)
 	}
-	
+
 	// 执行命令
 	return handler.Execute(ctx, args)
 }

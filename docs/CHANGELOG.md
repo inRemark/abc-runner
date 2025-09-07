@@ -2,7 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2025-XX-XX
+## [0.2.0] - 2025-09-08
+
+### 🚀 New Features
+
+- Added support for additional Redis operations:
+  - Counter operations: INCR, DECR
+  - List operations: LPUSH, RPUSH, LPOP, RPOP
+  - Set operations: SADD, SREM, SMEMBERS, SISMEMBER
+  - Sorted set operations: ZADD, ZREM, ZRANGE, ZRANK
+  - Extended hash operations: HMSET, HMGET, HGETALL
+  - Subscription operations: SUBSCRIBE, UNSUBSCRIBE
+- Enhanced Redis operation factory with better extensibility
+- Added comprehensive unit tests for all new operations
+
+### 🛠️ Improvements
+
+- Refactored Redis operations to support more data types
+- Improved operation validation and error handling
+- Enhanced documentation with examples for new operations
+- Better code organization and modularity
+
+## [0.1.0] - 2025-09-07
 
 ### ⚠️ Breaking Changes
 

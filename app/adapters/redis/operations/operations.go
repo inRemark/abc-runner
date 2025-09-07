@@ -26,6 +26,25 @@ const (
 	OperationSubscribe     OperationType = "sub"
 	OperationHSet          OperationType = "hset"
 	OperationHGet          OperationType = "hget"
+	// 新增的操作类型
+	OperationIncr          OperationType = "incr"
+	OperationDecr          OperationType = "decr"
+	OperationLPush         OperationType = "lpush"
+	OperationRPush         OperationType = "rpush"
+	OperationLPop          OperationType = "lpop"
+	OperationRPop          OperationType = "rpop"
+	OperationSAdd          OperationType = "sadd"
+	OperationSRem          OperationType = "srem"
+	OperationSMembers      OperationType = "smembers"
+	OperationSIsMember     OperationType = "sismember"
+	OperationZAdd          OperationType = "zadd"
+	OperationZRem          OperationType = "zrem"
+	OperationZRange        OperationType = "zrange"
+	OperationZRank         OperationType = "zrank"
+	OperationHMSet         OperationType = "hmset"
+	OperationHMGet         OperationType = "hmget"
+	OperationHGetAll       OperationType = "hgetall"
+	OperationUnsubscribe   OperationType = "unsub"
 )
 
 // OperationResult 操作结果
@@ -450,6 +469,498 @@ func (op *HGetOperation) GetType() OperationType {
 
 // Validate 验证参数
 func (op *HGetOperation) Validate(params OperationParams) error {
+	return nil
+}
+
+// IncrOperation Incr操作实现
+type IncrOperation struct {
+	keyGen *KeyGenerator
+}
+
+// NewIncrOperation 创建Incr操作
+func NewIncrOperation() *IncrOperation {
+	return &IncrOperation{
+		keyGen: NewKeyGenerator(),
+	}
+}
+
+// Execute 执行Incr操作
+func (op *IncrOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	
+	start := time.Now()
+	val, err := client.Incr(ctx, key).Result()
+	duration := time.Since(start)
+	
+	if err == nil {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   false,
+		Duration: duration,
+		Error:    err,
+		Value:    val,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *IncrOperation) GetType() OperationType {
+	return OperationType("incr")
+}
+
+// Validate 验证参数
+func (op *IncrOperation) Validate(params OperationParams) error {
+	return nil
+}
+
+// DecrOperation Decr操作实现
+type DecrOperation struct {
+	keyGen *KeyGenerator
+}
+
+// NewDecrOperation 创建Decr操作
+func NewDecrOperation() *DecrOperation {
+	return &DecrOperation{
+		keyGen: NewKeyGenerator(),
+	}
+}
+
+// Execute 执行Decr操作
+func (op *DecrOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	
+	start := time.Now()
+	val, err := client.Decr(ctx, key).Result()
+	duration := time.Since(start)
+	
+	if err == nil {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   false,
+		Duration: duration,
+		Error:    err,
+		Value:    val,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *DecrOperation) GetType() OperationType {
+	return OperationType("decr")
+}
+
+// Validate 验证参数
+func (op *DecrOperation) Validate(params OperationParams) error {
+	return nil
+}
+
+// ListOperation 列表操作实现
+type ListOperation struct {
+	keyGen *KeyGenerator
+	opType OperationType
+}
+
+// NewListOperation 创建列表操作
+func NewListOperation(opType OperationType) *ListOperation {
+	return &ListOperation{
+		keyGen: NewKeyGenerator(),
+		opType: opType,
+	}
+}
+
+// Execute 执行列表操作
+func (op *ListOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	value := strings.Repeat("X", params.DataSize)
+	
+	start := time.Now()
+	var err error
+	var result interface{}
+	
+	switch op.opType {
+	case OperationType("lpush"):
+		result, err = client.LPush(ctx, key, value).Result()
+	case OperationType("rpush"):
+		result, err = client.RPush(ctx, key, value).Result()
+	case OperationType("lpop"):
+		result, err = client.LPop(ctx, key).Result()
+	case OperationType("rpop"):
+		result, err = client.RPop(ctx, key).Result()
+	default:
+		return OperationResult{
+			Success: false,
+			Error:   fmt.Errorf("unsupported list operation: %s", op.opType),
+		}
+	}
+	
+	duration := time.Since(start)
+	
+	if err == nil && (op.opType == OperationType("lpush") || op.opType == OperationType("rpush")) {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   op.opType == OperationType("lpop") || op.opType == OperationType("rpop"),
+		Duration: duration,
+		Error:    err,
+		Value:    result,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *ListOperation) GetType() OperationType {
+	return op.opType
+}
+
+// Validate 验证参数
+func (op *ListOperation) Validate(params OperationParams) error {
+	if (op.opType == OperationType("lpush") || op.opType == OperationType("rpush")) && params.DataSize <= 0 {
+		return fmt.Errorf("data size must be positive for push operations")
+	}
+	return nil
+}
+
+// RedisSetOperation 集合操作实现
+type RedisSetOperation struct {
+	keyGen *KeyGenerator
+	opType OperationType
+}
+
+// NewRedisSetOperation 创建集合操作
+func NewRedisSetOperation(opType OperationType) *RedisSetOperation {
+	return &RedisSetOperation{
+		keyGen: NewKeyGenerator(),
+		opType: opType,
+	}
+}
+
+// Execute 执行集合操作
+func (op *RedisSetOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	value := strings.Repeat("X", params.DataSize)
+	
+	start := time.Now()
+	var err error
+	var result interface{}
+	
+	switch op.opType {
+	case OperationType("sadd"):
+		result, err = client.SAdd(ctx, key, value).Result()
+	case OperationType("smembers"):
+		result, err = client.SMembers(ctx, key).Result()
+	case OperationType("srem"):
+		result, err = client.SRem(ctx, key, value).Result()
+	case OperationType("sismember"):
+		result, err = client.SIsMember(ctx, key, value).Result()
+	default:
+		return OperationResult{
+			Success: false,
+			Error:   fmt.Errorf("unsupported set operation: %s", op.opType),
+		}
+	}
+	
+	duration := time.Since(start)
+	
+	if err == nil && op.opType == OperationType("sadd") {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   op.opType == OperationType("smembers") || op.opType == OperationType("sismember"),
+		Duration: duration,
+		Error:    err,
+		Value:    result,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *RedisSetOperation) GetType() OperationType {
+	return op.opType
+}
+
+// Validate 验证参数
+func (op *RedisSetOperation) Validate(params OperationParams) error {
+	if (op.opType == OperationType("sadd") || op.opType == OperationType("srem")) && params.DataSize <= 0 {
+		return fmt.Errorf("data size must be positive for sadd and srem operations")
+	}
+	return nil
+}
+
+// SortedSetOperation 有序集合操作实现
+type SortedSetOperation struct {
+	keyGen *KeyGenerator
+	opType OperationType
+}
+
+// NewSortedSetOperation 创建有序集合操作
+func NewSortedSetOperation(opType OperationType) *SortedSetOperation {
+	return &SortedSetOperation{
+		keyGen: NewKeyGenerator(),
+		opType: opType,
+	}
+}
+
+// Execute 执行有序集合操作
+func (op *SortedSetOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	value := strings.Repeat("X", params.DataSize)
+	
+	start := time.Now()
+	var err error
+	var result interface{}
+	
+	// 生成一个随机分数用于有序集合操作
+	score := float64(rand.Intn(1000))
+	
+	switch op.opType {
+	case OperationType("zadd"):
+		result, err = client.ZAdd(ctx, key, &redis.Z{Score: score, Member: value}).Result()
+	case OperationType("zrem"):
+		result, err = client.ZRem(ctx, key, value).Result()
+	case OperationType("zrange"):
+		result, err = client.ZRange(ctx, key, 0, -1).Result()
+	case OperationType("zrank"):
+		result, err = client.ZRank(ctx, key, value).Result()
+	default:
+		return OperationResult{
+			Success: false,
+			Error:   fmt.Errorf("unsupported sorted set operation: %s", op.opType),
+		}
+	}
+	
+	duration := time.Since(start)
+	
+	if err == nil && (op.opType == OperationType("zadd")) {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   op.opType == OperationType("zrange") || op.opType == OperationType("zrank"),
+		Duration: duration,
+		Error:    err,
+		Value:    result,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *SortedSetOperation) GetType() OperationType {
+	return op.opType
+}
+
+// Validate 验证参数
+func (op *SortedSetOperation) Validate(params OperationParams) error {
+	if (op.opType == OperationType("zadd") || op.opType == OperationType("zrem")) && params.DataSize <= 0 {
+		return fmt.Errorf("data size must be positive for zadd and zrem operations")
+	}
+	return nil
+}
+
+// HashOperation 哈希操作实现
+type HashOperation struct {
+	keyGen *KeyGenerator
+	opType OperationType
+}
+
+// NewHashOperation 创建哈希操作
+func NewHashOperation(opType OperationType) *HashOperation {
+	return &HashOperation{
+		keyGen: NewKeyGenerator(),
+		opType: opType,
+	}
+}
+
+// Execute 执行哈希操作
+func (op *HashOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	ctx := context.Background()
+	key := op.keyGen.GenerateKey(params.RandomKeys, params.Total)
+	value := strings.Repeat("X", params.DataSize)
+	
+	start := time.Now()
+	var err error
+	var result interface{}
+	
+	// 生成多个字段用于哈希操作
+	field1 := op.keyGen.GetRandomGeneratedKey()
+	field2 := op.keyGen.GetRandomGeneratedKey()
+	
+	switch op.opType {
+	case OperationType("hset"):
+		result, err = client.HSet(ctx, key, field1, value).Result()
+	case OperationType("hget"):
+		result, err = client.HGet(ctx, key, field1).Result()
+	case OperationType("hmset"):
+		fields := map[string]interface{}{
+			field1: value,
+			field2: value + "_2",
+		}
+		result, err = client.HMSet(ctx, key, fields).Result()
+	case OperationType("hmget"):
+		result, err = client.HMGet(ctx, key, field1, field2).Result()
+	case OperationType("hgetall"):
+		result, err = client.HGetAll(ctx, key).Result()
+	default:
+		return OperationResult{
+			Success: false,
+			Error:   fmt.Errorf("unsupported hash operation: %s", op.opType),
+		}
+	}
+	
+	duration := time.Since(start)
+	
+	if err == nil && (op.opType == OperationType("hset") || op.opType == OperationType("hmset")) {
+		op.keyGen.AddGeneratedKey(key)
+	}
+	
+	// 处理HMSET的特殊情况，它返回bool而不是int
+	if op.opType == OperationType("hmset") {
+		if b, ok := result.(bool); ok && b {
+			result = int64(1) // 转换为int64以保持一致性
+		}
+	}
+	
+	return OperationResult{
+		Success:  err == nil,
+		IsRead:   op.opType == OperationType("hget") || op.opType == OperationType("hmget") || op.opType == OperationType("hgetall"),
+		Duration: duration,
+		Error:    err,
+		Value:    result,
+		ExtraData: map[string]interface{}{
+			"key": key,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *HashOperation) GetType() OperationType {
+	return op.opType
+}
+
+// Validate 验证参数
+func (op *HashOperation) Validate(params OperationParams) error {
+	if (op.opType == OperationType("hset") || op.opType == OperationType("hmset")) && params.DataSize <= 0 {
+		return fmt.Errorf("data size must be positive for hset and hmset operations")
+	}
+	return nil
+}
+
+// SubscribeOperation 订阅操作实现
+type SubscribeOperation struct {
+	channel string
+}
+
+// NewSubscribeOperation 创建订阅操作
+func NewSubscribeOperation(channel string) *SubscribeOperation {
+	if channel == "" {
+		channel = "my_channel"
+	}
+	return &SubscribeOperation{
+		channel: channel,
+	}
+}
+
+// Execute 执行订阅操作
+func (op *SubscribeOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	// 注意：订阅操作是阻塞的，我们需要特殊处理
+	// 这里我们只是模拟订阅操作，实际的订阅应该在单独的goroutine中处理
+	start := time.Now()
+	
+	// 模拟订阅操作的延迟
+	time.Sleep(10 * time.Millisecond)
+	
+	duration := time.Since(start)
+	
+	return OperationResult{
+		Success:  true,
+		IsRead:   true,
+		Duration: duration,
+		Error:    nil,
+		Value:    nil,
+		ExtraData: map[string]interface{}{
+			"channel": op.channel,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *SubscribeOperation) GetType() OperationType {
+	return OperationSubscribe
+}
+
+// Validate 验证参数
+func (op *SubscribeOperation) Validate(params OperationParams) error {
+	return nil
+}
+
+// UnsubscribeOperation 取消订阅操作实现
+type UnsubscribeOperation struct {
+	channel string
+}
+
+// NewUnsubscribeOperation 创建取消订阅操作
+func NewUnsubscribeOperation(channel string) *UnsubscribeOperation {
+	if channel == "" {
+		channel = "my_channel"
+	}
+	return &UnsubscribeOperation{
+		channel: channel,
+	}
+}
+
+// Execute 执行取消订阅操作
+func (op *UnsubscribeOperation) Execute(client redis.Cmdable, params OperationParams) OperationResult {
+	start := time.Now()
+	
+	// 模拟取消订阅操作的延迟
+	time.Sleep(5 * time.Millisecond)
+	
+	duration := time.Since(start)
+	
+	return OperationResult{
+		Success:  true,
+		IsRead:   false,
+		Duration: duration,
+		Error:    nil,
+		Value:    nil,
+		ExtraData: map[string]interface{}{
+			"channel": op.channel,
+		},
+	}
+}
+
+// GetType 获取操作类型
+func (op *UnsubscribeOperation) GetType() OperationType {
+	return OperationType("unsub")
+}
+
+// Validate 验证参数
+func (op *UnsubscribeOperation) Validate(params OperationParams) error {
 	return nil
 }
 

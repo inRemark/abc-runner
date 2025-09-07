@@ -6,14 +6,14 @@
 
 A unified performance testing tool for Redis, HTTP, and Kafka protocols.
 
-⚠️ **Breaking Change Notice**: This version (v3.0.0) introduces breaking changes. See [Migration Guide](docs/CHANGELOG.md) for upgrade instructions.
+⚠️ **Breaking Change Notice**: This version (v0.1.0) introduces breaking changes. See [Migration Guide](docs/CHANGELOG.md) for upgrade instructions.
 
 ## Features
 
 ### Redis Testing
 
 - Support for Redis cluster, sentinel, and standalone modes
-- Multiple test cases: set_get_random, set_only, get_only, incr, append, etc.
+- Multiple test cases: set_get_random, set_only, get_only, incr, decr, lpush, rpush, lpop, rpop, sadd, smembers, zadd, zrange, hset, hget, hmset, hmget, hgetall, pub, sub, etc.
 - Configurable read/write ratios and TTL
 - Global self-increasing or random key generation
 
@@ -94,6 +94,33 @@ go build -o redis-runner .
 # Using configuration file
 ./redis-runner redis --config conf/redis.yaml
 ```
+
+Supported Redis test cases (`-t` option):
+- `get`: Simple GET operations
+- `set`: Simple SET operations
+- `set_get_random`: Mixed SET/GET operations with configurable read ratio
+- `delete`: DEL operations
+- `incr`: INCR operations (increment counters)
+- `decr`: DECR operations (decrement counters)
+- `lpush`: LPUSH operations (push to left of list)
+- `rpush`: RPUSH operations (push to right of list)
+- `lpop`: LPOP operations (pop from left of list)
+- `rpop`: RPOP operations (pop from right of list)
+- `sadd`: SADD operations (add to set)
+- `smembers`: SMEMBERS operations (get all members of set)
+- `srem`: SREM operations (remove from set)
+- `sismember`: SISMEMBER operations (check set membership)
+- `zadd`: ZADD operations (add to sorted set)
+- `zrange`: ZRANGE operations (get range from sorted set)
+- `zrem`: ZREM operations (remove from sorted set)
+- `zrank`: ZRANK operations (get rank in sorted set)
+- `hset`: HSET operations (set hash field)
+- `hget`: HGET operations (get hash field)
+- `hmset`: HMSET operations (set multiple hash fields)
+- `hmget`: HMGET operations (get multiple hash fields)
+- `hgetall`: HGETALL operations (get all hash fields)
+- `pub`: PUBLISH operations (publish to channel)
+- `sub`: SUBSCRIBE operations (subscribe to channel)
 
 ### HTTP Commands
 
@@ -206,7 +233,7 @@ For detailed documentation, please see the following resources:
 - [Contributing Guide](docs/development/contributing.md) - Guidelines for contributing
 - [Extending redis-runner](docs/development/extending.md) - How to extend the tool
 
-## Migration from v2.x
+## Migration from v0.0.x
 
 This version introduces breaking changes. Key changes:
 

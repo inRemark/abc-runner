@@ -53,12 +53,95 @@ func (f *OperationFactory) registerDefaultOperations() {
 		return NewPublishOperation("")
 	})
 
+	// 注册新的哈希操作
 	f.Register(OperationHSet, func() Operation {
-		return NewHSetOperation()
+		return NewHashOperation(OperationHSet)
 	})
 
 	f.Register(OperationHGet, func() Operation {
-		return NewHGetOperation()
+		return NewHashOperation(OperationHGet)
+	})
+	
+	// 注册新操作
+	f.Register(OperationType("incr"), func() Operation {
+		return NewIncrOperation()
+	})
+	
+	f.Register(OperationType("decr"), func() Operation {
+		return NewDecrOperation()
+	})
+	
+	// 注册列表操作
+	f.Register(OperationType("lpush"), func() Operation {
+		return NewListOperation(OperationType("lpush"))
+	})
+	
+	f.Register(OperationType("rpush"), func() Operation {
+		return NewListOperation(OperationType("rpush"))
+	})
+	
+	f.Register(OperationType("lpop"), func() Operation {
+		return NewListOperation(OperationType("lpop"))
+	})
+	
+	f.Register(OperationType("rpop"), func() Operation {
+		return NewListOperation(OperationType("rpop"))
+	})
+	
+	// 注册集合操作
+	f.Register(OperationType("sadd"), func() Operation {
+		return NewRedisSetOperation(OperationType("sadd"))
+	})
+	
+	f.Register(OperationType("smembers"), func() Operation {
+		return NewRedisSetOperation(OperationType("smembers"))
+	})
+	
+	f.Register(OperationType("srem"), func() Operation {
+		return NewRedisSetOperation(OperationType("srem"))
+	})
+	
+	f.Register(OperationType("sismember"), func() Operation {
+		return NewRedisSetOperation(OperationType("sismember"))
+	})
+	
+	// 注册有序集合操作
+	f.Register(OperationType("zadd"), func() Operation {
+		return NewSortedSetOperation(OperationType("zadd"))
+	})
+	
+	f.Register(OperationType("zrem"), func() Operation {
+		return NewSortedSetOperation(OperationType("zrem"))
+	})
+	
+	f.Register(OperationType("zrange"), func() Operation {
+		return NewSortedSetOperation(OperationType("zrange"))
+	})
+	
+	f.Register(OperationType("zrank"), func() Operation {
+		return NewSortedSetOperation(OperationType("zrank"))
+	})
+	
+	// 注册扩展的哈希操作
+	f.Register(OperationType("hmset"), func() Operation {
+		return NewHashOperation(OperationType("hmset"))
+	})
+	
+	f.Register(OperationType("hmget"), func() Operation {
+		return NewHashOperation(OperationType("hmget"))
+	})
+	
+	f.Register(OperationType("hgetall"), func() Operation {
+		return NewHashOperation(OperationType("hgetall"))
+	})
+	
+	// 注册订阅操作
+	f.Register(OperationSubscribe, func() Operation {
+		return NewSubscribeOperation("")
+	})
+	
+	f.Register(OperationType("unsub"), func() Operation {
+		return NewUnsubscribeOperation("")
 	})
 }
 
@@ -326,6 +409,25 @@ func OperationTypeFromString(s string) (OperationType, error) {
 		OperationSubscribe,
 		OperationHSet,
 		OperationHGet,
+		// 新增的操作类型
+		OperationIncr,
+		OperationDecr,
+		OperationLPush,
+		OperationRPush,
+		OperationLPop,
+		OperationRPop,
+		OperationSAdd,
+		OperationSRem,
+		OperationSMembers,
+		OperationSIsMember,
+		OperationZAdd,
+		OperationZRem,
+		OperationZRange,
+		OperationZRank,
+		OperationHMSet,
+		OperationHMGet,
+		OperationHGetAll,
+		OperationUnsubscribe,
 	}
 
 	for _, validType := range validTypes {
@@ -348,5 +450,24 @@ func GetAllOperationTypes() []OperationType {
 		OperationSubscribe,
 		OperationHSet,
 		OperationHGet,
+		// 新增的操作类型
+		OperationIncr,
+		OperationDecr,
+		OperationLPush,
+		OperationRPush,
+		OperationLPop,
+		OperationRPop,
+		OperationSAdd,
+		OperationSRem,
+		OperationSMembers,
+		OperationSIsMember,
+		OperationZAdd,
+		OperationZRem,
+		OperationZRange,
+		OperationZRank,
+		OperationHMSet,
+		OperationHMGet,
+		OperationHGetAll,
+		OperationUnsubscribe,
 	}
 }

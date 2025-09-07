@@ -134,6 +134,108 @@ func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operati
 		result.Error = err
 		result.Success = err == nil
 
+	// 新增的操作
+	case "incr":
+		value, err := r.executeIncr(ctx, operation)
+		result.Value = value
+		result.Error = err
+		result.Success = err == nil
+
+	case "decr":
+		value, err := r.executeDecr(ctx, operation)
+		result.Value = value
+		result.Error = err
+		result.Success = err == nil
+
+	case "lpush":
+		count, err := r.executeLPush(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "rpush":
+		count, err := r.executeRPush(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "lpop":
+		value, err := r.executeLPop(ctx, operation)
+		result.Value = value
+		result.Error = err
+		result.Success = err == nil
+
+	case "rpop":
+		value, err := r.executeRPop(ctx, operation)
+		result.Value = value
+		result.Error = err
+		result.Success = err == nil
+
+	case "sadd":
+		count, err := r.executeSAdd(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "smembers":
+		members, err := r.executeSMembers(ctx, operation)
+		result.Value = members
+		result.Error = err
+		result.Success = err == nil
+
+	case "srem":
+		count, err := r.executeSRem(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "sismember":
+		isMember, err := r.executeSIsMember(ctx, operation)
+		result.Value = isMember
+		result.Error = err
+		result.Success = err == nil
+
+	case "zadd":
+		count, err := r.executeZAdd(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "zrem":
+		count, err := r.executeZRem(ctx, operation)
+		result.Value = count
+		result.Error = err
+		result.Success = err == nil
+
+	case "zrange":
+		members, err := r.executeZRange(ctx, operation)
+		result.Value = members
+		result.Error = err
+		result.Success = err == nil
+
+	case "zrank":
+		rank, err := r.executeZRank(ctx, operation)
+		result.Value = rank
+		result.Error = err
+		result.Success = err == nil
+
+	case "hmset":
+		err := r.executeHMSet(ctx, operation)
+		result.Error = err
+		result.Success = err == nil
+
+	case "hmget":
+		values, err := r.executeHMGet(ctx, operation)
+		result.Value = values
+		result.Error = err
+		result.Success = err == nil
+
+	case "hgetall":
+		values, err := r.executeHGetAll(ctx, operation)
+		result.Value = values
+		result.Error = err
+		result.Success = err == nil
+
 	default:
 		return nil, fmt.Errorf("unsupported operation type: %s", operation.Type)
 	}
@@ -375,4 +477,133 @@ func (r *RedisAdapter) Subscribe(ctx context.Context, channels ...string) *redis
 // GetMetricsCollector 获取指标收集器
 func (r *RedisAdapter) GetMetricsCollector() interfaces.MetricsCollector {
 	return r.BaseAdapter.GetMetricsCollector()
+}
+
+// executeIncr 执行INCR操作
+func (r *RedisAdapter) executeIncr(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	return r.client.Incr(ctx, operation.Key).Result()
+}
+
+// executeDecr 执行DECR操作
+func (r *RedisAdapter) executeDecr(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	return r.client.Decr(ctx, operation.Key).Result()
+}
+
+// executeLPush 执行LPUSH操作
+func (r *RedisAdapter) executeLPush(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.LPush(ctx, operation.Key, value).Result()
+}
+
+// executeRPush 执行RPUSH操作
+func (r *RedisAdapter) executeRPush(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.RPush(ctx, operation.Key, value).Result()
+}
+
+// executeLPop 执行LPOP操作
+func (r *RedisAdapter) executeLPop(ctx context.Context, operation interfaces.Operation) (string, error) {
+	return r.client.LPop(ctx, operation.Key).Result()
+}
+
+// executeRPop 执行RPOP操作
+func (r *RedisAdapter) executeRPop(ctx context.Context, operation interfaces.Operation) (string, error) {
+	return r.client.RPop(ctx, operation.Key).Result()
+}
+
+// executeSAdd 执行SADD操作
+func (r *RedisAdapter) executeSAdd(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.SAdd(ctx, operation.Key, value).Result()
+}
+
+// executeSMembers 执行SMEMBERS操作
+func (r *RedisAdapter) executeSMembers(ctx context.Context, operation interfaces.Operation) ([]string, error) {
+	return r.client.SMembers(ctx, operation.Key).Result()
+}
+
+// executeSRem 执行SREM操作
+func (r *RedisAdapter) executeSRem(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.SRem(ctx, operation.Key, value).Result()
+}
+
+// executeSIsMember 执行SISMEMBER操作
+func (r *RedisAdapter) executeSIsMember(ctx context.Context, operation interfaces.Operation) (bool, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.SIsMember(ctx, operation.Key, value).Result()
+}
+
+// executeZAdd 执行ZADD操作
+func (r *RedisAdapter) executeZAdd(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	score, _ := operation.Params["score"].(float64)
+	
+	// 如果没有提供分数，使用当前时间戳
+	if score == 0 {
+		score = float64(time.Now().UnixNano() % 1000)
+	}
+	
+	return r.client.ZAdd(ctx, operation.Key, &redis.Z{Score: score, Member: value}).Result()
+}
+
+// executeZRem 执行ZREM操作
+func (r *RedisAdapter) executeZRem(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.ZRem(ctx, operation.Key, value).Result()
+}
+
+// executeZRange 执行ZRANGE操作
+func (r *RedisAdapter) executeZRange(ctx context.Context, operation interfaces.Operation) ([]string, error) {
+	return r.client.ZRange(ctx, operation.Key, 0, -1).Result()
+}
+
+// executeZRank 执行ZRANK操作
+func (r *RedisAdapter) executeZRank(ctx context.Context, operation interfaces.Operation) (int64, error) {
+	value := fmt.Sprintf("%v", operation.Value)
+	return r.client.ZRank(ctx, operation.Key, value).Result()
+}
+
+// executeHMSet 执行HMSET操作
+func (r *RedisAdapter) executeHMSet(ctx context.Context, operation interfaces.Operation) error {
+	fields, ok := operation.Params["fields"].([]string)
+	if !ok {
+		// 如果没有提供多个字段，使用单个字段
+		field, _ := operation.Params["field"].(string)
+		if field == "" {
+			field = "field1"
+		}
+		value := fmt.Sprintf("%v", operation.Value)
+		return r.client.HMSet(ctx, operation.Key, map[string]interface{}{field: value}).Err()
+	}
+	
+	// 处理多个字段
+	fieldValues := make(map[string]interface{})
+	value := fmt.Sprintf("%v", operation.Value)
+	for _, field := range fields {
+		fieldValues[field] = value
+	}
+	
+	return r.client.HMSet(ctx, operation.Key, fieldValues).Err()
+}
+
+// executeHMGet 执行HMGET操作
+func (r *RedisAdapter) executeHMGet(ctx context.Context, operation interfaces.Operation) ([]interface{}, error) {
+	fields, ok := operation.Params["fields"].([]string)
+	if !ok {
+		// 如果没有提供多个字段，使用单个字段
+		field, _ := operation.Params["field"].(string)
+		if field == "" {
+			field = "field1"
+		}
+		return r.client.HMGet(ctx, operation.Key, field).Result()
+	}
+	
+	// 处理多个字段
+	return r.client.HMGet(ctx, operation.Key, fields...).Result()
+}
+
+// executeHGetAll 执行HGETALL操作
+func (r *RedisAdapter) executeHGetAll(ctx context.Context, operation interfaces.Operation) (map[string]string, error) {
+	return r.client.HGetAll(ctx, operation.Key).Result()
 }
