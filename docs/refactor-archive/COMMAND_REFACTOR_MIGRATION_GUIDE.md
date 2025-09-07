@@ -9,6 +9,7 @@ redis-runner 已完成破坏式升级，统一使用 `redis`、`http`、`kafka` 
 ### 1. 命令简化
 
 **旧版本命令:**
+
 ```bash
 # 增强版命令
 redis-runner redis-enhanced --config conf/redis.yaml
@@ -22,6 +23,7 @@ redis-runner kafka --brokers localhost:9092
 ```
 
 **新版本命令:**
+
 ```bash
 # 统一命令格式
 redis-runner redis --config conf/redis.yaml
@@ -86,17 +88,20 @@ redis-runner k --brokers localhost:9092 --topic test -n 10 -c 1
 ## 新功能特性
 
 ### 1. 简化的命令结构
+
 - 统一的命令格式
 - 清晰的参数命名
 - 一致的帮助系统
 
 ### 2. 保留的核心功能
+
 - 所有原有的性能测试功能
 - 配置文件支持
 - 详细的性能报告
 - 多种测试模式
 
 ### 3. 改进的用户体验
+
 - 更简洁的命令行接口
 - 统一的错误处理
 - 一致的输出格式
@@ -153,6 +158,7 @@ redis-runner kafka --brokers localhost:9092,localhost:9093 \
 配置文件格式保持基本兼容，但建议检查以下项目：
 
 ### Redis 配置 (conf/redis.yaml)
+
 ```yaml
 protocol: redis
 connection:
@@ -170,6 +176,7 @@ benchmark:
 ```
 
 ### HTTP 配置 (conf/http.yaml)
+
 ```yaml
 protocol: http
 connection:
@@ -185,6 +192,7 @@ benchmark:
 ```
 
 ### Kafka 配置 (conf/kafka.yaml)
+
 ```yaml
 protocol: kafka
 brokers: ["localhost:9092"]
@@ -204,21 +212,27 @@ benchmark:
 ### 常见问题
 
 1. **命令不存在错误**
-   ```
+
+   ```bash
    unknown command: redis-enhanced
    ```
+
    **解决方案**: 使用 `redis` 替代 `redis-enhanced`
 
 2. **配置文件错误**
-   ```
+
+   ```bash
    failed to load configuration
    ```
+
    **解决方案**: 检查配置文件格式，确保字段名正确
 
 3. **连接问题**
-   ```
+
+   ```bash
    failed to connect to Redis/HTTP/Kafka
    ```
+
    **解决方案**: 检查目标服务是否运行，网络是否可达
 
 ### 获取帮助

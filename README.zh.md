@@ -64,6 +64,3 @@ Usage: redis-runner http [arguments]
   -n            Total number of requests (default 10000)
   -c            Number of parallel connections (default 50)
 ```
-
-
-

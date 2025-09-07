@@ -11,18 +11,21 @@ A unified performance testing tool for Redis, HTTP, and Kafka protocols.
 ## Features
 
 ### Redis Testing
+
 - Support for Redis cluster, sentinel, and standalone modes
 - Multiple test cases: set_get_random, set_only, get_only, incr, append, etc.
 - Configurable read/write ratios and TTL
 - Global self-increasing or random key generation
 
 ### HTTP Testing  
+
 - Support for GET, POST, PUT, DELETE methods
 - Custom headers and request bodies
 - Connection pooling and keep-alive
 - Duration-based and request-count-based testing
 
 ### Kafka Testing
+
 - Producer and consumer performance testing
 - Support for multiple brokers and topics
 - Configurable message sizes and compression
@@ -255,6 +258,7 @@ Contributions are welcome! Please read our contributing guidelines before submit
 ## Support
 
 For questions and support:
+
 - Check the [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md)
 - Review command help: `./redis-runner <command> --help`
 - Open an issue for bug reports or feature requests

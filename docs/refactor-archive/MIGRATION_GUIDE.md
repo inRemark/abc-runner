@@ -100,6 +100,7 @@ redis-runner k --config conf/kafka.yaml
 #### Redis配置迁移
 
 **老格式：**
+
 ```yaml
 redis:
   host: localhost
