@@ -256,14 +256,14 @@ benchmark:
 
 详细文档请参阅以下资源：
 
-- [架构概述](docs/architecture/overview.md) - 系统架构和设计原则
-- [组件文档](docs/architecture/components.md) - 详细组件文档
-- [快速入门指南](docs/usage/quickstart.md) - 快速开始
-- [Redis测试指南](docs/usage/redis.md) - Redis特定功能和用法
-- [HTTP测试指南](docs/usage/http.md) - HTTP特定功能和用法
-- [Kafka测试指南](docs/usage/kafka.md) - Kafka特定功能和用法
-- [贡献指南](docs/development/contributing.md) - 贡献指南
-- [扩展redis-runner](docs/development/extending.md) - 如何扩展工具
+- [架构概述](docs/en/architecture/overview.md) - 系统架构和设计原则 | [架构概述](docs/zh/architecture/overview.md)
+- [组件文档](docs/en/architecture/components.md) - 详细组件文档 | [组件详解](docs/zh/architecture/components.md)
+- [快速入门指南](docs/en/getting-started/quickstart.md) - 快速开始 | [快速开始](docs/zh/getting-started/quickstart.md)
+- [Redis测试指南](docs/en/user-guide/redis.md) - Redis特定功能和用法 | [Redis测试指南](docs/zh/user-guide/redis.md)
+- [HTTP测试指南](docs/en/user-guide/http.md) - HTTP特定功能和用法 | [HTTP测试指南](docs/zh/user-guide/http.md)
+- [Kafka测试指南](docs/en/user-guide/kafka.md) - Kafka特定功能和用法 | [Kafka测试指南](docs/zh/user-guide/kafka.md)
+- [贡献指南](docs/en/developer-guide/contributing.md) - 贡献指南 | [贡献指南](docs/zh/developer-guide/contributing.md)
+- [扩展redis-runner](docs/en/developer-guide/extending.md) - 如何扩展工具 | [扩展redis-runner](docs/zh/developer-guide/extending.md)
 
 ## 从v0.0.x迁移
 
@@ -334,3 +334,7 @@ benchmark:
 - 查看[迁移指南](docs/CHANGELOG.md)
 - 查看命令帮助: `./redis-runner <command> --help`
 - 提交issue报告bug或功能请求
+
+## 文档
+
+本项目维护英文和中文两种语言的文档。有关维护多语言文档的指南，请参阅[文档翻译指南](docs/maintenance/document-translation-guide.md)。

@@ -1,6 +1,6 @@
 # redis-runner
 
-[English](README.md) | [中文](README_zh.md)
+[English](README.md) | [中文](README.zh.md)
 
 ## About
 
@@ -224,14 +224,14 @@ benchmark:
 
 For detailed documentation, please see the following resources:
 
-- [Architecture Overview](docs/architecture/overview.md) - System architecture and design principles
-- [Component Documentation](docs/architecture/components.md) - Detailed component documentation
-- [Quick Start Guide](docs/usage/quickstart.md) - Getting started quickly
-- [Redis Testing Guide](docs/usage/redis.md) - Redis-specific features and usage
-- [HTTP Testing Guide](docs/usage/http.md) - HTTP-specific features and usage
-- [Kafka Testing Guide](docs/usage/kafka.md) - Kafka-specific features and usage
-- [Contributing Guide](docs/development/contributing.md) - Guidelines for contributing
-- [Extending redis-runner](docs/development/extending.md) - How to extend the tool
+- [Architecture Overview](docs/en/architecture/overview.md) - System architecture and design principles | [架构概述](docs/zh/architecture/overview.md)
+- [Component Documentation](docs/en/architecture/components.md) - Detailed component documentation | [组件详解](docs/zh/architecture/components.md)
+- [Quick Start Guide](docs/en/getting-started/quickstart.md) - Getting started quickly | [快速开始](docs/zh/getting-started/quickstart.md)
+- [Redis Testing Guide](docs/en/user-guide/redis.md) - Redis-specific features and usage | [Redis测试指南](docs/zh/user-guide/redis.md)
+- [HTTP Testing Guide](docs/en/user-guide/http.md) - HTTP-specific features and usage | [HTTP测试指南](docs/zh/user-guide/http.md)
+- [Kafka Testing Guide](docs/en/user-guide/kafka.md) - Kafka-specific features and usage | [Kafka测试指南](docs/zh/user-guide/kafka.md)
+- [Contributing Guide](docs/en/developer-guide/contributing.md) - Guidelines for contributing | [贡献指南](docs/zh/developer-guide/contributing.md)
+- [Extending redis-runner](docs/en/developer-guide/extending.md) - How to extend the tool | [扩展redis-runner](docs/zh/developer-guide/extending.md)
 
 ## Packaging and Distribution
 
@@ -334,3 +334,7 @@ For questions and support:
 - Check the [Migration Guide](docs/CHANGELOG.md)
 - Review command help: `./redis-runner <command> --help`
 - Open an issue for bug reports or feature requests
+
+## Documentation
+
+This project maintains documentation in both English and Chinese. For guidelines on maintaining multilingual documentation, see the [Document Translation Guide](docs/maintenance/document-translation-guide.md).

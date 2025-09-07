@@ -15,7 +15,7 @@ GO_CLEAN=$(GO) clean
 GO_DEPS=$(GO) mod tidy
 
 # 版本信息
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 
@@ -122,6 +122,13 @@ docs:
 	@mkdir -p $(DOCS_DIR)/generated
 	@echo "Documentation generation completed!"
 
+# 文档验证
+.PHONY: validate-docs
+validate-docs:
+	@echo "Validating documentation language consistency..."
+	@./tools/validate_docs.sh
+	@echo "Documentation validation completed!"
+
 # 配置文件
 .PHONY: config
 config:
@@ -197,6 +204,7 @@ help:
 	@echo "  vendor          - Vendor dependencies"
 	@echo "  install         - Install the binary"
 	@echo "  docs            - Generate documentation"
+	@echo "  validate-docs   - Validate documentation language consistency"
 	@echo "  config          - Copy configuration templates"
 	@echo "  release         - Create a release with platform-specific archives"
 	@echo "  help            - Show this help message"
