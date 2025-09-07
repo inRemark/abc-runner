@@ -6,7 +6,7 @@
 
 A unified performance testing tool for Redis, HTTP, and Kafka protocols.
 
-⚠️ **Breaking Change Notice**: This version (v3.0.0) introduces breaking changes. See [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md) for upgrade instructions.
+⚠️ **Breaking Change Notice**: This version (v3.0.0) introduces breaking changes. See [Migration Guide](docs/CHANGELOG.md) for upgrade instructions.
 
 ## Features
 
@@ -193,6 +193,19 @@ benchmark:
   test_type: "produce"
 ```
 
+## Documentation
+
+For detailed documentation, please see the following resources:
+
+- [Architecture Overview](docs/architecture/overview.md) - System architecture and design principles
+- [Component Documentation](docs/architecture/components.md) - Detailed component documentation
+- [Quick Start Guide](docs/usage/quickstart.md) - Getting started quickly
+- [Redis Testing Guide](docs/usage/redis.md) - Redis-specific features and usage
+- [HTTP Testing Guide](docs/usage/http.md) - HTTP-specific features and usage
+- [Kafka Testing Guide](docs/usage/kafka.md) - Kafka-specific features and usage
+- [Contributing Guide](docs/development/contributing.md) - Guidelines for contributing
+- [Extending redis-runner](docs/development/extending.md) - How to extend the tool
+
 ## Migration from v2.x
 
 This version introduces breaking changes. Key changes:
@@ -203,7 +216,7 @@ This version introduces breaking changes. Key changes:
 - Simplified command structure
 - Unified configuration format
 
-See the [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md) for detailed upgrade instructions.
+See the [Migration Guide](docs/CHANGELOG.md) for detailed upgrade instructions.
 
 ## Examples
 
@@ -259,6 +272,6 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 For questions and support:
 
-- Check the [Migration Guide](COMMAND_REFACTOR_MIGRATION_GUIDE.md)
+- Check the [Migration Guide](docs/CHANGELOG.md)
 - Review command help: `./redis-runner <command> --help`
 - Open an issue for bug reports or feature requests
