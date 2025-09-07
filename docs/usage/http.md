@@ -88,6 +88,7 @@ benchmark:
 ```
 
 Run with configuration:
+
 ```bash
 ./redis-runner http --config http.yaml
 ```

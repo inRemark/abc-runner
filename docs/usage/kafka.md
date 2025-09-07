@@ -119,6 +119,7 @@ benchmark:
 ```
 
 Run with configuration:
+
 ```bash
 ./redis-runner kafka --config kafka.yaml
 ```

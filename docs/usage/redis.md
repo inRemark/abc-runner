@@ -139,6 +139,7 @@ benchmark:
 ```
 
 Run with configuration:
+
 ```bash
 ./redis-runner redis --config redis.yaml
 ```

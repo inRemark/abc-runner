@@ -22,7 +22,7 @@ To add support for a new protocol, you need to:
 
 Create a new directory under `app/adapters/` for your protocol:
 
-```
+```bash
 app/adapters/myprotocol/
 ├── adapter.go          # Main adapter implementation
 ├── config/             # Configuration structures

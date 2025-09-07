@@ -52,6 +52,7 @@ graph TB
 ### 1. Core Engine
 
 The core engine is responsible for:
+
 - Parsing command line arguments
 - Managing configuration
 - Coordinating test execution
@@ -60,6 +61,7 @@ The core engine is responsible for:
 ### 2. Protocol Adapters
 
 Each protocol (Redis, HTTP, Kafka) has its own adapter that implements:
+
 - Connection management
 - Protocol-specific operations
 - Metrics collection
@@ -68,6 +70,7 @@ Each protocol (Redis, HTTP, Kafka) has its own adapter that implements:
 ### 3. Configuration Management
 
 The configuration system supports:
+
 - Command line arguments
 - YAML configuration files
 - Environment variables
@@ -76,6 +79,7 @@ The configuration system supports:
 ### 4. Reporting System
 
 The reporting system provides:
+
 - Real-time progress updates
 - Detailed performance metrics
 - Summary statistics

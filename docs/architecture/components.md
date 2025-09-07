@@ -12,6 +12,7 @@ The Enhanced Runner is the heart of the redis-runner tool. It coordinates the en
 - Handles test scheduling and progress tracking
 
 Key features:
+
 - Configurable parallel execution
 - Real-time progress monitoring
 - Graceful shutdown handling
@@ -27,6 +28,7 @@ The Configuration Manager handles all aspects of configuration:
 - Managing configuration precedence
 
 Key components:
+
 - `ConfigManager`: Main configuration coordinator
 - `MultiSourceLoader`: Loads config from multiple sources
 - `ConfigSources`: Defines configuration sources and precedence
@@ -46,18 +48,21 @@ The Report Manager handles test result collection and presentation:
 
 The Redis adapter provides comprehensive Redis testing capabilities:
 
-#### Connection Management
+#### Redis Connection Management
+
 - Supports standalone, cluster, and sentinel modes
 - Connection pooling for efficient resource usage
 - Authentication and TLS support
 
-#### Operations
+#### Redis Operations
+
 - Multiple test cases (SET/GET, INCR, LPUSH/LPOP, etc.)
 - Configurable read/write ratios
 - TTL support
 - Key generation strategies
 
-#### Configuration
+#### Redis Configuration
+
 - Host, port, and authentication settings
 - Mode selection (standalone/cluster/sentinel)
 - Connection timeout and retry settings
@@ -66,18 +71,21 @@ The Redis adapter provides comprehensive Redis testing capabilities:
 
 The HTTP adapter enables HTTP endpoint performance testing:
 
-#### Connection Management
+#### HTTP Connection Management
+
 - Connection pooling with keep-alive support
 - Configurable connection limits
 - Timeout and retry handling
 
-#### Operations
+#### HTTP Operations
+
 - Support for GET, POST, PUT, DELETE methods
 - Custom headers and request bodies
 - Content-Type handling
 - Response validation
 
-#### Configuration
+#### HTTP Configuration
+
 - Base URL and path settings
 - Method and header configuration
 - Request body templates
@@ -87,18 +95,21 @@ The HTTP adapter enables HTTP endpoint performance testing:
 
 The Kafka adapter provides Kafka producer and consumer testing:
 
-#### Connection Management
+#### Kafka Connection Management
+
 - Broker connection management
 - Producer and consumer pooling
 - Topic management
 
-#### Operations
+#### Kafka Operations
+
 - Producer performance testing
 - Consumer lag testing
 - Mixed produce/consume workloads
 - Message size and compression configuration
 
-#### Configuration
+#### Kafka Configuration
+
 - Broker and topic settings
 - Producer and consumer configurations
 - Message format and serialization
