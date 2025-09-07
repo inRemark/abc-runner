@@ -38,6 +38,14 @@ func NewRedisCommandHandler() *RedisSimpleHandler {
 
 // Execute 执行Redis命令
 func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
+	// 检查是否请求帮助
+	for _, arg := range args {
+		if arg == "--help" || arg == "help" {
+			fmt.Println(h.GetHelp())
+			return nil
+		}
+	}
+
 	log.Println("Starting Redis benchmark...")
 
 	// 1. 加载配置
@@ -209,7 +217,7 @@ func (h *RedisSimpleHandler) printResults(metrics *interfaces.Metrics) {
 	fmt.Printf("Total Requests: %d\n", benchmarkConfig.GetTotal())
 	fmt.Printf("Parallel Connections: %d\n", benchmarkConfig.GetParallels())
 	fmt.Printf("Data Size: %d bytes\n", cfg.GetBenchmark().GetDataSize())
-	
+
 	// 测试模式信息
 	// 一些字段可能不存在，暂时注释
 	// if benchmarkConfig.GetDuration() > 0 {
@@ -266,7 +274,7 @@ func (h *RedisSimpleHandler) getRedisMetrics() map[string]interface{} {
 	if h.metricsCollector == nil {
 		return nil
 	}
-	
+
 	// 这里应该从Redis适配器获取特定指标
 	// 为了保持兼容性，先返回空
 	return nil

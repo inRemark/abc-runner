@@ -38,6 +38,14 @@ func NewKafkaCommandHandler() *KafkaSimpleHandler {
 
 // Execute 执行Kafka命令
 func (k *KafkaSimpleHandler) Execute(ctx context.Context, args []string) error {
+	// 检查是否请求帮助
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" || arg == "help" {
+			fmt.Println(k.GetHelp())
+			return nil
+		}
+	}
+
 	log.Println("Starting Kafka performance test...")
 
 	// 1. 加载配置
@@ -509,7 +517,7 @@ func (k *KafkaSimpleHandler) getKafkaMetrics() map[string]interface{} {
 	if k.metricsCollector == nil {
 		return nil
 	}
-	
+
 	// 这里应该从Kafka适配器获取特定指标
 	// 为了保持兼容性，先返回空
 	return nil

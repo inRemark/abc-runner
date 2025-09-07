@@ -38,6 +38,14 @@ func NewHttpCommandHandler() *HttpSimpleHandler {
 
 // Execute 执行HTTP命令
 func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
+	// 检查是否请求帮助
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" || arg == "help" {
+			fmt.Println(h.GetHelp())
+			return nil
+		}
+	}
+
 	log.Println("Starting HTTP load test...")
 
 	// 1. 加载配置
@@ -171,6 +179,20 @@ func (h *HttpSimpleHandler) createConfigFromArgs(args []string) *httpConfig.Http
 			IdleConnTimeout: 90 * time.Second,
 			KeepAlive:       90 * time.Second, // 使用正确的time.Duration类型
 		},
+		// 添加默认的请求配置以满足验证要求
+		Requests: []httpConfig.HttpRequestConfig{
+			{
+				Method:      "GET",
+				Path:        "/",
+				Headers:     map[string]string{"Accept": "application/json"},
+				ContentType: "application/json",
+				Weight:      100,
+			},
+		},
+		// 添加默认的认证配置
+		Auth: httpConfig.HttpAuthConfig{
+			Type: "none",
+		},
 		Benchmark: httpConfig.HttpBenchmarkConfig{
 			Total:           1000,
 			Parallels:       10,
@@ -183,6 +205,8 @@ func (h *HttpSimpleHandler) createConfigFromArgs(args []string) *httpConfig.Http
 	}
 
 	headers := make(map[string]string)
+	// 获取默认请求配置用于更新
+	defaultRequest := &cfg.Requests[0]
 
 	// 解析命令行参数
 	for i := 0; i < len(args); i++ {
@@ -209,12 +233,16 @@ func (h *HttpSimpleHandler) createConfigFromArgs(args []string) *httpConfig.Http
 			}
 		case "--method":
 			if i+1 < len(args) {
-				cfg.Benchmark.Method = strings.ToUpper(args[i+1])
+				method := strings.ToUpper(args[i+1])
+				cfg.Benchmark.Method = method
+				defaultRequest.Method = method
 				i++
 			}
 		case "--path":
 			if i+1 < len(args) {
-				cfg.Benchmark.Path = args[i+1]
+				path := args[i+1]
+				cfg.Benchmark.Path = path
+				defaultRequest.Path = path
 				i++
 			}
 		case "--timeout":
@@ -273,6 +301,10 @@ func (h *HttpSimpleHandler) createConfigFromArgs(args []string) *httpConfig.Http
 	// 设置收集到的headers
 	if len(headers) > 0 {
 		cfg.Benchmark.Headers = headers
+		// 同时更新请求配置中的headers
+		for k, v := range headers {
+			defaultRequest.Headers[k] = v
+		}
 	}
 
 	return cfg
@@ -321,7 +353,7 @@ func (h *HttpSimpleHandler) printResults(metrics *interfaces.Metrics) {
 		fmt.Printf("HTTP Method: %s\n", httpCfg.Benchmark.Method)
 		fmt.Printf("Total Requests: %d\n", httpCfg.Benchmark.Total)
 		fmt.Printf("Parallel Connections: %d\n", httpCfg.Benchmark.Parallels)
-		
+
 		if httpCfg.Benchmark.Duration > 0 {
 			fmt.Printf("Test Duration: %v\n", httpCfg.Benchmark.Duration)
 		}
@@ -382,9 +414,8 @@ func (h *HttpSimpleHandler) getHttpMetrics() map[string]interface{} {
 	if h.metricsCollector == nil {
 		return nil
 	}
-	
-	// 这里应该从HTTP适配器获取特定指标
-	// 为了保持兼容性，先返回空
+
+	// TODO: 这里应该从HTTP适配器获取特定指标, 为了保持兼容性，先返回空
 	return nil
 }
 

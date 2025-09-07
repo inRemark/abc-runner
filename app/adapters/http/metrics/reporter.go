@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	
+
 	"redis-runner/app/core/interfaces"
 )
 
@@ -23,22 +23,22 @@ func NewHttpMetricsReporter(collector *HttpMetricsCollector) *HttpMetricsReporte
 // GenerateReport 生成报告
 func (r *HttpMetricsReporter) GenerateReport() string {
 	var report strings.Builder
-	
+
 	// 基础指标
 	baseMetrics := r.collector.GetMetrics()
 	report.WriteString(r.formatBaseMetrics(baseMetrics))
-	
+
 	// HTTP特定指标
 	httpMetrics := r.collector.GetHttpSpecificMetrics()
 	report.WriteString(r.formatHttpMetrics(httpMetrics))
-	
+
 	return report.String()
 }
 
 // GenerateSimpleReport 生成简单报告
 func (r *HttpMetricsReporter) GenerateSimpleReport() string {
 	baseMetrics := r.collector.GetMetrics()
-	
+
 	return fmt.Sprintf(`HTTP Performance Report:
   Total Requests: %d
   Successful: %d (%.2f%%)
@@ -67,24 +67,24 @@ func (r *HttpMetricsReporter) GenerateSimpleReport() string {
 // formatBaseMetrics 格式化基础指标
 func (r *HttpMetricsReporter) formatBaseMetrics(metrics *interfaces.Metrics) string {
 	var report strings.Builder
-	
+
 	report.WriteString("=== HTTP Performance Summary ===\n")
 	report.WriteString(fmt.Sprintf("Test Duration: %v\n", metrics.Duration))
 	report.WriteString(fmt.Sprintf("Start Time: %v\n", metrics.StartTime.Format(time.RFC3339)))
 	report.WriteString(fmt.Sprintf("End Time: %v\n", metrics.EndTime.Format(time.RFC3339)))
 	report.WriteString("\n")
-	
+
 	report.WriteString("=== Request Statistics ===\n")
 	report.WriteString(fmt.Sprintf("Total Requests: %d\n", metrics.TotalOps))
-	report.WriteString(fmt.Sprintf("Successful Requests: %d (%.2f%%)\n", 
+	report.WriteString(fmt.Sprintf("Successful Requests: %d (%.2f%%)\n",
 		metrics.SuccessOps, float64(metrics.SuccessOps)/float64(metrics.TotalOps)*100))
-	report.WriteString(fmt.Sprintf("Failed Requests: %d (%.2f%%)\n", 
+	report.WriteString(fmt.Sprintf("Failed Requests: %d (%.2f%%)\n",
 		metrics.FailedOps, float64(metrics.FailedOps)/float64(metrics.TotalOps)*100))
 	report.WriteString(fmt.Sprintf("Read Operations: %d\n", metrics.ReadOps))
 	report.WriteString(fmt.Sprintf("Write Operations: %d\n", metrics.WriteOps))
 	report.WriteString(fmt.Sprintf("Requests per Second: %d\n", metrics.RPS))
 	report.WriteString("\n")
-	
+
 	report.WriteString("=== Latency Statistics ===\n")
 	report.WriteString(fmt.Sprintf("Minimum Latency: %v\n", metrics.MinLatency))
 	report.WriteString(fmt.Sprintf("Maximum Latency: %v\n", metrics.MaxLatency))
@@ -94,14 +94,14 @@ func (r *HttpMetricsReporter) formatBaseMetrics(metrics *interfaces.Metrics) str
 	report.WriteString(fmt.Sprintf("P99 Latency: %v\n", metrics.P99Latency))
 	report.WriteString(fmt.Sprintf("Error Rate: %.2f%%\n", metrics.ErrorRate))
 	report.WriteString("\n")
-	
+
 	return report.String()
 }
 
 // formatHttpMetrics 格式化HTTP特定指标
 func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) string {
 	var report strings.Builder
-	
+
 	// 状态码分布
 	if statusCodes, ok := metrics["status_codes"].(map[int]int64); ok && len(statusCodes) > 0 {
 		report.WriteString("=== HTTP Status Code Distribution ===\n")
@@ -110,7 +110,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 请求方法统计
 	if methods, ok := metrics["methods"].(map[string]int64); ok && len(methods) > 0 {
 		report.WriteString("=== HTTP Method Distribution ===\n")
@@ -119,7 +119,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 错误类型统计
 	if errorTypes, ok := metrics["error_types"].(map[string]int64); ok && len(errorTypes) > 0 {
 		report.WriteString("=== Error Type Distribution ===\n")
@@ -128,7 +128,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 响应大小统计
 	if responseSizes, ok := metrics["response_sizes"].(map[string]interface{}); ok && responseSizes != nil {
 		report.WriteString("=== Response Size Statistics ===\n")
@@ -146,7 +146,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// TLS握手时间统计
 	if tlsStats, ok := metrics["tls_handshake_times"].(map[string]interface{}); ok && tlsStats != nil {
 		report.WriteString("=== TLS Handshake Time Statistics ===\n")
@@ -161,7 +161,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 上传统计
 	if uploadStats, ok := metrics["upload_stats"].(map[string]interface{}); ok && uploadStats != nil {
 		report.WriteString("=== File Upload Statistics ===\n")
@@ -178,7 +178,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 网络时间统计
 	if networkTimes, ok := metrics["network_times"].(map[string]interface{}); ok && len(networkTimes) > 0 {
 		report.WriteString("=== Network Time Breakdown ===\n")
@@ -199,7 +199,7 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 		}
 		report.WriteString("\n")
 	}
-	
+
 	// 计数器统计
 	if redirectCount, ok := metrics["redirect_count"].(int64); ok && redirectCount > 0 {
 		report.WriteString(fmt.Sprintf("Redirects: %d\n", redirectCount))
@@ -210,38 +210,38 @@ func (r *HttpMetricsReporter) formatHttpMetrics(metrics map[string]interface{}) 
 	if connErrorCount, ok := metrics["connection_error_count"].(int64); ok && connErrorCount > 0 {
 		report.WriteString(fmt.Sprintf("Connection Errors: %d\n", connErrorCount))
 	}
-	
+
 	return report.String()
 }
 
 // GenerateJSONReport 生成JSON格式报告
 func (r *HttpMetricsReporter) GenerateJSONReport() map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	// 基础指标
 	baseMetrics := r.collector.GetMetrics()
 	result["base_metrics"] = map[string]interface{}{
-		"total_ops":    baseMetrics.TotalOps,
-		"success_ops":  baseMetrics.SuccessOps,
-		"failed_ops":   baseMetrics.FailedOps,
-		"read_ops":     baseMetrics.ReadOps,
-		"write_ops":    baseMetrics.WriteOps,
-		"rps":          baseMetrics.RPS,
-		"avg_latency":  baseMetrics.AvgLatency.Nanoseconds(),
-		"min_latency":  baseMetrics.MinLatency.Nanoseconds(),
-		"max_latency":  baseMetrics.MaxLatency.Nanoseconds(),
-		"p90_latency":  baseMetrics.P90Latency.Nanoseconds(),
-		"p95_latency":  baseMetrics.P95Latency.Nanoseconds(),
-		"p99_latency":  baseMetrics.P99Latency.Nanoseconds(),
-		"error_rate":   baseMetrics.ErrorRate,
-		"duration":     baseMetrics.Duration.Nanoseconds(),
-		"start_time":   baseMetrics.StartTime.Unix(),
-		"end_time":     baseMetrics.EndTime.Unix(),
+		"total_ops":   baseMetrics.TotalOps,
+		"success_ops": baseMetrics.SuccessOps,
+		"failed_ops":  baseMetrics.FailedOps,
+		"read_ops":    baseMetrics.ReadOps,
+		"write_ops":   baseMetrics.WriteOps,
+		"rps":         baseMetrics.RPS,
+		"avg_latency": baseMetrics.AvgLatency.Nanoseconds(),
+		"min_latency": baseMetrics.MinLatency.Nanoseconds(),
+		"max_latency": baseMetrics.MaxLatency.Nanoseconds(),
+		"p90_latency": baseMetrics.P90Latency.Nanoseconds(),
+		"p95_latency": baseMetrics.P95Latency.Nanoseconds(),
+		"p99_latency": baseMetrics.P99Latency.Nanoseconds(),
+		"error_rate":  baseMetrics.ErrorRate,
+		"duration":    baseMetrics.Duration.Nanoseconds(),
+		"start_time":  baseMetrics.StartTime.Unix(),
+		"end_time":    baseMetrics.EndTime.Unix(),
 	}
-	
+
 	// HTTP特定指标
 	result["http_metrics"] = r.collector.GetHttpSpecificMetrics()
-	
+
 	return result
 }
 
@@ -259,7 +259,7 @@ func (r *HttpMetricsReporter) GenerateCSVRow() string {
 		metrics.SuccessOps,
 		metrics.FailedOps,
 		metrics.RPS,
-		float64(metrics.AvgLatency.Nanoseconds())/1000000,  // 转换为毫秒
+		float64(metrics.AvgLatency.Nanoseconds())/1000000, // 转换为毫秒
 		float64(metrics.P95Latency.Nanoseconds())/1000000,
 		float64(metrics.P99Latency.Nanoseconds())/1000000,
 		metrics.ErrorRate,

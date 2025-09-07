@@ -3,69 +3,69 @@ package config
 import (
 	"log"
 
-	"redis-runner/app/core/interfaces"
-	redisconfig "redis-runner/app/adapters/redis/config"
 	httpconfig "redis-runner/app/adapters/http/config"
 	kafkaconfig "redis-runner/app/adapters/kafka/config"
+	redisconfig "redis-runner/app/adapters/redis/config"
+	"redis-runner/app/core/interfaces"
 )
 
 // CreateRedisConfigSources 创建Redis配置源列表
 func CreateRedisConfigSources(yamlFile string, args []string) []ConfigSource {
 	sources := []ConfigSource{}
-	
+
 	// YAML文件配置（最高优先级）
 	if yamlFile != "" {
 		sources = append(sources, NewRedisYAMLConfigSource(yamlFile))
 	}
-	
+
 	// 环境变量配置
 	sources = append(sources, NewRedisEnvironmentConfigSource("REDIS_RUNNER"))
-	
+
 	// 命令行参数配置（最低优先级）
 	if args != nil {
 		sources = append(sources, NewRedisCommandLineConfigSource(args))
 	}
-	
+
 	return sources
 }
 
 // CreateHttpConfigSources 创建HTTP配置源列表
 func CreateHttpConfigSources(yamlFile string, args []string) []ConfigSource {
 	sources := []ConfigSource{}
-	
+
 	// YAML文件配置（最高优先级）
 	if yamlFile != "" {
 		sources = append(sources, NewHttpYAMLConfigSource(yamlFile))
 	}
-	
+
 	// 环境变量配置
 	sources = append(sources, NewHttpEnvironmentConfigSource("HTTP_RUNNER"))
-	
+
 	// 命令行参数配置（最低优先级）
 	if args != nil {
 		sources = append(sources, NewHttpCommandLineConfigSource(args))
 	}
-	
+
 	return sources
 }
 
 // CreateKafkaConfigSources 创建Kafka配置源列表
 func CreateKafkaConfigSources(yamlFile string, args []string) []ConfigSource {
 	sources := []ConfigSource{}
-	
+
 	// YAML文件配置（最高优先级）
 	if yamlFile != "" {
 		sources = append(sources, NewKafkaYAMLConfigSource(yamlFile))
 	}
-	
+
 	// 环境变量配置
 	sources = append(sources, NewKafkaEnvironmentConfigSource("KAFKA_RUNNER"))
-	
+
 	// 命令行参数配置（最低优先级）
 	if args != nil {
 		sources = append(sources, NewKafkaCommandLineConfigSource(args))
 	}
-	
+
 	return sources
 }
 
@@ -191,13 +191,13 @@ func (h *HttpConfigSourceImpl) Load() (interfaces.Config, error) {
 		log.Printf("HTTP YAML config loading not implemented yet: %s", h.filePath)
 		return httpconfig.LoadDefaultHttpConfig(), nil
 	}
-	
+
 	if h.args != nil {
 		// TODO: 实现命令行参数解析
 		log.Println("HTTP command line config parsing not implemented yet")
 		return httpconfig.LoadDefaultHttpConfig(), nil
 	}
-	
+
 	// 环境变量配置
 	// TODO: 实现环境变量加载
 	log.Println("HTTP environment config loading not implemented yet")
@@ -233,13 +233,13 @@ func (k *KafkaConfigSourceImpl) Load() (interfaces.Config, error) {
 		log.Printf("Kafka YAML config loading not implemented yet: %s", k.filePath)
 		return kafkaconfig.LoadDefaultKafkaConfig(), nil
 	}
-	
+
 	if k.args != nil {
 		// TODO: 实现命令行参数解析
 		log.Println("Kafka command line config parsing not implemented yet")
 		return kafkaconfig.LoadDefaultKafkaConfig(), nil
 	}
-	
+
 	// 环境变量配置
 	// TODO: 实现环境变量加载
 	log.Println("Kafka environment config loading not implemented yet")

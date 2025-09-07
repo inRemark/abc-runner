@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"time"
-	
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -13,12 +13,12 @@ func DefaultHTTPConfig() *HttpAdapterConfig {
 	return &HttpAdapterConfig{
 		Protocol: "http",
 		Connection: HttpConnectionConfig{
-			BaseURL:           "http://localhost:8080",
-			Timeout:           30 * time.Second,
-			KeepAlive:         90 * time.Second,
-			MaxIdleConns:      50,
-			MaxConnsPerHost:   20,
-			IdleConnTimeout:   90 * time.Second,
+			BaseURL:            "http://localhost:8080",
+			Timeout:            30 * time.Second,
+			KeepAlive:          90 * time.Second,
+			MaxIdleConns:       50,
+			MaxConnsPerHost:    20,
+			IdleConnTimeout:    90 * time.Second,
 			DisableCompression: false,
 			TLS: HttpTLSConfig{
 				InsecureSkipVerify:       false,
@@ -80,34 +80,34 @@ func DefaultHTTPConfig() *HttpAdapterConfig {
 func LoadHTTPConfig(path string) (*HttpAdapterConfig, error) {
 	// 首先加载默认配置
 	config := DefaultHTTPConfig()
-	
+
 	// 如果指定了配置文件路径，则读取配置文件
 	if path != "" {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 		}
-		
+
 		// 解析配置文件
 		var fileConfig struct {
 			HTTP *HttpAdapterConfig `yaml:"http"`
 		}
-		
+
 		if err := yaml.Unmarshal(data, &fileConfig); err != nil {
 			return nil, fmt.Errorf("failed to parse config file %s: %w", path, err)
 		}
-		
+
 		if fileConfig.HTTP != nil {
 			// 合并配置
 			config = mergeConfig(config, fileConfig.HTTP)
 		}
 	}
-	
+
 	// 验证配置
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -119,7 +119,7 @@ func LoadHTTPConfigDefault() (*HttpAdapterConfig, error) {
 // mergeConfig 合并配置
 func mergeConfig(base, override *HttpAdapterConfig) *HttpAdapterConfig {
 	result := *base
-	
+
 	// 合并连接配置
 	if override.Connection.BaseURL != "" {
 		result.Connection.BaseURL = override.Connection.BaseURL
@@ -140,7 +140,7 @@ func mergeConfig(base, override *HttpAdapterConfig) *HttpAdapterConfig {
 		result.Connection.IdleConnTimeout = override.Connection.IdleConnTimeout
 	}
 	result.Connection.DisableCompression = override.Connection.DisableCompression
-	
+
 	// 合并TLS配置
 	if override.Connection.TLS.MinVersion != "" {
 		result.Connection.TLS.MinVersion = override.Connection.TLS.MinVersion
@@ -170,22 +170,22 @@ func mergeConfig(base, override *HttpAdapterConfig) *HttpAdapterConfig {
 	result.Connection.TLS.ClientAuth = override.Connection.TLS.ClientAuth
 	result.Connection.TLS.PreferServerCipherSuites = override.Connection.TLS.PreferServerCipherSuites
 	result.Connection.TLS.SessionTicketsDisabled = override.Connection.TLS.SessionTicketsDisabled
-	
+
 	// 合并请求配置
 	if len(override.Requests) > 0 {
 		result.Requests = override.Requests
 	}
-	
+
 	// 合并认证配置
 	if override.Auth.Type != "" {
 		result.Auth = override.Auth
 	}
-	
+
 	// 合并上传配置
 	if override.Upload.Enable {
 		result.Upload = override.Upload
 	}
-	
+
 	// 合并基准测试配置
 	if override.Benchmark.Total > 0 {
 		result.Benchmark.Total = override.Benchmark.Total
@@ -226,7 +226,7 @@ func mergeConfig(base, override *HttpAdapterConfig) *HttpAdapterConfig {
 	result.Benchmark.FollowRedirects = override.Benchmark.FollowRedirects
 	result.Benchmark.DisableCompression = override.Benchmark.DisableCompression
 	result.Benchmark.EnableHTTP2 = override.Benchmark.EnableHTTP2
-	
+
 	return &result
 }
 
@@ -238,15 +238,15 @@ func SaveHTTPConfig(config *HttpAdapterConfig, path string) error {
 	}{
 		HTTP: config,
 	}
-	
+
 	data, err := yaml.Marshal(wrapper)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	
+
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file %s: %w", path, err)
 	}
-	
+
 	return nil
 }
