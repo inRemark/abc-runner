@@ -1,7 +1,7 @@
 # redis-runner Makefile
 
 # 变量定义
-BINARY_NAME=redis-runner
+BINARY_NAME=abc-runner
 OUTPUT_DIR=bin
 SOURCE_DIR=.
 CONFIG_DIR=conf
@@ -15,7 +15,7 @@ GO_CLEAN=$(GO) clean
 GO_DEPS=$(GO) mod tidy
 
 # 版本信息
-VERSION ?= 0.3.0
+VERSION ?= 0.2.0
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 

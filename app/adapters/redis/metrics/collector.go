@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"redis-runner/app/adapters/redis/operations"
+	"abc-runner/app/adapters/redis/operations"
 )
 
 // MetricsCollector Redis指标收集器

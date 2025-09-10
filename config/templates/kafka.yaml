@@ -4,7 +4,7 @@ kafka:
     - "192.168.0.62:9092"
     - "192.168.0.62:9093"
     - "192.168.0.62:9094"
-  client_id: "redis-runner-kafka-client"
+  client_id: "abc-runner-kafka-client"
   version: "2.8.0"
   
   # 生产者配置
@@ -22,7 +22,7 @@ kafka:
     
   # 消费者配置
   consumer:
-    group_id: "redis-runner-group"
+    group_id: "abc-runner-group"
     auto_offset_reset: "latest"    # earliest, latest
     enable_auto_commit: true
     auto_commit_interval: "1s"

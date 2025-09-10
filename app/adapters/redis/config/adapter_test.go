@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 func TestRedisConfigAdapter(t *testing.T) {

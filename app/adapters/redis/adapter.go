@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"redis-runner/app/core/base"
-	redisconfig "redis-runner/app/adapters/redis/config"
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/base"
+	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/interfaces"
 
 	"github.com/go-redis/redis/v8"
 )

@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"redis-runner/app/adapters/kafka"
-	"redis-runner/app/adapters/kafka/config"
-	"redis-runner/app/adapters/kafka/operations"
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/adapters/kafka"
+	"abc-runner/app/adapters/kafka/config"
+	"abc-runner/app/adapters/kafka/operations"
+	"abc-runner/app/core/interfaces"
 )
 
 func main() {

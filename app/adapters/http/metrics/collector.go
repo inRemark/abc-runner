@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 	
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // HttpMetricsCollector HTTP指标收集器

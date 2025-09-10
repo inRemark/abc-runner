@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // LoadDefaultKafkaConfig 加载默认Kafka配置

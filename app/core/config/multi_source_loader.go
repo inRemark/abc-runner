@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"redis-runner/app/core/interfaces"
-	redisconfig "redis-runner/app/adapters/redis/config"
+	"abc-runner/app/core/interfaces"
+	redisconfig "abc-runner/app/adapters/redis/config"
 )
 
 // EnvironmentConfigSource 环境变量配置源

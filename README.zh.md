@@ -1,4 +1,4 @@
-# redis-runner
+# abc-runner
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -35,7 +35,7 @@
 
 ### 发布包
 
-预构建的发布包可从[发布页面](https://github.com/your-org/redis-runner/releases)下载。每个发布包含：
+预构建的发布包可从[发布页面](https://github.com/your-org/abc-runner/releases)下载。每个发布包含：
 
 - 针对macOS、Linux和Windows平台的二进制文件
 - 配置文件模板
@@ -45,8 +45,8 @@
 
 ```
 # 克隆仓库
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # 为当前平台构建
 make build
@@ -69,7 +69,7 @@ VERSION=1.0.0 make release
 
 ```
 # 从源码构建
-go build -o redis-runner .
+go build -o abc-runner .
 
 # 或从发布页面下载预构建的二进制文件
 ```
@@ -78,25 +78,25 @@ go build -o redis-runner .
 
 ```
 # 显示帮助
-./redis-runner --help
+./abc-runner --help
 
 # Redis性能测试
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # HTTP负载测试
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # Kafka性能测试
-./redis-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
 ```
 
 ### 使用别名
 
 ```
 # 快速测试的短别名
-./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
-./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
-./redis-runner k --broker localhost:9092 -n 100      # Kafka
+./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
+./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
+./abc-runner k --broker localhost:9092 -n 100      # Kafka
 ```
 
 ## 命令参考
@@ -104,27 +104,27 @@ go build -o redis-runner .
 ### 全局选项
 
 ```
-./redis-runner --help                 # 显示帮助
-./redis-runner --version              # 显示版本
+./abc-runner --help                 # 显示帮助
+./abc-runner --version              # 显示版本
 ```
 
 ### Redis命令
 
 ```
 # 基本Redis测试
-./redis-runner redis -h <host> -p <port> -n <requests> -c <connections>
+./abc-runner redis -h <host> -p <port> -n <requests> -c <connections>
 
 # 带认证的Redis
-./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
 
 # Redis集群模式
-./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
 
 # 自定义测试用例和读取比例
-./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
+./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # 使用配置文件
-./redis-runner redis --config config/templates/redis.yaml
+./abc-runner redis --config config/templates/redis.yaml
 ```
 
 支持的Redis测试用例 (`-t` 选项):
@@ -158,32 +158,32 @@ go build -o redis-runner .
 
 ```
 # 基本HTTP GET测试
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # 带请求体的HTTP POST
-./redis-runner http --url http://api.example.com/users \n  --method POST --body '{"name":"test"}' \n  --content-type application/json -n 1000 -c 20
+./abc-runner http --url http://api.example.com/users \n  --method POST --body '{"name":"test"}' \n  --content-type application/json -n 1000 -c 20
 
 # 基于持续时间的测试
-./redis-runner http --url http://localhost:8080 --duration 60s -c 100
+./abc-runner http --url http://localhost:8080 --duration 60s -c 100
 
 # 自定义头部
-./redis-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
+./abc-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
 ```
 
 ### Kafka命令
 
 ```
 # 基本生产者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # 消费者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id my-group -n 1000
+./abc-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id my-group -n 1000
 
 # 混合生产和消费测试
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic high-throughput --test-type produce_consume \n  --message-size 4096 --duration 60s -c 8
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic high-throughput --test-type produce_consume \n  --message-size 4096 --duration 60s -c 8
 
 # 高性能测试与压缩
-./redis-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
+./abc-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
 ```
 
 ## 配置文件
@@ -263,7 +263,7 @@ benchmark:
 - [HTTP测试指南](docs/en/user-guide/http.md) - HTTP特定功能和用法 | [HTTP测试指南](docs/zh/user-guide/http.md)
 - [Kafka测试指南](docs/en/user-guide/kafka.md) - Kafka特定功能和用法 | [Kafka测试指南](docs/zh/user-guide/kafka.md)
 - [贡献指南](docs/en/developer-guide/contributing.md) - 贡献指南 | [贡献指南](docs/zh/developer-guide/contributing.md)
-- [扩展redis-runner](docs/en/developer-guide/extending.md) - 如何扩展工具 | [扩展redis-runner](docs/zh/developer-guide/extending.md)
+- [扩展abc-runner](docs/en/developer-guide/extending.md) - 如何扩展工具 | [扩展abc-runner](docs/zh/developer-guide/extending.md)
 
 ## 从v0.0.x迁移
 
@@ -283,40 +283,40 @@ benchmark:
 
 ```
 # 基本性能测试
-./redis-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
+./abc-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
 
 # 带认证的集群模式
-./redis-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
+./abc-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
 
 # 自定义测试模式
-./redis-runner redis -t incr -n 50000 -c 100  # 计数器操作
-./redis-runner redis -t lpush_lpop -n 10000 -c 50  # 列表操作
+./abc-runner redis -t incr -n 50000 -c 100  # 计数器操作
+./abc-runner redis -t lpush_lpop -n 10000 -c 50  # 列表操作
 ```
 
 ### HTTP负载测试
 
 ```
 # API端点测试
-./redis-runner http --url http://api.example.com/health -n 10000 -c 100
+./abc-runner http --url http://api.example.com/health -n 10000 -c 100
 
 # 带JSON负载的POST
-./redis-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
+./abc-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
 
 # 带渐进的负载测试
-./redis-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
+./abc-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
 ```
 
 ### Kafka性能测试
 
 ```
 # 生产者吞吐量测试
-./redis-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
+./abc-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
 
 # 消费者延迟测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
+./abc-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
 
 # 端到端延迟测试
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
 ```
 
 ## 许可证
@@ -332,7 +332,7 @@ benchmark:
 如有问题和支持需求：
 
 - 查看[迁移指南](docs/CHANGELOG.md)
-- 查看命令帮助: `./redis-runner <command> --help`
+- 查看命令帮助: `./abc-runner <command> --help`
 - 提交issue报告bug或功能请求
 
 ## 文档

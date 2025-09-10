@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/adapters/kafka/connection"
-	"redis-runner/app/adapters/kafka/metrics"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/adapters/kafka/connection"
+	"abc-runner/app/adapters/kafka/metrics"
 )
 
 // ConsumerOperations 消费者操作实现

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // DefaultKeyGenerator 默认键生成器实现

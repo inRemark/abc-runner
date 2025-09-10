@@ -1,12 +1,12 @@
 package main
 
 import (
+	"abc-runner/app/commands"
 	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"redis-runner/app/commands"
 	"time"
 )
 
@@ -165,10 +165,10 @@ func parseCommandArgs() (string, []string) {
 
 // showGlobalHelp 显示全局帮助信息
 func showGlobalHelp() {
-	fmt.Println("redis-runner - Unified Performance Testing Tool")
+	fmt.Println("abc-runner - Unified Performance Testing Tool")
 	fmt.Println()
 	fmt.Println("USAGE:")
-	fmt.Println("  redis-runner <command> [options]")
+	fmt.Println("  abc-runner <command> [options]")
 	fmt.Println()
 	fmt.Println("COMMANDS:")
 	fmt.Println("  redis, r         Redis performance testing")
@@ -180,18 +180,18 @@ func showGlobalHelp() {
 	fmt.Println("  --version, -v    Show version information")
 	fmt.Println()
 	fmt.Println("EXAMPLES:")
-	fmt.Println("  redis-runner redis --config config/templates/redis.yaml")
-	fmt.Println("  redis-runner r -n 1000 -c 10")
-	fmt.Println("  redis-runner http --url http://localhost:8080")
-	fmt.Println("  redis-runner kafka --brokers localhost:9092")
+	fmt.Println("  abc-runner redis --config config/templates/redis.yaml")
+	fmt.Println("  abc-runner r -n 1000 -c 10")
+	fmt.Println("  abc-runner http --url http://localhost:8080")
+	fmt.Println("  abc-runner kafka --brokers localhost:9092")
 	fmt.Println()
-	fmt.Println("Use \"redis-runner <command> --help\" for more information about a command.")
+	fmt.Println("Use \"abc-runner <command> --help\" for more information about a command.")
 }
 
 // showVersion 显示版本信息
 func showVersion() {
-	version := "0.0.1"
-	releaseDate := "2025-05-21"
+	version := "0.2.0"
+	releaseDate := "2025-09-8"
 	fmt.Printf("Version: %s\n", version)
 	fmt.Printf("Release date: %s\n", releaseDate)
 }

@@ -36,10 +36,10 @@
 
 ```bash
 # 直接使用示例配置
-./redis-runner redis --config config/examples/redis.yaml
+./abc-runner redis --config config/examples/redis.yaml
 
 # 复制并修改后使用
 cp config/examples/redis.yaml my-redis-config.yaml
 # 编辑 my-redis-config.yaml
-./redis-runner redis --config my-redis-config.yaml
+./abc-runner redis --config my-redis-config.yaml
 ```

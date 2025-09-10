@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 	
-	httpConfig "redis-runner/app/adapters/http/config"
+	httpConfig "abc-runner/app/adapters/http/config"
 )
 
 // HttpClient HTTP客户端封装

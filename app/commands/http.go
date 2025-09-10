@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"redis-runner/app/adapters/http"
-	httpConfig "redis-runner/app/adapters/http/config"
-	"redis-runner/app/core/config"
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/core/reports"
-	"redis-runner/app/core/runner"
-	"redis-runner/app/core/utils"
+	"abc-runner/app/adapters/http"
+	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/core/config"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/reports"
+	"abc-runner/app/core/runner"
+	"abc-runner/app/core/utils"
 )
 
 // HttpSimpleHandler 简化的HTTP命令处理器
@@ -109,7 +109,7 @@ func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (h *HttpSimpleHandler) GetHelp() string {
-	baseHelp := `Usage: redis-runner http [options]
+	baseHelp := `Usage: abc-runner http [options]
 
 HTTP Load Testing Tool
 
@@ -136,24 +136,24 @@ Load Patterns:
 
 Examples:
   # Basic GET test
-  redis-runner http --url http://localhost:8080/api/users -n 10000 -c 50
+  abc-runner http --url http://localhost:8080/api/users -n 10000 -c 50
 
   # POST test with JSON body
-  redis-runner http --url http://api.example.com/users --method POST \\
+  abc-runner http --url http://api.example.com/users --method POST \\
     --body '{"name":"test","email":"test@example.com"}' \\
     --content-type application/json -n 1000 -c 20
 
   # Duration-based test with custom headers
-  redis-runner http --url https://api.example.com/health \\
+  abc-runner http --url https://api.example.com/health \\
     --duration 60s -c 100 \\
     --header "Authorization:Bearer token123" \\
     --header "X-API-Key:secret"
 
   # Load test with configuration file
-  redis-runner http --config config/templates/http.yaml
+  abc-runner http --config config/templates/http.yaml
 
   # Stress test with ramp-up
-  redis-runner http --url http://localhost:8080 \\
+  abc-runner http --url http://localhost:8080 \\
     --duration 5m -c 200 --ramp-up 30s
 
 For more information: https://docs.redis-runner.com/http`

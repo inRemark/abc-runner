@@ -12,7 +12,7 @@ import (
 	"github.com/segmentio/kafka-go/sasl/plain"
 	"github.com/segmentio/kafka-go/sasl/scram"
 	
-	"redis-runner/app/adapters/kafka/config"
+	"abc-runner/app/adapters/kafka/config"
 )
 
 // PoolConfig 连接池配置

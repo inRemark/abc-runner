@@ -1,7 +1,7 @@
 package config
 
 import (
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // CreateRedisConfigSources 创建Redis配置源（兼容旧接口）

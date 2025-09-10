@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // BaseAdapter 协议适配器基础实现

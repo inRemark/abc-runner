@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"redis-runner/app/adapters/redis/config"
+	"abc-runner/app/adapters/redis/config"
 )
 
 // OperationType 操作类型常量

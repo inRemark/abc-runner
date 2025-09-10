@@ -1,4 +1,4 @@
-module redis-runner
+module abc-runner
 
 go 1.25.1
 

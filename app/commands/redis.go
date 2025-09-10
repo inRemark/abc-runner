@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"redis-runner/app/adapters/redis"
-	redisconfig "redis-runner/app/adapters/redis/config"
-	"redis-runner/app/core/config"
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/core/reports"
-	"redis-runner/app/core/runner"
-	"redis-runner/app/core/utils"
+	"abc-runner/app/adapters/redis"
+	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/config"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/reports"
+	"abc-runner/app/core/runner"
+	"abc-runner/app/core/utils"
 )
 
 // RedisSimpleHandler 简化的Redis命令处理器
@@ -109,7 +109,7 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (h *RedisSimpleHandler) GetHelp() string {
-	baseHelp := `Usage: redis-runner redis [options]
+	baseHelp := `Usage: abc-runner redis [options]
 
 Redis Performance Testing Tool
 
@@ -162,25 +162,25 @@ Test Cases:
 
 Examples:
   # Basic test
-  redis-runner redis -h 127.0.0.1 -p 6379 -n 10000 -c 50
+  abc-runner redis -h 127.0.0.1 -p 6379 -n 10000 -c 50
 
   # Duration-based test
-  redis-runner redis -h localhost -p 6379 --duration 60s -c 100
+  abc-runner redis -h localhost -p 6379 --duration 60s -c 100
 
   # Cluster test with configuration file
-  redis-runner redis --config config/templates/redis.yaml
+  abc-runner redis --config config/templates/redis.yaml
 
   # Custom test case with read-heavy workload
-  redis-runner redis -t set_get_random -n 50000 -c 100 --read-ratio 80
+  abc-runner redis -t set_get_random -n 50000 -c 100 --read-ratio 80
 
   # Counter operations test
-  redis-runner redis -t incr -n 10000 -c 50 -d 10
+  abc-runner redis -t incr -n 10000 -c 50 -d 10
 
   # List operations test
-  redis-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
+  abc-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
 
   # Set operations test
-  redis-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
+  abc-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
 
 For more information: https://docs.redis-runner.com/redis`
 

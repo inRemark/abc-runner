@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"redis-runner/app/adapters/redis/config"
+	"abc-runner/app/adapters/redis/config"
 )
 
 // ConnectionPool 连接池接口

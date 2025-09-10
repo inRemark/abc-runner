@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 	
-	httpConfig "redis-runner/app/adapters/http/config"
+	httpConfig "abc-runner/app/adapters/http/config"
 )
 
 // ConnectionPool HTTP连接池

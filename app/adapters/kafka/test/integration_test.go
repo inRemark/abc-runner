@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 	
-	kafkaAdapter "redis-runner/app/adapters/kafka"
-	"redis-runner/app/core/interfaces"
+	kafkaAdapter "abc-runner/app/adapters/kafka"
+	"abc-runner/app/core/interfaces"
 )
 
 // TestKafkaAdapterIntegration 集成测试

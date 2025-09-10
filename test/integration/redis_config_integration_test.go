@@ -3,9 +3,9 @@ package integration_test
 import (
 	"testing"
 
-	redisadapter "redis-runner/app/adapters/redis"
-	redisconfig "redis-runner/app/adapters/redis/config"
-	"redis-runner/app/core/interfaces"
+	redisadapter "abc-runner/app/adapters/redis"
+	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/interfaces"
 )
 
 func TestRedisConfigurationIntegration(t *testing.T) {

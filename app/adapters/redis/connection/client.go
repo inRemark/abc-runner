@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"redis-runner/app/adapters/redis/config"
+	"abc-runner/app/adapters/redis/config"
 )
 
 // ClientManager Redis客户端管理器

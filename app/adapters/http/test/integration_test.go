@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	httpAdapter "redis-runner/app/adapters/http"
-	httpConfig "redis-runner/app/adapters/http/config"
-	"redis-runner/app/core/interfaces"
+	httpAdapter "abc-runner/app/adapters/http"
+	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/core/interfaces"
 )
 
 // TestHttpAdapterIntegration 集成测试

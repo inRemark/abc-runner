@@ -35,6 +35,6 @@ func GetVersionInfo() *ConfigVersion {
 		Version:     "1.0.0",
 		CreatedAt:   time.Now(),
 		Description: "Initial configuration version",
-		Author:      "redis-runner",
+		Author:      "abc-runner",
 	}
 }

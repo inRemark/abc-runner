@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"redis-runner/app/adapters/redis/config"
-	"redis-runner/app/adapters/redis/connection"
-	"redis-runner/app/adapters/redis/metrics"
-	"redis-runner/app/adapters/redis/operations"
+	"abc-runner/app/adapters/redis/config"
+	"abc-runner/app/adapters/redis/connection"
+	"abc-runner/app/adapters/redis/metrics"
+	"abc-runner/app/adapters/redis/operations"
 
 	"github.com/go-redis/redis/v8"
 )

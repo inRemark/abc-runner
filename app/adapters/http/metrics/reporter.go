@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // HttpMetricsReporter HTTP指标报告器

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // LoadDefaultHttpConfig 加载默认HTTP配置

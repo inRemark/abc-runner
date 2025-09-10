@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 	
-	"redis-runner/app/adapters/kafka/config"
+	"abc-runner/app/adapters/kafka/config"
 )
 
 func TestKafkaAdapterConfig_Validate(t *testing.T) {

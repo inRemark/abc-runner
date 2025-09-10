@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"redis-runner/app/adapters/kafka"
-	kafkaConfig "redis-runner/app/adapters/kafka/config"
-	"redis-runner/app/core/config"
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/core/reports"
-	"redis-runner/app/core/runner"
-	"redis-runner/app/core/utils"
+	"abc-runner/app/adapters/kafka"
+	kafkaConfig "abc-runner/app/adapters/kafka/config"
+	"abc-runner/app/core/config"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/reports"
+	"abc-runner/app/core/runner"
+	"abc-runner/app/core/utils"
 )
 
 // KafkaSimpleHandler 简化的Kafka命令处理器
@@ -109,7 +109,7 @@ func (k *KafkaSimpleHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (k *KafkaSimpleHandler) GetHelp() string {
-	baseHelp := `Usage: redis-runner kafka [options]
+	baseHelp := `Usage: abc-runner kafka [options]
 
 Kafka Performance Testing Tool
 
@@ -153,26 +153,26 @@ Test Types:
 
 Examples:
   # Basic producer test
-  redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+  abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
   # Consumer test with specific group
-  redis-runner kafka --broker localhost:9092 --topic test-topic \\
+  abc-runner kafka --broker localhost:9092 --topic test-topic \\
     --test-type consume --group-id my-group -n 1000
 
   # High-throughput test with larger messages
-  redis-runner kafka --brokers localhost:9092,localhost:9093 \\
+  abc-runner kafka --brokers localhost:9092,localhost:9093 \\
     --topic high-throughput --message-size 4096 \\
     --batch-size 65536 -n 100000 -c 10
 
   # Duration-based mixed workload
-  redis-runner kafka --broker localhost:9092 --topic mixed-workload \\
+  abc-runner kafka --broker localhost:9092 --topic mixed-workload \\
     --test-type produce_consume --duration 60s -c 8
 
   # Load test with configuration file
-  redis-runner kafka --config config/templates/kafka.yaml
+  abc-runner kafka --config config/templates/kafka.yaml
 
   # Performance test with compression
-  redis-runner kafka --broker localhost:9092 --topic perf-test \\
+  abc-runner kafka --broker localhost:9092 --topic perf-test \\
     --compression lz4 --acks all --batch-size 32768 -n 50000
 
 For more information: https://docs.redis-runner.com/kafka`

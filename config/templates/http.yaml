@@ -131,7 +131,7 @@ http:
     max_redirects: 10
     disable_compression: false
     enable_http2: true
-    user_agent: "redis-runner-http-client/1.0"
+    user_agent: "abc-runner-http-client/1.0"
 
   # 报告配置
   reports:

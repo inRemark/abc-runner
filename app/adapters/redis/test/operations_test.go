@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"redis-runner/app/adapters/redis/operations"
+	"abc-runner/app/adapters/redis/operations"
 )
 
 func TestIncrOperation(t *testing.T) {

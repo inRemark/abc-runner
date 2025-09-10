@@ -1,8 +1,8 @@
 package http
 
 import (
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/core/utils"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/utils"
 )
 
 // RegisterHttpOperations 注册HTTP操作

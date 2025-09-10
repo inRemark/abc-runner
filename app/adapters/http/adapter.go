@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	httpConfig "redis-runner/app/adapters/http/config"
-	"redis-runner/app/adapters/http/connection"
-	"redis-runner/app/adapters/http/metrics"
-	"redis-runner/app/adapters/http/operations"
-	"redis-runner/app/core/base"
-	"redis-runner/app/core/interfaces"
+	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/adapters/http/connection"
+	"abc-runner/app/adapters/http/metrics"
+	"abc-runner/app/adapters/http/operations"
+	"abc-runner/app/core/base"
+	"abc-runner/app/core/interfaces"
 )
 
 // HttpAdapter HTTP协议适配器实现

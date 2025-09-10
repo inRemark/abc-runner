@@ -39,11 +39,11 @@ config/
 
 ```bash
 # 使用配置文件运行Redis测试
-./redis-runner redis --config config/production/redis.yaml
+./abc-runner redis --config config/production/redis.yaml
 
 # 使用配置文件运行HTTP测试
-./redis-runner http --config config/examples/http.yaml
+./abc-runner http --config config/examples/http.yaml
 
 # 使用配置文件运行Kafka测试
-./redis-runner kafka --config config/templates/kafka.yaml
+./abc-runner kafka --config config/templates/kafka.yaml
 ```

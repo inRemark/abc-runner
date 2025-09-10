@@ -1,4 +1,4 @@
-# redis-runner
+# abc-runner
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ A unified performance testing tool for Redis, HTTP, and Kafka protocols.
 
 ```bash
 # Build from source
-go build -o redis-runner .
+go build -o abc-runner .
 
 # Or download pre-built binaries from releases
 ```
@@ -46,25 +46,25 @@ go build -o redis-runner .
 
 ```bash
 # Show help
-./redis-runner --help
+./abc-runner --help
 
 # Redis performance test
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # HTTP load test
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # Kafka performance test
-./redis-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
 ```
 
 ### Using Aliases
 
 ```bash
 # Short aliases for quick testing
-./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
-./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
-./redis-runner k --broker localhost:9092 -n 100      # Kafka
+./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
+./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
+./abc-runner k --broker localhost:9092 -n 100      # Kafka
 ```
 
 ## Command Reference
@@ -72,27 +72,27 @@ go build -o redis-runner .
 ### Global Options
 
 ```bash
-./redis-runner --help                 # Show help
-./redis-runner --version              # Show version
+./abc-runner --help                 # Show help
+./abc-runner --version              # Show version
 ```
 
 ### Redis Commands
 
 ```bash
 # Basic Redis test
-./redis-runner redis -h <host> -p <port> -n <requests> -c <connections>
+./abc-runner redis -h <host> -p <port> -n <requests> -c <connections>
 
 # Redis with authentication
-./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
 
 # Redis cluster mode
-./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
 
 # Custom test case with read ratio
-./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
+./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # Using configuration file
-./redis-runner redis --config config/templates/redis.yaml
+./abc-runner redis --config config/templates/redis.yaml
 ```
 
 Supported Redis test cases (`-t` option):
@@ -126,32 +126,32 @@ Supported Redis test cases (`-t` option):
 
 ```bash
 # Basic HTTP GET test
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # HTTP POST with body
-./redis-runner http --url http://api.example.com/users \n  --method POST --body '{"name":"test"}' \n  --content-type application/json -n 1000 -c 20
+./abc-runner http --url http://api.example.com/users \n  --method POST --body '{"name":"test"}' \n  --content-type application/json -n 1000 -c 20
 
 # Duration-based test
-./redis-runner http --url http://localhost:8080 --duration 60s -c 100
+./abc-runner http --url http://localhost:8080 --duration 60s -c 100
 
 # Custom headers
-./redis-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
+./abc-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
 ```
 
 ### Kafka Commands
 
 ```bash
 # Basic producer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # Consumer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id my-group -n 1000
+./abc-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id my-group -n 1000
 
 # Mixed produce/consume test
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic high-throughput --test-type produce_consume \n  --message-size 4096 --duration 60s -c 8
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic high-throughput --test-type produce_consume \n  --message-size 4096 --duration 60s -c 8
 
 # High-performance test with compression
-./redis-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
+./abc-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
 ```
 
 ## Configuration Files
@@ -231,13 +231,13 @@ For detailed documentation, please see the following resources:
 - [HTTP Testing Guide](docs/en/user-guide/http.md) - HTTP-specific features and usage | [HTTP测试指南](docs/zh/user-guide/http.md)
 - [Kafka Testing Guide](docs/en/user-guide/kafka.md) - Kafka-specific features and usage | [Kafka测试指南](docs/zh/user-guide/kafka.md)
 - [Contributing Guide](docs/en/developer-guide/contributing.md) - Guidelines for contributing | [贡献指南](docs/zh/developer-guide/contributing.md)
-- [Extending redis-runner](docs/en/developer-guide/extending.md) - How to extend the tool | [扩展redis-runner](docs/zh/developer-guide/extending.md)
+- [Extending abc-runner](docs/en/developer-guide/extending.md) - How to extend the tool | [扩展abc-runner](docs/zh/developer-guide/extending.md)
 
 ## Packaging and Distribution
 
 ### Release Packages
 
-Pre-built release packages are available for download from the [releases page](https://github.com/your-org/redis-runner/releases). Each release includes:
+Pre-built release packages are available for download from the [releases page](https://github.com/your-org/abc-runner/releases). Each release includes:
 
 - Platform-specific binaries for macOS, Linux, and Windows
 - Configuration file templates
@@ -247,8 +247,8 @@ Pre-built release packages are available for download from the [releases page](h
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # Build for current platform
 make build
@@ -283,40 +283,40 @@ See the [Migration Guide](docs/CHANGELOG.md) for detailed upgrade instructions.
 
 ```bash
 # Basic performance test
-./redis-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
+./abc-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
 
 # Cluster mode with authentication
-./redis-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
+./abc-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
 
 # Custom test patterns
-./redis-runner redis -t incr -n 50000 -c 100  # Counter operations
-./redis-runner redis -t lpush_lpop -n 10000 -c 50  # List operations
+./abc-runner redis -t incr -n 50000 -c 100  # Counter operations
+./abc-runner redis -t lpush_lpop -n 10000 -c 50  # List operations
 ```
 
 ### HTTP Load Testing
 
 ```bash
 # API endpoint testing
-./redis-runner http --url http://api.example.com/health -n 10000 -c 100
+./abc-runner http --url http://api.example.com/health -n 10000 -c 100
 
 # POST with JSON payload
-./redis-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
+./abc-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
 
 # Load testing with ramp-up
-./redis-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
+./abc-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
 ```
 
 ### Kafka Performance Testing
 
 ```bash
 # Producer throughput test
-./redis-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
+./abc-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
 
 # Consumer lag test
-./redis-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
+./abc-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
 
 # End-to-end latency test
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
 ```
 
 ## License
@@ -332,7 +332,7 @@ Contributions are welcome! Please read our contributing guidelines before submit
 For questions and support:
 
 - Check the [Migration Guide](docs/CHANGELOG.md)
-- Review command help: `./redis-runner <command> --help`
+- Review command help: `./abc-runner <command> --help`
 - Open an issue for bug reports or feature requests
 
 ## Documentation

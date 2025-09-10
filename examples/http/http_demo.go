@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	httpAdapter "redis-runner/app/adapters/http"
-	httpConfig "redis-runner/app/adapters/http/config"
+	httpAdapter "abc-runner/app/adapters/http"
+	httpConfig "abc-runner/app/adapters/http/config"
 )
 
 func main() {

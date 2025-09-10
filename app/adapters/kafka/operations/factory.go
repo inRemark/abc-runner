@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"time"
 	
-	"redis-runner/app/core/interfaces"
-	kafkaConfig "redis-runner/app/adapters/kafka/config"
+	"abc-runner/app/core/interfaces"
+	kafkaConfig "abc-runner/app/adapters/kafka/config"
 )
 
 // KafkaOperationFactory Kafka操作工厂

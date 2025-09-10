@@ -3,10 +3,10 @@ package config
 import (
 	"log"
 
-	httpconfig "redis-runner/app/adapters/http/config"
-	kafkaconfig "redis-runner/app/adapters/kafka/config"
-	redisconfig "redis-runner/app/adapters/redis/config"
-	"redis-runner/app/core/interfaces"
+	httpconfig "abc-runner/app/adapters/http/config"
+	kafkaconfig "abc-runner/app/adapters/kafka/config"
+	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/interfaces"
 )
 
 // CreateRedisConfigSources 创建Redis配置源列表

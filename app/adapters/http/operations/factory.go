@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 	
-	"redis-runner/app/core/interfaces"
-	httpConfig "redis-runner/app/adapters/http/config"
+	"abc-runner/app/core/interfaces"
+	httpConfig "abc-runner/app/adapters/http/config"
 )
 
 // HttpOperationFactory HTTP操作工厂

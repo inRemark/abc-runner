@@ -1,8 +1,8 @@
 package kafka
 
 import (
-	"redis-runner/app/core/interfaces"
-	"redis-runner/app/core/utils"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/utils"
 )
 
 // RegisterKafkaOperations 注册Kafka操作

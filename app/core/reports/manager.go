@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // ReportFormat 报告格式枚举

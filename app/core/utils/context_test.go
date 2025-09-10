@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 func TestDefaultKeyGenerator(t *testing.T) {

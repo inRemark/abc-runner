@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // RedisConfigAdapter Redis配置适配器

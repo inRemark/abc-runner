@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
-	"redis-runner/app/core/base"
-	"redis-runner/app/core/interfaces"
-	kafkaConfig "redis-runner/app/adapters/kafka/config"
-	"redis-runner/app/adapters/kafka/connection"
-	"redis-runner/app/adapters/kafka/metrics"
-	"redis-runner/app/adapters/kafka/operations"
+	"abc-runner/app/core/base"
+	"abc-runner/app/core/interfaces"
+	kafkaConfig "abc-runner/app/adapters/kafka/config"
+	"abc-runner/app/adapters/kafka/connection"
+	"abc-runner/app/adapters/kafka/metrics"
+	"abc-runner/app/adapters/kafka/operations"
 )
 
 // KafkaAdapter Kafka协议适配器实现

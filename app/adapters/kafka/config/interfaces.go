@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"redis-runner/app/core/interfaces"
+	"abc-runner/app/core/interfaces"
 )
 
 // ConnectionConfigImpl 连接配置实现
