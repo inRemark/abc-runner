@@ -321,7 +321,7 @@ benchmark:
 
 ## 许可证
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
 
 ## 贡献
 

@@ -321,7 +321,7 @@ See the [Migration Guide](docs/CHANGELOG.md) for detailed upgrade instructions.
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
 
 ## Contributing
 
