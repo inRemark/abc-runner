@@ -92,7 +92,10 @@ go build -o abc-runner .
 ./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # Using configuration file
-./abc-runner redis --config config/templates/redis.yaml
+./abc-runner redis --config config/redis.yaml
+
+# Using configuration file with core configuration
+./abc-runner redis --config config/redis.yaml --core-config config/core.yaml
 ```
 
 Supported Redis test cases (`-t` option):
@@ -136,6 +139,9 @@ Supported Redis test cases (`-t` option):
 
 # Custom headers
 ./abc-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
+
+# Using configuration file with core configuration
+./abc-runner http --config config/http.yaml --core-config config/core.yaml
 ```
 
 ### Kafka Commands
@@ -152,72 +158,162 @@ Supported Redis test cases (`-t` option):
 
 # High-performance test with compression
 ./abc-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
+
+# Using configuration file with core configuration
+./abc-runner kafka --config config/kafka.yaml --core-config config/core.yaml
 ```
 
 ## Configuration Files
 
 You can use YAML configuration files for complex setups:
 
-### Redis Configuration (config/templates/redis.yaml)
+### Core Configuration (config/core.yaml)
+
+The core configuration file contains common settings shared across all protocols:
 
 ```yaml
-protocol: redis
-connection:
-  host: localhost
-  port: 6379
-  mode: standalone  # standalone, cluster, sentinel
-  timeout: 30s
+core:
+  # Logging configuration
+  logging:
+    level: "info"              # Log level: debug, info, warn, error
+    format: "json"             # Log format: json, text
+    output: "stdout"           # Output target: stdout, file, or file path
+    file_path: "./logs"        # Log file directory
+    max_size: "100MB"          # Maximum size of a single log file
+    max_age: 7                 # Number of days to retain log files
+    max_backups: 5             # Maximum number of backup files
+    compress: true             # Whether to compress old log files
 
-benchmark:
-  total: 10000
-  parallels: 50
-  test_case: "set_get_random"
-  data_size: 64
-  read_ratio: 0.5
+  # Report configuration
+  reports:
+    enabled: true              # Whether to enable reports
+    formats: ["console"]       # Report formats: console, json, csv, text, all
+    output_dir: "./reports"    # Report output directory
+    file_prefix: "benchmark"   # Report file prefix
+    include_timestamp: true    # Include timestamp in filename
+    enable_console_report: true # Enable detailed console report
+    overwrite_existing: false  # Whether to overwrite existing files
+
+  # Monitoring configuration
+  monitoring:
+    enabled: true              # Whether to enable monitoring
+    metrics_interval: "5s"     # Metrics collection interval
+    prometheus:
+      enabled: false           # Whether to enable Prometheus export
+      port: 9090               # Prometheus export port
+    statsd:
+      enabled: false           # Whether to enable StatsD export
+      host: "localhost:8125"   # StatsD server address
+
+  # Global connection configuration
+  connection:
+    timeout: "30s"             # Default connection timeout
+    keep_alive: "30s"          # Connection keep-alive time
+    max_idle_conns: 100        # Maximum number of idle connections
+    idle_conn_timeout: "90s"   # Idle connection timeout
 ```
 
-### HTTP Configuration (config/templates/http.yaml)
+### Redis Configuration (config/redis.yaml)
 
 ```yaml
-protocol: http
-connection:
-  base_url: "http://localhost:8080"
-  timeout: 30s
-  max_conns_per_host: 50
-
-benchmark:
-  total: 10000
-  parallels: 50
-  method: "GET"
-  path: "/api/test"
-  headers:
-    "Content-Type": "application/json"
-    "Authorization": "Bearer token"
+redis:
+  mode: "standalone"    # Options: standalone, sentinel, cluster
+  benchmark:
+    total: 10000              # 10000 requests default
+    parallels: 50             # 2 parallel default
+    random_keys: 50           # 0:Incremental key, >0:random key range is [0, r]
+    read_percent: 50          # 50% read and 50 write default
+    data_size: 3              # 3 bytes default
+    ttl: 120                  # 120 seconds default
+    case: "set_get_random"    # operations: set_get_random, set, get, del, pub, sub
+  pool:
+    pool_size: 10
+    min_idle: 2
+  standalone:
+    addr: 127.0.0.1:6379
+    password: "pwd@redis"
+    db: 0
+  sentinel:
+    master_name: "mymaster"
+    addrs:
+      - "127.0.0.1:26371"
+      - "127.0.0.1:26372"
+      - "127.0.0.1:26373"
+    password: "pwd@redis"
+    db: 0
+  cluster:
+    addrs:
+      - "127.0.0.1:6371"
+      - "127.0.0.1:6372"
+      - "127.0.0.1:6373"
+    password: "pwd@redis"
 ```
 
-### Kafka Configuration (config/templates/kafka.yaml)
+### HTTP Configuration (config/http.yaml)
 
 ```yaml
-protocol: kafka
-brokers: ["localhost:9092"]
-topic_configs:
-  - name: "test-topic"
-    partitions: 3
+http:
+  connection:
+    base_url: "http://localhost:8080"
+    timeout: 30s
+    keep_alive: 90s
+    max_idle_conns: 50
+    max_conns_per_host: 20
+    idle_conn_timeout: 90s
+    disable_compression: false
+  benchmark:
+    total: 100000
+    parallels: 50
+    duration: "5m"
+    ramp_up: "30s"
+    data_size: 1024
+    ttl: 0s
+    read_percent: 70
+    random_keys: 0
+    test_case: "mixed_operations"
+    timeout: 30s
+  requests:
+    - method: "GET"
+      path: "/api/users"
+      headers:
+        Accept: "application/json"
+      weight: 100
+```
 
-producer:
-  batch_size: 16384
-  compression: "snappy"
-  required_acks: 1
+### Kafka Configuration (config/kafka.yaml)
 
-consumer:
-  group_id: "test-group"
-  auto_offset_reset: "earliest"
-
-benchmark:
-  total: 10000
-  parallels: 5
-  message_size: 1024
-  test_type: "produce"
+```yaml
+kafka:
+  brokers:
+    - "localhost:9092"
+  client_id: "abc-runner-kafka-client"
+  version: "2.8.0"
+  producer:
+    acks: "all"
+    retries: 3
+    batch_size: 16384
+    linger_ms: "5ms"
+    compression: "snappy"
+    idempotence: true
+    max_in_flight: 5
+    request_timeout: "30s"
+    write_timeout: "10s"
+    read_timeout: "10s"
+  benchmark:
+    default_topic: "benchmark-topic"
+    message_size_range:
+      min: 100
+      max: 10240
+    batch_sizes: [1, 10, 100, 1000]
+    partition_strategy: "round_robin"
+    total: 100000
+    parallels: 50
+    data_size: 1024
+    ttl: 0
+    read_percent: 50
+    random_keys: 10000
+    test_case: "produce"
+    timeout: "30s"
 ```
 
 ## Documentation

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"abc-runner/app/core/interfaces"
 	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/interfaces"
 )
 
 // EnvironmentConfigSource 环境变量配置源
@@ -18,7 +18,7 @@ type EnvironmentConfigSource struct {
 // NewEnvironmentConfigSource 创建环境变量配置源
 func NewEnvironmentConfigSource(prefix string) *EnvironmentConfigSource {
 	if prefix == "" {
-		prefix = "REDIS_RUNNER"
+		prefix = "ABC_RUNNER"
 	}
 	return &EnvironmentConfigSource{Prefix: prefix}
 }
@@ -273,7 +273,7 @@ func validateProtocol(config interfaces.Config) error {
 		return fmt.Errorf("protocol cannot be empty")
 	}
 
-	supportedProtocols := []string{"redis"}
+	supportedProtocols := []string{"redis", "http", "kafka"}
 	for _, supported := range supportedProtocols {
 		if protocol == supported {
 			return nil

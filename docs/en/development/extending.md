@@ -1,12 +1,12 @@
-# Extending redis-runner
+# Extending abc-runner
 
 [English](extending.md) | [中文](extending.zh.md)
 
-This guide explains how to extend redis-runner to support additional protocols or features.
+This guide explains how to extend abc-runner to support additional protocols or features.
 
 ## Architecture Overview
 
-redis-runner follows a modular architecture based on the Adapter pattern. Each protocol (Redis, HTTP, Kafka) is implemented as a separate adapter that conforms to a common interface.
+abc-runner follows a modular architecture based on the Adapter pattern. Each protocol (Redis, HTTP, Kafka) is implemented as a separate adapter that conforms to a common interface.
 
 ## Adding a New Protocol
 

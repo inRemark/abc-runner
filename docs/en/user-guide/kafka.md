@@ -4,7 +4,7 @@
 
 ## Supported Kafka Operations
 
-redis-runner supports the following Kafka operations:
+abc-runner supports the following Kafka operations:
 
 - **Producer Testing**: Message production performance testing
 - **Consumer Testing**: Message consumption performance testing
@@ -56,17 +56,17 @@ kafka:
 
 ```bash
 # Simple producer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # Duration-based test
-./redis-runner kafka --broker localhost:9092 --topic test-topic --duration 60s -c 10
+./abc-runner kafka --broker localhost:9092 --topic test-topic --duration 60s -c 10
 ```
 
 ### Consumer Testing
 
 ```bash
 # Consumer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -74,7 +74,7 @@ kafka:
 
 ```bash
 # Simultaneous production and consumption test
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \
   --topic high-throughput --test-type produce_consume \
   --message-size 4096 --duration 60s -c 8
 ```
@@ -83,7 +83,7 @@ kafka:
 
 ```bash
 # High-performance test (with compression)
-./redis-runner kafka --broker localhost:9092 --topic perf-test \
+./abc-runner kafka --broker localhost:9092 --topic perf-test \
   --compression lz4 --acks all --batch-size 32768 -n 50000
 ```
 
@@ -91,7 +91,7 @@ kafka:
 
 ```bash
 # Complex testing using configuration file
-./redis-runner kafka --config config/examples/kafka-producer.yaml
+./abc-runner kafka --config config/examples/kafka-producer.yaml
 ```
 
 ## Producer Configuration
@@ -124,7 +124,7 @@ producer:
 
 ```yaml
 consumer:
-  group_id: "redis-runner-group"
+  group_id: "abc-runner-group"
 ```
 
 ### Offset Management
@@ -170,7 +170,7 @@ security:
 
 ## Result Interpretation
 
-After Kafka testing is completed, redis-runner will output detailed performance reports:
+After Kafka testing is completed, abc-runner will output detailed performance reports:
 
 - **Producer Metrics**:
   - Message production rate

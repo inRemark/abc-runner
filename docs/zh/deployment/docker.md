@@ -4,16 +4,16 @@
 
 ## Docker镜像
 
-redis-runner提供官方Docker镜像，可用于快速部署和测试。
+abc-runner提供官方Docker镜像，可用于快速部署和测试。
 
 ## 拉取镜像
 
 ```bash
 # 拉取最新版本
-docker pull redis-runner/redis-runner:latest
+docker pull abc-runner/abc-runner:latest
 
 # 拉取特定版本
-docker pull redis-runner/redis-runner:v0.2.0
+docker pull abc-runner/abc-runner:v0.2.0
 ```
 
 ## 基本使用
@@ -22,24 +22,24 @@ docker pull redis-runner/redis-runner:v0.2.0
 
 ```bash
 # 运行基本的Redis测试
-docker run --rm redis-runner/redis-runner redis -h host.docker.internal -p 6379 -n 1000 -c 10
+docker run --rm abc-runner/abc-runner redis -h host.docker.internal -p 6379 -n 1000 -c 10
 
 # 使用自定义配置文件
-docker run --rm -v $(pwd)/config:/config redis-runner/redis-runner redis --config /config/redis.yaml
+docker run --rm -v $(pwd)/config:/config abc-runner/abc-runner redis --config /config/redis.yaml
 ```
 
 ### 运行HTTP测试
 
 ```bash
 # 运行HTTP测试
-docker run --rm redis-runner/redis-runner http --url http://host.docker.internal:8080 -n 1000 -c 10
+docker run --rm abc-runner/abc-runner http --url http://host.docker.internal:8080 -n 1000 -c 10
 ```
 
 ### 运行Kafka测试
 
 ```bash
 # 运行Kafka测试
-docker run --rm redis-runner/redis-runner kafka --broker host.docker.internal:9092 --topic test -n 1000 -c 5
+docker run --rm abc-runner/abc-runner kafka --broker host.docker.internal:9092 --topic test -n 1000 -c 5
 ```
 
 ## Docker Compose
@@ -50,8 +50,8 @@ docker run --rm redis-runner/redis-runner kafka --broker host.docker.internal:90
 version: '3.8'
 
 services:
-  redis-runner:
-    image: redis-runner/redis-runner:latest
+  abc-runner:
+    image: abc-runner/abc-runner:latest
     depends_on:
       - redis
       - kafka
@@ -91,10 +91,10 @@ services:
 docker-compose up -d
 
 # 运行Redis测试
-docker-compose run --rm redis-runner redis -h redis -p 6379 -n 1000 -c 10
+docker-compose run --rm abc-runner redis -h redis -p 6379 -n 1000 -c 10
 
 # 运行Kafka测试
-docker-compose run --rm redis-runner kafka --broker kafka:9092 --topic test -n 1000 -c 5
+docker-compose run --rm abc-runner kafka --broker kafka:9092 --topic test -n 1000 -c 5
 
 # 停止所有服务
 docker-compose down
@@ -107,7 +107,7 @@ docker-compose down
 创建`Dockerfile`：
 
 ```dockerfile
-FROM redis-runner/redis-runner:latest
+FROM abc-runner/abc-runner:latest
 
 # 复制自定义配置
 COPY config/ /config/
@@ -116,14 +116,14 @@ COPY config/ /config/
 WORKDIR /app
 
 # 设置默认命令
-ENTRYPOINT ["redis-runner"]
+ENTRYPOINT ["abc-runner"]
 CMD ["--help"]
 ```
 
 构建镜像：
 
 ```bash
-docker build -t my-redis-runner .
+docker build -t my-abc-runner .
 ```
 
 ### 多阶段构建
@@ -139,7 +139,7 @@ COPY . .
 RUN go mod tidy
 
 # 构建二进制文件
-RUN CGO_ENABLED=0 GOOS=linux go build -o redis-runner .
+RUN CGO_ENABLED=0 GOOS=linux go build -o abc-runner .
 
 # 运行阶段
 FROM alpine:latest
@@ -150,7 +150,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 # 从构建阶段复制二进制文件
-COPY --from=builder /app/redis-runner .
+COPY --from=builder /app/abc-runner .
 
 # 复制配置文件
 COPY config/ /config/
@@ -159,7 +159,7 @@ COPY config/ /config/
 EXPOSE 8080
 
 # 运行应用
-CMD ["./redis-runner"]
+CMD ["./abc-runner"]
 ```
 
 ## 持久化数据
@@ -168,14 +168,14 @@ CMD ["./redis-runner"]
 
 ```bash
 # 挂载报告目录
-docker run --rm -v $(pwd)/reports:/reports redis-runner/redis-runner redis -h redis -p 6379
+docker run --rm -v $(pwd)/reports:/reports abc-runner/abc-runner redis -h redis -p 6379
 ```
 
 ### 配置文件
 
 ```bash
 # 挂载配置目录
-docker run --rm -v $(pwd)/config:/config redis-runner/redis-runner redis --config /config/redis.yaml
+docker run --rm -v $(pwd)/config:/config abc-runner/abc-runner redis --config /config/redis.yaml
 ```
 
 ## 环境变量
@@ -187,7 +187,7 @@ docker run --rm \
   -e REDIS_HOST=redis \
   -e REDIS_PORT=6379 \
   -e KAFKA_BROKERS=kafka:9092 \
-  redis-runner/redis-runner redis -n 1000 -c 10
+  abc-runner/abc-runner redis -n 1000 -c 10
 ```
 
 ## 网络配置
@@ -196,13 +196,13 @@ docker run --rm \
 
 ```bash
 # 创建自定义网络
-docker network create redis-runner-network
+docker network create abc-runner-network
 
 # 运行Redis
-docker run -d --name redis --network redis-runner-network redis:7-alpine
+docker run -d --name redis --network abc-runner-network redis:7-alpine
 
-# 运行redis-runner
-docker run --rm --network redis-runner-network redis-runner/redis-runner redis -h redis -p 6379 -n 1000 -c 10
+# 运行abc-runner
+docker run --rm --network abc-runner-network abc-runner/abc-runner redis -h redis -p 6379 -n 1000 -c 10
 ```
 
 ## 安全考虑
@@ -225,7 +225,7 @@ USER runner
 docker run --rm --read-only \
   -v $(pwd)/reports:/reports \
   -v $(pwd)/config:/config \
-  redis-runner/redis-runner redis -h redis -p 6379
+  abc-runner/abc-runner redis -h redis -p 6379
 ```
 
 ## 监控和日志
@@ -234,10 +234,10 @@ docker run --rm --read-only \
 
 ```bash
 # 使用json-file日志驱动
-docker run --rm --log-driver json-file --log-opt max-size=10m redis-runner/redis-runner redis -h redis -p 6379
+docker run --rm --log-driver json-file --log-opt max-size=10m abc-runner/abc-runner redis -h redis -p 6379
 
 # 使用syslog日志驱动
-docker run --rm --log-driver syslog --log-opt syslog-address=tcp://localhost:514 redis-runner/redis-runner redis -h redis -p 6379
+docker run --rm --log-driver syslog --log-opt syslog-address=tcp://localhost:514 abc-runner/abc-runner redis -h redis -p 6379
 ```
 
 ### 健康检查
@@ -245,7 +245,7 @@ docker run --rm --log-driver syslog --log-opt syslog-address=tcp://localhost:514
 ```dockerfile
 # 添加健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD ./redis-runner --version || exit 1
+  CMD ./abc-runner --version || exit 1
 ```
 
 ## 最佳实践

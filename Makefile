@@ -1,4 +1,4 @@
-# redis-runner Makefile
+# abc-runner Makefile
 
 # 变量定义
 BINARY_NAME=abc-runner
@@ -134,7 +134,7 @@ validate-docs:
 config:
 	@echo "Copying configuration files..."
 	@mkdir -p $(CONFIG_DIR)
-	@cp -n config/templates/*.yaml $(CONFIG_DIR)/ 2>/dev/null || true
+	@cp -n config/*.yaml $(CONFIG_DIR)/ 2>/dev/null || true
 	@echo "Configuration files copied!"
 
 # 发布
@@ -144,7 +144,7 @@ release: clean deps build-all
 	@mkdir -p releases/v$(VERSION)
 	@cp $(OUTPUT_DIR)/$(BINARY_NAME)-* releases/v$(VERSION)/
 	@mkdir -p releases/v$(VERSION)/config
-	@cp config/templates/*.yaml releases/v$(VERSION)/config/
+	@cp config/*.yaml releases/v$(VERSION)/config/
 	@cp README.md releases/v$(VERSION)/
 	@cp LICENSE releases/v$(VERSION)/
 	@echo "Release v$(VERSION) created in releases/v$(VERSION)/"
@@ -158,14 +158,14 @@ release: clean deps build-all
 		FOLDER_NAME="$(BINARY_NAME)-v$(VERSION)-$$OS-$$ARCH"; \
 		if [ "$$OS" = "windows" ]; then \
 			mkdir -p temp_extract/$$FOLDER_NAME && \
-			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config/ v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME/ && \
+			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME && \
 			cd temp_extract && \
 			zip -r ../$$ARCHIVE_NAME.zip $$FOLDER_NAME && \
 			cd .. && \
 			rm -rf temp_extract; \
 		else \
 			mkdir -p temp_extract/$$FOLDER_NAME && \
-			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config/ v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME/ && \
+			cp -r v$(VERSION)/$(BINARY_NAME)-$$OS-$$ARCH* v$(VERSION)/config v$(VERSION)/README.md v$(VERSION)/LICENSE temp_extract/$$FOLDER_NAME && \
 			cd temp_extract && \
 			tar -czf ../$$ARCHIVE_NAME.tar.gz $$FOLDER_NAME && \
 			cd .. && \
@@ -177,7 +177,7 @@ release: clean deps build-all
 # 帮助
 .PHONY: help
 help:
-	@echo "redis-runner Makefile"
+	@echo "abc-runner Makefile"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make              Build the project"

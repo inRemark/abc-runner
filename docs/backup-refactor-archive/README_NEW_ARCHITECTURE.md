@@ -35,13 +35,13 @@ Redis Runner 是一个高性能的 Redis 基准测试工具，经过全面重构
 
 ```bash
 # 基本用法
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50 -t set_get_random
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50 -t set_get_random
 
 # 集群模式
-./redis-runner redis --cluster -h localhost -p 6371 -a password -n 50000 -c 100 -d 64 -R 70 -ttl 300 -t set_get_random
+./abc-runner redis --cluster -h localhost -p 6371 -a password -n 50000 -c 100 -d 64 -R 70 -ttl 300 -t set_get_random
 
 # 完整参数示例
-./redis-runner redis \
+./abc-runner redis \
   -h 127.0.0.1 \
   -p 6379 \
   -a "mypassword" \
@@ -96,20 +96,20 @@ redis:
 然后运行：
 
 ```bash
-./redis-runner redis --config
+./abc-runner redis --config
 ```
 
 ### 使用环境变量
 
 ```bash
-export REDIS_RUNNER_MODE=cluster
-export REDIS_RUNNER_TOTAL=50000
-export REDIS_RUNNER_PARALLELS=100
-export REDIS_RUNNER_ADDRS="127.0.0.1:6371,127.0.0.1:6372,127.0.0.1:6373"
-export REDIS_RUNNER_PASSWORD="mypassword"
-export REDIS_RUNNER_CASE=set_get_random
+export ABC_RUNNER_MODE=cluster
+export ABC_RUNNER_TOTAL=50000
+export ABC_RUNNER_PARALLELS=100
+export ABC_RUNNER_ADDRS="127.0.0.1:6371,127.0.0.1:6372,127.0.0.1:6373"
+export ABC_RUNNER_PASSWORD="mypassword"
+export ABC_RUNNER_CASE=set_get_random
 
-./redis-runner redis
+./abc-runner redis
 ```
 
 ## 支持的操作类型
@@ -309,8 +309,8 @@ pool:
 设置环境变量启用详细日志：
 
 ```bash
-export REDIS_RUNNER_DEBUG=true
-export REDIS_RUNNER_LOG_LEVEL=debug
+export ABC_RUNNER_DEBUG=true
+export ABC_RUNNER_LOG_LEVEL=debug
 ```
 
 ## 更新日志

@@ -2,51 +2,45 @@ package config
 
 import (
 	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/utils"
 )
 
 // CreateRedisConfigSources 创建Redis配置源（兼容旧接口）
 func CreateRedisConfigSources(configFile string, args []string) []RedisConfigSource {
 	sources := make([]RedisConfigSource, 0)
-	
+
 	// 1. 默认配置源（最低优先级）
 	sources = append(sources, &RedisConfigSourceAdapter{
 		source: NewDefaultConfigSource(),
 	})
-	
+
 	// 2. YAML配置文件
 	if configFile != "" {
 		sources = append(sources, &RedisConfigSourceAdapter{
 			source: NewYAMLConfigSource(configFile),
 		})
 	} else {
-		// 尝试默认路径
-		defaultPaths := []string{
-			"config/templates/redis.yaml",
-			"redis.yaml",
-		}
-		for _, path := range defaultPaths {
-			yamlSource := NewYAMLConfigSource(path)
-			if yamlSource.CanLoad() {
-				sources = append(sources, &RedisConfigSourceAdapter{
-					source: yamlSource,
-				})
-				break
-			}
+		// 使用统一的配置文件查找机制
+		foundPath := utils.FindConfigFile("redis")
+		if foundPath != "" {
+			sources = append(sources, &RedisConfigSourceAdapter{
+				source: NewYAMLConfigSource(foundPath),
+			})
 		}
 	}
-	
+
 	// 3. 环境变量配置源
 	sources = append(sources, &RedisConfigSourceAdapter{
-		source: NewEnvConfigSource("REDIS_RUNNER"),
+		source: NewEnvConfigSource("ABC_RUNNER"),
 	})
-	
+
 	// 4. 命令行参数配置源（最高优先级）
 	if len(args) > 0 {
 		sources = append(sources, &RedisConfigSourceAdapter{
 			source: NewCommandLineConfigSource(args),
 		})
 	}
-	
+
 	return sources
 }
 
@@ -68,7 +62,7 @@ func (r *RedisConfigSourceAdapter) Load() (interfaces.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return NewRedisConfigAdapter(redisConfig), nil
 }
 
@@ -86,7 +80,7 @@ func (r *RedisConfigSourceAdapter) Priority() int {
 func LoadRedisConfigurationFromSources(sources ...RedisConfigSource) (interfaces.Config, error) {
 	// 创建Redis配置管理器
 	manager := NewRedisConfigManager()
-	
+
 	// 转换为原生配置源
 	nativeSources := make([]ConfigSource, len(sources))
 	for i, source := range sources {
@@ -94,13 +88,13 @@ func LoadRedisConfigurationFromSources(sources ...RedisConfigSource) (interfaces
 			nativeSources[i] = adapter.source
 		}
 	}
-	
+
 	// 加载配置
 	err := manager.LoadConfiguration(nativeSources...)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 返回适配器
 	return manager.GetAdapter(), nil
 }
@@ -112,7 +106,7 @@ func LoadRedisConfigFromArgs(args []string) (interfaces.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return manager.GetAdapter(), nil
 }
 
@@ -123,7 +117,7 @@ func LoadRedisConfigFromFile(filePath string) (interfaces.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return manager.GetAdapter(), nil
 }
 

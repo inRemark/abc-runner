@@ -46,7 +46,7 @@
   },
   "metadata": {
     "format": "json",
-    "generated_by": "redis-runner",
+    "generated_by": "abc-runner",
     "version": "3.0.0"
   },
   "protocol": "http",

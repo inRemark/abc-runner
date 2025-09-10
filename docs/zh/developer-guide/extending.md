@@ -1,12 +1,12 @@
-# 扩展redis-runner
+# 扩展abc-runner
 
 [English](../en/developer-guide/extending.md) | [中文](extending.md)
 
-redis-runner设计为可扩展的架构，允许开发者添加新的协议支持、操作类型和功能模块。
+abc-runner设计为可扩展的架构，允许开发者添加新的协议支持、操作类型和功能模块。
 
 ## 架构概述
 
-redis-runner采用插件化架构，核心组件包括：
+abc-runner采用插件化架构，核心组件包括：
 
 1. **命令路由器**: 负责解析和路由命令
 2. **协议适配器**: 为不同协议提供统一接口
@@ -27,7 +27,7 @@ package myprotocol
 
 import (
     "context"
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyProtocolAdapter struct {
@@ -66,7 +66,7 @@ func (a *MyProtocolAdapter) GetMetricsCollector() interfaces.MetricsCollector {
 package config
 
 import (
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyProtocolConfig struct {
@@ -92,7 +92,7 @@ package commands
 
 import (
     "context"
-    "redis-runner/app/adapters/myprotocol"
+    "abc-runner/app/adapters/myprotocol"
 )
 
 type MyProtocolCommandHandler struct {
@@ -166,7 +166,7 @@ registry.Register("my_operation", &MyOperationFactory{})
 package reports
 
 import (
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyReportGenerator struct {

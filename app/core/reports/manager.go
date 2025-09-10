@@ -26,25 +26,25 @@ const (
 
 // ReportConfig 统一报告配置
 type ReportConfig struct {
-	Formats                []ReportFormat `json:"formats"`                  // 报告格式列表
-	OutputDirectory        string         `json:"output_directory"`         // 输出目录
-	FilePrefix             string         `json:"file_prefix"`              // 文件前缀
-	EnableConsoleReport    bool           `json:"enable_console_report"`    // 启用控制台详细报告
-	EnableProtocolMetrics  bool           `json:"enable_protocol_metrics"`  // 启用协议特定指标
-	IncludeTimestamp       bool           `json:"include_timestamp"`        // 文件名包含时间戳
-	OverwriteExisting      bool           `json:"overwrite_existing"`       // 覆盖已存在文件
+	Formats               []ReportFormat `json:"formats"`                 // 报告格式列表
+	OutputDirectory       string         `json:"output_directory"`        // 输出目录
+	FilePrefix            string         `json:"file_prefix"`             // 文件前缀
+	EnableConsoleReport   bool           `json:"enable_console_report"`   // 启用控制台详细报告
+	EnableProtocolMetrics bool           `json:"enable_protocol_metrics"` // 启用协议特定指标
+	IncludeTimestamp      bool           `json:"include_timestamp"`       // 文件名包含时间戳
+	OverwriteExisting     bool           `json:"overwrite_existing"`      // 覆盖已存在文件
 }
 
 // DefaultReportConfig 默认报告配置
 func DefaultReportConfig() *ReportConfig {
 	return &ReportConfig{
-		Formats:                []ReportFormat{FormatConsole, FormatJSON},
-		OutputDirectory:        "./reports",
-		FilePrefix:             "benchmark",
-		EnableConsoleReport:    true,
-		EnableProtocolMetrics:  true,
-		IncludeTimestamp:       true,
-		OverwriteExisting:      false,
+		Formats:               []ReportFormat{FormatConsole, FormatJSON},
+		OutputDirectory:       "./reports",
+		FilePrefix:            "benchmark",
+		EnableConsoleReport:   true,
+		EnableProtocolMetrics: true,
+		IncludeTimestamp:      true,
+		OverwriteExisting:     false,
 	}
 }
 
@@ -61,7 +61,7 @@ func NewReportManager(protocol string, collector interfaces.MetricsCollector, co
 	if config == nil {
 		config = DefaultReportConfig()
 	}
-	
+
 	return &ReportManager{
 		config:           config,
 		protocol:         protocol,
@@ -128,24 +128,24 @@ func (rm *ReportManager) ensureOutputDirectory() error {
 // generateFilename 生成文件名
 func (rm *ReportManager) generateFilename(extension string) string {
 	var filename string
-	
+
 	if rm.config.FilePrefix != "" {
 		filename = rm.config.FilePrefix
 	} else {
 		filename = fmt.Sprintf("%s_benchmark", rm.protocol)
 	}
-	
+
 	if rm.config.IncludeTimestamp {
 		timestamp := time.Now().Format("20060102_150405")
 		filename = fmt.Sprintf("%s_%s", filename, timestamp)
 	}
-	
+
 	filename = fmt.Sprintf("%s.%s", filename, extension)
-	
+
 	if rm.config.OutputDirectory != "" {
 		filename = filepath.Join(rm.config.OutputDirectory, filename)
 	}
-	
+
 	return filename
 }
 
@@ -234,7 +234,7 @@ func (rm *ReportManager) displayProtocolMetrics(metrics map[string]interface{}) 
 // generateJSONReport 生成JSON报告
 func (rm *ReportManager) generateJSONReport() error {
 	filename := rm.generateFilename("json")
-	
+
 	// 构建报告数据
 	reportData := map[string]interface{}{
 		"timestamp":        time.Now().Format(time.RFC3339),
@@ -242,7 +242,7 @@ func (rm *ReportManager) generateJSONReport() error {
 		"base_metrics":     nil,
 		"protocol_metrics": rm.protocolMetrics,
 		"metadata": map[string]interface{}{
-			"generated_by": "redis-runner",
+			"generated_by": "abc-runner",
 			"version":      "3.0.0",
 			"format":       "json",
 		},
@@ -271,7 +271,7 @@ func (rm *ReportManager) generateJSONReport() error {
 // generateCSVReport 生成CSV报告
 func (rm *ReportManager) generateCSVReport() error {
 	filename := rm.generateFilename("csv")
-	
+
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create CSV report file %s: %w", filename, err)
@@ -283,7 +283,7 @@ func (rm *ReportManager) generateCSVReport() error {
 
 	// 写入CSV头部
 	header := []string{
-		"timestamp", "protocol", "total_ops", "success_ops", "failed_ops", 
+		"timestamp", "protocol", "total_ops", "success_ops", "failed_ops",
 		"rps", "avg_latency_ms", "p95_latency_ms", "p99_latency_ms", "error_rate",
 	}
 	if err := writer.Write(header); err != nil {
@@ -321,7 +321,7 @@ func (rm *ReportManager) generateCSVReport() error {
 // generateTextReport 生成文本报告
 func (rm *ReportManager) generateTextReport() error {
 	filename := rm.generateFilename("txt")
-	
+
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create text report file %s: %w", filename, err)
@@ -388,7 +388,7 @@ func ParseReportFormats(formatStr string) []ReportFormat {
 
 	var formats []ReportFormat
 	parts := strings.Split(formatStr, ",")
-	
+
 	for _, part := range parts {
 		part = strings.TrimSpace(strings.ToLower(part))
 		switch part {

@@ -2,7 +2,7 @@
 
 ## 目录结构
 
-```
+```bash
 config/
 ├── templates/           # 配置模板文件
 ├── examples/            # 配置示例文件
@@ -45,5 +45,5 @@ config/
 ./abc-runner http --config config/examples/http.yaml
 
 # 使用配置文件运行Kafka测试
-./abc-runner kafka --config config/templates/kafka.yaml
+./abc-runner kafka --config config/kafka.yaml
 ```

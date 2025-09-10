@@ -2,7 +2,7 @@
 
 ## 概述
 
-redis-runner 已完成破坏式升级，统一使用 `redis`、`http`、`kafka` 作为子命令名称，移除了增强命令（redis-enhanced、http-enhanced、kafka-enhanced）和传统命令的复杂兼容性架构。
+abc-runner 已完成破坏式升级，统一使用 `redis`、`http`、`kafka` 作为子命令名称，移除了增强命令（redis-enhanced、http-enhanced、kafka-enhanced）和传统命令的复杂兼容性架构。
 
 ## 主要变更
 
@@ -12,28 +12,28 @@ redis-runner 已完成破坏式升级，统一使用 `redis`、`http`、`kafka` 
 
 ```bash
 # 增强版命令
-redis-runner redis-enhanced --config conf/redis.yaml
-redis-runner http-enhanced --url http://localhost:8080
-redis-runner kafka-enhanced --brokers localhost:9092
+abc-runner redis-enhanced --config conf/redis.yaml
+abc-runner http-enhanced --url http://localhost:8080
+abc-runner kafka-enhanced --brokers localhost:9092
 
 # 传统版命令（已移除）
-redis-runner redis -h localhost -p 6379
-redis-runner http --url http://localhost:8080
-redis-runner kafka --brokers localhost:9092
+abc-runner redis -h localhost -p 6379
+abc-runner http --url http://localhost:8080
+abc-runner kafka --brokers localhost:9092
 ```
 
 **新版本命令:**
 
 ```bash
 # 统一命令格式
-redis-runner redis --config conf/redis.yaml
-redis-runner http --url http://localhost:8080
-redis-runner kafka --brokers localhost:9092
+abc-runner redis --config conf/redis.yaml
+abc-runner http --url http://localhost:8080
+abc-runner kafka --brokers localhost:9092
 
 # 支持别名
-redis-runner r -h localhost -p 6379 -n 1000 -c 10
-redis-runner h --url http://localhost:8080 -n 1000 -c 50
-redis-runner k --brokers localhost:9092 -n 1000 -c 5
+abc-runner r -h localhost -p 6379 -n 1000 -c 10
+abc-runner h --url http://localhost:8080 -n 1000 -c 50
+abc-runner k --brokers localhost:9092 -n 1000 -c 5
 ```
 
 ### 2. 命令对照表
@@ -73,16 +73,16 @@ sed -i 's/kafka-enhanced/kafka/g' your_script.sh
 
 ```bash
 # 测试Redis命令
-redis-runner redis --help
-redis-runner r -h localhost -p 6379 -n 10 -c 1
+abc-runner redis --help
+abc-runner r -h localhost -p 6379 -n 10 -c 1
 
 # 测试HTTP命令  
-redis-runner http --help
-redis-runner h --url http://httpbin.org/get -n 10 -c 1
+abc-runner http --help
+abc-runner h --url http://httpbin.org/get -n 10 -c 1
 
 # 测试Kafka命令
-redis-runner kafka --help
-redis-runner k --brokers localhost:9092 --topic test -n 10 -c 1
+abc-runner kafka --help
+abc-runner k --brokers localhost:9092 --topic test -n 10 -c 1
 ```
 
 ## 新功能特性
@@ -112,28 +112,28 @@ redis-runner k --brokers localhost:9092 --topic test -n 10 -c 1
 
 ```bash
 # 基础测试
-redis-runner redis -h 127.0.0.1 -p 6379 -n 10000 -c 50
+abc-runner redis -h 127.0.0.1 -p 6379 -n 10000 -c 50
 
 # 使用配置文件
-redis-runner redis --config conf/redis.yaml
+abc-runner redis --config conf/redis.yaml
 
 # 自定义测试用例
-redis-runner r -t set_get_random -n 50000 -c 100 --read-ratio 80
+abc-runner r -t set_get_random -n 50000 -c 100 --read-ratio 80
 ```
 
 ### HTTP 负载测试
 
 ```bash
 # GET请求测试
-redis-runner http --url http://localhost:8080/api/users -n 10000 -c 50
+abc-runner http --url http://localhost:8080/api/users -n 10000 -c 50
 
 # POST请求测试
-redis-runner h --url http://api.example.com/users --method POST \
+abc-runner h --url http://api.example.com/users --method POST \
   --body '{"name":"test","email":"test@example.com"}' \
   --content-type application/json -n 1000 -c 20
 
 # 持续时间测试
-redis-runner http --url https://api.example.com/health \
+abc-runner http --url https://api.example.com/health \
   --duration 60s -c 100
 ```
 
@@ -141,14 +141,14 @@ redis-runner http --url https://api.example.com/health \
 
 ```bash
 # 生产者测试
-redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # 消费者测试
-redis-runner k --broker localhost:9092 --topic test-topic \
+abc-runner k --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 
 # 混合测试
-redis-runner kafka --brokers localhost:9092,localhost:9093 \
+abc-runner kafka --brokers localhost:9092,localhost:9093 \
   --topic high-throughput --test-type produce_consume \
   --message-size 4096 --duration 60s -c 8
 ```
@@ -239,15 +239,15 @@ benchmark:
 
 ```bash
 # 查看全局帮助
-redis-runner --help
+abc-runner --help
 
 # 查看具体命令帮助
-redis-runner redis --help
-redis-runner http --help
-redis-runner kafka --help
+abc-runner redis --help
+abc-runner http --help
+abc-runner kafka --help
 
 # 查看版本信息
-redis-runner --version
+abc-runner --version
 ```
 
 ## 向后兼容性说明

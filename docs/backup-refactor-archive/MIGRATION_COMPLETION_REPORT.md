@@ -1,8 +1,8 @@
-# Redis-Runner 架构迁移完成报告
+# abc-runner 架构迁移完成报告
 
 ## 迁移概述
 
-Redis-Runner项目已成功完成从老架构到新统一适配器框架的破坏性迁移。本次迁移彻底重构了项目架构，移除了技术债务，建立了统一、高效、可扩展的多协议基准测试平台。
+abc-runner项目已成功完成从老架构到新统一适配器框架的破坏性迁移。本次迁移彻底重构了项目架构，移除了技术债务，建立了统一、高效、可扩展的多协议基准测试平台。
 
 ## 迁移执行情况
 
@@ -80,14 +80,14 @@ Redis-Runner项目已成功完成从老架构到新统一适配器框架的破�
 
 ```bash
 # 新增强版命令
-redis-runner redis-enhanced --config conf/redis.yaml
-redis-runner http-enhanced --config conf/http.yaml
-redis-runner kafka-enhanced --config conf/kafka.yaml
+abc-runner redis-enhanced --config conf/redis.yaml
+abc-runner http-enhanced --config conf/http.yaml
+abc-runner kafka-enhanced --config conf/kafka.yaml
 
 # 简化别名支持
-redis-runner r --config conf/redis.yaml  # Redis
-redis-runner h --config conf/http.yaml   # HTTP
-redis-runner k --config conf/kafka.yaml  # Kafka
+abc-runner r --config conf/redis.yaml  # Redis
+abc-runner h --config conf/http.yaml   # HTTP
+abc-runner k --config conf/kafka.yaml  # Kafka
 ```
 
 ### 🔄 向后兼容机制
@@ -95,7 +95,7 @@ redis-runner k --config conf/kafka.yaml  # Kafka
 老命令仍然可以识别但会显示迁移提示：
 
 ```bash
-$ ./redis-runner redis
+$ ./abc-runner redis
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 WARNING: DEPRECATED command 'redis' has been REMOVED
 Please migrate to the enhanced version: 'redis-enhanced'
@@ -105,7 +105,7 @@ ERROR: Legacy command 'redis' has been REMOVED
 ...
 To continue using redis testing:
 1. Use the enhanced command:
-   redis-runner redis-enhanced --config conf/redis.yaml
+   abc-runner redis-enhanced --config conf/redis.yaml
 ...
 ```
 
@@ -131,18 +131,18 @@ go run tools/config_migration.go -input old-config.yaml -output new-config.yaml
 
 ```bash
 # 构建成功
-$ go build -o redis-runner main.go
+$ go build -o abc-runner main.go
 ✅ Build successful
 
 # 运行测试
-$ ./redis-runner --help
+$ ./abc-runner --help
 ✅ Help display working
 
-$ ./redis-runner redis
+$ ./abc-runner redis
 ✅ Legacy command handling working
 ✅ Migration messages displayed
 
-$ ./redis-runner redis-enhanced
+$ ./abc-runner redis-enhanced
 ✅ Enhanced command working
 ```
 
@@ -227,7 +227,7 @@ $ ./redis-runner redis-enhanced
 
 ## 结论
 
-Redis-Runner的架构迁移已圆满完成。通过破坏性迁移，项目从一个功能分散、维护困难的工具成功转变为统一、高效、可扩展的多协议基准测试平台。
+abc-runner的架构迁移已圆满完成。通过破坏性迁移，项目从一个功能分散、维护困难的工具成功转变为统一、高效、可扩展的多协议基准测试平台。
 
 新架构不仅解决了历史技术债务问题，还为项目未来发展奠定了坚实的技术基础。用户可以享受到更好的性能、更统一的接口和更强的功能，同时开发团队也能以更高的效率继续迭代产品。
 

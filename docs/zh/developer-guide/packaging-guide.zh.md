@@ -4,7 +4,7 @@
 
 ## 概述
 
-本文档介绍了如何使用 Makefile 中的 `release` 目标来创建 redis-runner 的发布包。
+本文档介绍了如何使用 Makefile 中的 `release` 目标来创建 abc-runner 的发布包。
 
 ## 打包流程
 
@@ -42,22 +42,22 @@ VERSION=1.0.0 make release
 ```
 releases/
 ├── v0.2.0/                    # 版本目录
-│   ├── redis-runner-darwin-amd64     # macOS AMD64 二进制文件
-│   ├── redis-runner-darwin-arm64     # macOS ARM64 二进制文件
-│   ├── redis-runner-linux-amd64      # Linux AMD64 二进制文件
-│   ├── redis-runner-linux-arm64      # Linux ARM64 二进制文件
-│   ├── redis-runner-windows-amd64.exe # Windows AMD64 二进制文件
+│   ├── abc-runner-darwin-amd64     # macOS AMD64 二进制文件
+│   ├── abc-runner-darwin-arm64     # macOS ARM64 二进制文件
+│   ├── abc-runner-linux-amd64      # Linux AMD64 二进制文件
+│   ├── abc-runner-linux-arm64      # Linux ARM64 二进制文件
+│   ├── abc-runner-windows-amd64.exe # Windows AMD64 二进制文件
 │   ├── config/                       # 配置文件目录
 │   │   ├── redis.yaml
 │   │   ├── http.yaml
 │   │   └── kafka.yaml
 │   ├── README.md                     # 项目说明
 │   └── LICENSE                       # 许可证文件
-├── redis-runner-v0.2.0-darwin-amd64.tar.gz     # 平台特定压缩包
-├── redis-runner-v0.2.0-darwin-arm64.tar.gz
-├── redis-runner-v0.2.0-linux-amd64.tar.gz
-├── redis-runner-v0.2.0-linux-arm64.tar.gz
-└── redis-runner-v0.2.0-windows-amd64.zip
+├── abc-runner-v0.2.0-darwin-amd64.tar.gz     # 平台特定压缩包
+├── abc-runner-v0.2.0-darwin-arm64.tar.gz
+├── abc-runner-v0.2.0-linux-amd64.tar.gz
+├── abc-runner-v0.2.0-linux-arm64.tar.gz
+└── abc-runner-v0.2.0-windows-amd64.zip
 ```
 
 ## 使用发布包
@@ -73,13 +73,13 @@ releases/
 
 ```bash
 # 下载并解压
-tar -xzf redis-runner-v0.2.0-darwin-amd64.tar.gz
+tar -xzf abc-runner-v0.2.0-darwin-amd64.tar.gz
 
 # 编辑配置文件（可选）
 nano config/redis.yaml
 
 # 运行
-./redis-runner-darwin-amd64 redis --help
+./abc-runner-darwin-amd64 redis --help
 ```
 
 ## 支持的平台

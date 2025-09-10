@@ -71,7 +71,7 @@ func DefaultHTTPConfig() *HttpAdapterConfig {
 			MaxRedirects:       10,
 			DisableCompression: false,
 			EnableHTTP2:        true,
-			UserAgent:          "redis-runner-http-client/1.0",
+			UserAgent:          "abc-runner-http-client/1.0",
 		},
 	}
 }
@@ -113,7 +113,7 @@ func LoadHTTPConfig(path string) (*HttpAdapterConfig, error) {
 
 // LoadHTTPConfigDefault 加载默认路径的HTTP配置
 func LoadHTTPConfigDefault() (*HttpAdapterConfig, error) {
-	return LoadHTTPConfig("config/templates/http.yaml")
+	return LoadHTTPConfig("config/http.yaml")
 }
 
 // mergeConfig 合并配置

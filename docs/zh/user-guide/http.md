@@ -4,7 +4,7 @@
 
 ## 支持的HTTP方法
 
-redis-runner支持所有标准HTTP方法：
+abc-runner支持所有标准HTTP方法：
 
 - GET
 - POST
@@ -63,17 +63,17 @@ http:
 
 ```bash
 # 简单的GET请求测试
-./redis-runner http --url http://httpbin.org/get -n 1000 -c 50
+./abc-runner http --url http://httpbin.org/get -n 1000 -c 50
 
 # 持续时间测试
-./redis-runner http --url http://localhost:8080 --duration 60s -c 100
+./abc-runner http --url http://localhost:8080 --duration 60s -c 100
 ```
 
 ### POST请求测试
 
 ```bash
 # 带请求体的POST请求
-./redis-runner http --url http://httpbin.org/post \
+./abc-runner http --url http://httpbin.org/post \
   --method POST \
   --body '{"name":"test"}' \
   --content-type application/json \
@@ -84,7 +84,7 @@ http:
 
 ```bash
 # 带自定义请求头的请求
-./redis-runner http --url http://api.example.com \
+./abc-runner http --url http://api.example.com \
   --header "Authorization:Bearer token123" \
   --header "X-API-Key:secret" \
   -n 1000
@@ -94,7 +94,7 @@ http:
 
 ```bash
 # 使用配置文件进行复杂测试
-./redis-runner http --config config/examples/http-complex.yaml
+./abc-runner http --config config/examples/http-complex.yaml
 ```
 
 ## 请求权重
@@ -137,7 +137,7 @@ auth:
 
 ## 文件上传测试
 
-redis-runner支持文件上传测试：
+abc-runner支持文件上传测试：
 
 ```yaml
 upload:
@@ -150,7 +150,7 @@ upload:
 
 ## 结果解读
 
-HTTP测试完成后，redis-runner会输出详细的性能报告：
+HTTP测试完成后，abc-runner会输出详细的性能报告：
 
 - **RPS**: 每秒请求数
 - **成功率**: 成功请求的百分比

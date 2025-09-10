@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document provides guidelines for maintaining multilingual documentation in the redis-runner project. The goal is to ensure consistency and quality across all language versions of our documentation.
+This document provides guidelines for maintaining multilingual documentation in the abc-runner project. The goal is to ensure consistency and quality across all language versions of our documentation.
 
 ## Directory Structure
 

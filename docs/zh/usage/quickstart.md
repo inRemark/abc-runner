@@ -2,7 +2,7 @@
 
 [English](quickstart.md) | [中文](quickstart.zh.md)
 
-本指南将帮助您快速开始使用redis-runner。
+本指南将帮助您快速开始使用abc-runner。
 
 ## 安装
 
@@ -10,19 +10,19 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # 构建二进制文件
-go build -o redis-runner .
+go build -o abc-runner .
 
 # 运行工具
-./redis-runner --help
+./abc-runner --help
 ```
 
 ### 使用预构建的二进制文件
 
-从[发布页面](https://github.com/your-org/redis-runner/releases)下载预构建的二进制文件。
+从[发布页面](https://github.com/your-org/abc-runner/releases)下载预构建的二进制文件。
 
 ## 基本用法
 
@@ -30,23 +30,23 @@ go build -o redis-runner .
 
 ```bash
 # 基本Redis测试
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # 带认证的Redis
-./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
 
 # Redis集群模式
-./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
 ```
 
 ### HTTP负载测试
 
 ```bash
 # 基本HTTP GET测试
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # 带主体的HTTP POST
-./redis-runner http --url http://api.example.com/users \
+./abc-runner http --url http://api.example.com/users \
   --method POST --body '{"name":"test"}' \
   --content-type application/json -n 1000 -c 20
 ```
@@ -55,10 +55,10 @@ go build -o redis-runner .
 
 ```bash
 # 基本生产者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # 消费者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -88,7 +88,7 @@ benchmark:
 使用配置文件运行：
 
 ```bash
-./redis-runner redis --config redis.yaml
+./abc-runner redis --config redis.yaml
 ```
 
 ## 命令别名
@@ -97,19 +97,19 @@ benchmark:
 
 ```bash
 # 快速测试的短别名
-./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
-./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
-./redis-runner k --broker localhost:9092 -n 100      # Kafka
+./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
+./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
+./abc-runner k --broker localhost:9092 -n 100      # Kafka
 ```
 
 ## 查看帮助
 
 ```bash
 # 显示通用帮助
-./redis-runner --help
+./abc-runner --help
 
 # 显示特定协议的帮助
-./redis-runner redis --help
-./redis-runner http --help
-./redis-runner kafka --help
+./abc-runner redis --help
+./abc-runner http --help
+./abc-runner kafka --help
 ```

@@ -4,7 +4,7 @@
 
 ## System Architecture
 
-redis-runner adopts a modular, layered architecture design with clear component boundaries and separation of responsibilities.
+abc-runner adopts a modular, layered architecture design with clear component boundaries and separation of responsibilities.
 
 ```mermaid
 graph TD

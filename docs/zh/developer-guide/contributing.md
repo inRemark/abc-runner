@@ -2,7 +2,7 @@
 
 [English](../en/developer-guide/contributing.md) | [中文](contributing.md)
 
-感谢您考虑为redis-runner项目做贡献！我们欢迎各种形式的贡献，包括代码、文档、bug报告和功能建议。
+感谢您考虑为abc-runner项目做贡献！我们欢迎各种形式的贡献，包括代码、文档、bug报告和功能建议。
 
 ## 行为准则
 
@@ -14,7 +14,7 @@
 
 在报告bug时，请包含以下信息：
 
-1. **版本信息**: redis-runner的版本
+1. **版本信息**: abc-runner的版本
 2. **环境信息**: 操作系统、Go版本等
 3. **复现步骤**: 详细的复现步骤
 4. **期望行为**: 您期望看到什么
@@ -36,8 +36,8 @@
 
 1. **克隆仓库**:
    ```bash
-   git clone https://github.com/your-org/redis-runner.git
-   cd redis-runner
+   git clone https://github.com/your-org/abc-runner.git
+   cd abc-runner
    ```
 
 2. **安装依赖**:
@@ -252,5 +252,5 @@ docs/
 
 如有任何问题，请通过以下方式联系我们：
 
-- GitHub Issues: [https://github.com/your-org/redis-runner/issues](https://github.com/your-org/redis-runner/issues)
-- Email: maintainers@redis-runner.org
+- GitHub Issues: [https://github.com/your-org/abc-runner/issues](https://github.com/your-org/abc-runner/issues)
+- Email: maintainers@abc-runner.org

@@ -2,7 +2,7 @@
 
 [English](kafka.md) | [中文](kafka.zh.md)
 
-本指南涵盖了redis-runner的Kafka特定功能和使用模式。
+本指南涵盖了abc-runner的Kafka特定功能和使用模式。
 
 ## 基本Kafka测试
 
@@ -11,7 +11,7 @@
 测试Kafka生产者性能：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 ```
 
 ### 消费者测试
@@ -19,7 +19,7 @@
 测试Kafka消费者性能：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -28,7 +28,7 @@
 测试端到端Kafka性能：
 
 ```bash
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \
   --topic high-throughput --test-type produce_consume \
   --message-size 4096 --duration 60s -c 8
 ```
@@ -38,13 +38,13 @@
 ### 单个代理
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000
 ```
 
 ### 多个代理
 
 ```bash
-./redis-runner kafka --brokers localhost:9092,localhost:9093,localhost:9094 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093,localhost:9094 \
   --topic test-topic -n 10000
 ```
 
@@ -53,21 +53,21 @@
 ### 仅生产（默认）
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type produce -n 10000
 ```
 
 ### 仅消费
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id test-group -n 1000
 ```
 
 ### 生产和消费
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type produce_consume -n 10000
 ```
 
@@ -78,7 +78,7 @@
 控制生产的消息大小：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --message-size 1024 -n 10000
 ```
 
@@ -87,7 +87,7 @@
 使用不同的压缩算法进行测试：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --compression lz4 --message-size 4096 -n 10000
 ```
 
@@ -123,7 +123,7 @@ benchmark:
 使用配置文件运行：
 
 ```bash
-./redis-runner kafka --config kafka.yaml
+./abc-runner kafka --config kafka.yaml
 ```
 
 ## 高级功能
@@ -133,7 +133,7 @@ benchmark:
 测试启用SSL/TLS的Kafka集群：
 
 ```bash
-./redis-runner kafka --broker localhost:9093 --topic test-topic \
+./abc-runner kafka --broker localhost:9093 --topic test-topic \
   --tls-enabled --tls-skip-verify -n 1000
 ```
 
@@ -142,7 +142,7 @@ benchmark:
 测试使用SASL/PLAIN认证：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --sasl-enabled --sasl-user user --sasl-password pass -n 1000
 ```
 
@@ -151,7 +151,7 @@ benchmark:
 使用特定的消费者组设置进行测试：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id performance-test \
   --consumer-group-reset earliest -n 1000
 ```
@@ -163,7 +163,7 @@ benchmark:
 优化生产者的批量大小以提高吞吐量：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --batch-size 32768 --message-size 1024 -n 100000
 ```
 
@@ -172,7 +172,7 @@ benchmark:
 测试不同的确认设置：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --acks all --message-size 1024 -n 10000
 ```
 
@@ -181,7 +181,7 @@ benchmark:
 调整并行连接数：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   -n 100000 -c 20
 ```
 
@@ -190,6 +190,6 @@ benchmark:
 运行特定时长的测试而不是固定数量的消息：
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --duration 300s -c 10
 ```

@@ -51,7 +51,7 @@ make integration-test
 make build-all
 
 # Verify binaries
-./bin/redis-runner-*
+./bin/abc-runner-*
 ```
 
 ### 4. Merge to Main Branch
@@ -87,11 +87,11 @@ git push origin v0.2.0
 ```bash
 # Upload pre-compiled binaries
 gh release create v0.2.0 \
-  bin/redis-runner-darwin-amd64 \
-  bin/redis-runner-darwin-arm64 \
-  bin/redis-runner-linux-amd64 \
-  bin/redis-runner-linux-arm64 \
-  bin/redis-runner-windows-amd64.exe \
+  bin/abc-runner-darwin-amd64 \
+  bin/abc-runner-darwin-arm64 \
+  bin/abc-runner-linux-amd64 \
+  bin/abc-runner-linux-arm64 \
+  bin/abc-runner-windows-amd64.exe \
   --title "v0.2.0" \
   --notes "Release notes for v0.2.0"
 ```
@@ -100,12 +100,12 @@ gh release create v0.2.0 \
 
 ```bash
 # Build Docker image
-docker build -t redis-runner/redis-runner:v0.2.0 .
+docker build -t abc-runner/abc-runner:v0.2.0 .
 
 # Push image
-docker push redis-runner/redis-runner:v0.2.0
-docker tag redis-runner/redis-runner:v0.2.0 redis-runner/redis-runner:latest
-docker push redis-runner/redis-runner:latest
+docker push abc-runner/abc-runner:v0.2.0
+docker tag abc-runner/abc-runner:v0.2.0 abc-runner/abc-runner:latest
+docker push abc-runner/abc-runner:latest
 ```
 
 ### 7. Update Documentation Website
@@ -190,7 +190,7 @@ Use tools to automatically generate CHANGELOG:
 # Using github-changelog-generator
 github_changelog_generator \
   --user your-org \
-  --project redis-runner \
+  --project abc-runner \
   --token $GITHUB_TOKEN \
   --since-tag v0.1.0 \
   --future-release v0.2.0
@@ -274,7 +274,7 @@ git branch -d hotfix/critical-bug
 # Build and release emergency fix version
 make build-all
 gh release create v0.2.1 \
-  bin/redis-runner-* \
+  bin/abc-runner-* \
   --title "v0.2.1" \
   --notes "Emergency fix version"
 ```
@@ -304,7 +304,7 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: bin/redis-runner-*
+        files: bin/abc-runner-*
         body_path: CHANGELOG.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -336,7 +336,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: redis-runner/redis-runner:${{ github.ref_name }},redis-runner/redis-runner:latest
+        tags: abc-runner/abc-runner:${{ github.ref_name }},abc-runner/abc-runner:latest
 ```
 
 ## Release Checklist

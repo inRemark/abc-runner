@@ -1,5 +1,15 @@
 # 配置示例说明
 
+## 核心配置示例 (core.yaml)
+
+核心配置示例文件，包含所有协议通用的配置选项。
+
+### 适用场景
+
+- 为所有协议提供统一的日志、报告和监控配置
+- 设置全局连接参数
+- 配置统一的报告输出目录
+
 ## Redis 配置示例 (redis.yaml)
 
 简单的Redis单机模式配置示例，适用于快速开始测试。
@@ -35,11 +45,12 @@
 直接使用示例配置文件运行测试，或根据实际需求进行修改：
 
 ```bash
-# 直接使用示例配置
-./abc-runner redis --config config/examples/redis.yaml
+# 使用核心配置和协议特定配置
+./abc-runner redis --config config/examples/core.yaml --config config/examples/redis.yaml
 
 # 复制并修改后使用
+cp config/examples/core.yaml my-core-config.yaml
 cp config/examples/redis.yaml my-redis-config.yaml
-# 编辑 my-redis-config.yaml
-./abc-runner redis --config my-redis-config.yaml
+# 编辑配置文件
+./abc-runner redis --config my-core-config.yaml --config my-redis-config.yaml
 ```

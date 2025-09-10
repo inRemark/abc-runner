@@ -4,7 +4,7 @@
 
 ## 支持的Kafka操作
 
-redis-runner支持以下Kafka操作：
+abc-runner支持以下Kafka操作：
 
 - **生产者测试**: 消息生产性能测试
 - **消费者测试**: 消息消费性能测试
@@ -56,17 +56,17 @@ kafka:
 
 ```bash
 # 简单的生产者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # 持续时间测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic --duration 60s -c 10
+./abc-runner kafka --broker localhost:9092 --topic test-topic --duration 60s -c 10
 ```
 
 ### 消费者测试
 
 ```bash
 # 消费者测试
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -74,7 +74,7 @@ kafka:
 
 ```bash
 # 同时进行生产和消费测试
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \
   --topic high-throughput --test-type produce_consume \
   --message-size 4096 --duration 60s -c 8
 ```
@@ -83,7 +83,7 @@ kafka:
 
 ```bash
 # 高性能测试（启用压缩）
-./redis-runner kafka --broker localhost:9092 --topic perf-test \
+./abc-runner kafka --broker localhost:9092 --topic perf-test \
   --compression lz4 --acks all --batch-size 32768 -n 50000
 ```
 
@@ -91,7 +91,7 @@ kafka:
 
 ```bash
 # 使用配置文件进行复杂测试
-./redis-runner kafka --config config/examples/kafka-producer.yaml
+./abc-runner kafka --config config/examples/kafka-producer.yaml
 ```
 
 ## 生产者配置
@@ -124,7 +124,7 @@ producer:
 
 ```yaml
 consumer:
-  group_id: "redis-runner-group"
+  group_id: "abc-runner-group"
 ```
 
 ### 偏移量管理
@@ -170,7 +170,7 @@ security:
 
 ## 结果解读
 
-Kafka测试完成后，redis-runner会输出详细的性能报告：
+Kafka测试完成后，abc-runner会输出详细的性能报告：
 
 - **生产者指标**:
   - 消息生产速率

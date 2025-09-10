@@ -4,7 +4,7 @@
 
 ## Supported Redis Modes
 
-redis-runner supports the following Redis deployment modes:
+abc-runner supports the following Redis deployment modes:
 
 - **Standalone Mode**: Standard single-instance Redis
 - **Sentinel Mode**: Redis Sentinel high availability configuration
@@ -12,7 +12,7 @@ redis-runner supports the following Redis deployment modes:
 
 ## Test Cases
 
-redis-runner supports multiple Redis operation tests:
+abc-runner supports multiple Redis operation tests:
 
 - `set_get_random`: Random SET/GET operations
 - `set_only`: SET operations only
@@ -90,45 +90,45 @@ redis:
 
 ```bash
 # Simple SET/GET test
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # Duration-based test
-./redis-runner redis -h localhost -p 6379 --duration 60s -c 100
+./abc-runner redis -h localhost -p 6379 --duration 60s -c 100
 ```
 
 ### Cluster Mode Testing
 
 ```bash
 # Using command line arguments
-./redis-runner redis --mode cluster -h localhost -p 6371 -n 10000 -c 10
+./abc-runner redis --mode cluster -h localhost -p 6371 -n 10000 -c 10
 
 # Using configuration file
-./redis-runner redis --config config/examples/redis-cluster.yaml
+./abc-runner redis --config config/examples/redis-cluster.yaml
 ```
 
 ### Custom Test Cases
 
 ```bash
 # Counter operations test
-./redis-runner redis -t incr -n 10000 -c 50 -d 10
+./abc-runner redis -t incr -n 10000 -c 50 -d 10
 
 # List operations test
-./redis-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
+./abc-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
 
 # Set operations test
-./redis-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
+./abc-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
 ```
 
 ### Sentinel Mode Testing
 
 ```bash
 # Sentinel mode testing using configuration file
-./redis-runner redis --config config/examples/redis-sentinel.yaml
+./abc-runner redis --config config/examples/redis-sentinel.yaml
 ```
 
 ## Result Interpretation
 
-After testing is completed, redis-runner will output detailed performance reports:
+After testing is completed, abc-runner will output detailed performance reports:
 
 - **RPS**: Requests Per Second
 - **Success Rate**: Percentage of successful requests

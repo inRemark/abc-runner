@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-	
-	"abc-runner/app/core/interfaces"
+
 	kafkaConfig "abc-runner/app/adapters/kafka/config"
+	"abc-runner/app/core/interfaces"
 )
 
 // KafkaOperationFactory Kafka操作工厂
@@ -29,7 +29,7 @@ func NewKafkaOperationFactory(config *kafkaConfig.KafkaAdapterConfig) *KafkaOper
 		config: config,
 		rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
-	
+
 	factory.initializeOperationTypes()
 	return factory
 }
@@ -48,19 +48,19 @@ func (f *KafkaOperationFactory) initializeOperationTypes() {
 func (f *KafkaOperationFactory) CreateOperation(params map[string]interface{}) (interfaces.Operation, error) {
 	// 选择操作类型
 	operationType := f.selectOperationType(params)
-	
+
 	// 生成操作键
 	operationKey := f.generateOperationKey(operationType, params)
-	
+
 	// 根据操作类型创建特定的操作参数
 	operationParams, err := f.createOperationParams(operationType, params)
 	if err != nil {
 		return interfaces.Operation{}, fmt.Errorf("failed to create operation params: %w", err)
 	}
-	
+
 	// 生成操作值
 	operationValue := f.generateOperationValue(operationType, params)
-	
+
 	// 创建操作
 	operation := interfaces.Operation{
 		Type:   operationType,
@@ -72,7 +72,7 @@ func (f *KafkaOperationFactory) CreateOperation(params map[string]interface{}) (
 			"operation_type":    operationType,
 		},
 	}
-	
+
 	return operation, nil
 }
 
@@ -86,45 +86,45 @@ func (f *KafkaOperationFactory) selectOperationType(params map[string]interface{
 			}
 		}
 	}
-	
+
 	// 按权重随机选择
 	totalWeight := 0
 	for _, op := range f.operations {
 		totalWeight += op.weight
 	}
-	
+
 	if totalWeight == 0 {
 		return "produce_message" // 默认操作
 	}
-	
+
 	randomValue := f.rand.Intn(totalWeight)
 	currentWeight := 0
-	
+
 	for _, op := range f.operations {
 		currentWeight += op.weight
 		if randomValue < currentWeight {
 			return op.name
 		}
 	}
-	
+
 	return "produce_message" // 默认操作
 }
 
 // isValidOperationType 检查是否为有效的操作类型
 func (f *KafkaOperationFactory) isValidOperationType(opType string) bool {
 	validTypes := []string{
-		"produce_message", "produce_batch", 
+		"produce_message", "produce_batch",
 		"consume_message", "consume_batch",
 		"create_topic", "delete_topic", "list_topics",
 		"describe_consumer_groups",
 	}
-	
+
 	for _, validType := range validTypes {
 		if opType == validType {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -132,49 +132,49 @@ func (f *KafkaOperationFactory) isValidOperationType(opType string) bool {
 func (f *KafkaOperationFactory) generateOperationKey(operationType string, params map[string]interface{}) string {
 	// 基于操作类型和参数生成唯一键
 	key := operationType
-	
+
 	// 如果有索引参数，加入键中
 	if index, exists := params["index"]; exists {
 		key = fmt.Sprintf("%s:%v", key, index)
 	}
-	
+
 	// 如果是随机键模式
 	if f.config.Benchmark.RandomKeys > 0 {
 		randomSuffix := f.rand.Intn(f.config.Benchmark.RandomKeys)
 		key = fmt.Sprintf("%s:random_%d", key, randomSuffix)
 	}
-	
+
 	return key
 }
 
 // createOperationParams 创建操作参数
 func (f *KafkaOperationFactory) createOperationParams(operationType string, params map[string]interface{}) (map[string]interface{}, error) {
 	operationParams := make(map[string]interface{})
-	
+
 	// 复制基础参数
 	for k, v := range params {
 		operationParams[k] = v
 	}
-	
+
 	// 设置默认topic
 	if _, exists := operationParams["topic"]; !exists {
 		operationParams["topic"] = f.config.Benchmark.DefaultTopic
 	}
-	
+
 	// 根据操作类型设置特定参数
 	switch operationType {
 	case "produce_message":
 		return f.createProduceMessageParams(operationParams)
-		
+
 	case "produce_batch":
 		return f.createProduceBatchParams(operationParams)
-		
+
 	case "consume_message":
 		return f.createConsumeMessageParams(operationParams)
-		
+
 	case "consume_batch":
 		return f.createConsumeBatchParams(operationParams)
-		
+
 	default:
 		// 对于其他操作类型，返回基础参数
 		return operationParams, nil
@@ -186,17 +186,17 @@ func (f *KafkaOperationFactory) createProduceMessageParams(params map[string]int
 	// 设置默认Headers
 	if _, exists := params["headers"]; !exists {
 		params["headers"] = map[string]string{
-			"producer": "redis-runner",
+			"producer":  "abc-runner",
 			"timestamp": fmt.Sprintf("%d", time.Now().Unix()),
 		}
 	}
-	
+
 	// 设置分区策略
 	if _, exists := params["partition"]; !exists && f.config.Benchmark.PartitionStrategy == "manual" {
 		// 手动分区分配（简单轮询）
 		params["partition"] = int32(f.rand.Intn(8)) // 假设8个分区
 	}
-	
+
 	return params, nil
 }
 
@@ -206,11 +206,11 @@ func (f *KafkaOperationFactory) createProduceBatchParams(params map[string]inter
 	if _, exists := params["messages"]; !exists {
 		batchSize := f.selectBatchSize()
 		messages := make([]*Message, batchSize)
-		
+
 		for i := 0; i < batchSize; i++ {
 			messages[i] = &Message{
-				Key:     fmt.Sprintf("batch_key_%d_%d", time.Now().UnixNano(), i),
-				Value:   f.generateMessageValue(),
+				Key:   fmt.Sprintf("batch_key_%d_%d", time.Now().UnixNano(), i),
+				Value: f.generateMessageValue(),
 				Headers: map[string]string{
 					"batch_index": fmt.Sprintf("%d", i),
 					"batch_size":  fmt.Sprintf("%d", batchSize),
@@ -218,10 +218,10 @@ func (f *KafkaOperationFactory) createProduceBatchParams(params map[string]inter
 				Partition: int32(f.rand.Intn(8)), // 假设8个分区
 			}
 		}
-		
+
 		params["messages"] = messages
 	}
-	
+
 	return params, nil
 }
 
@@ -231,7 +231,7 @@ func (f *KafkaOperationFactory) createConsumeMessageParams(params map[string]int
 	if _, exists := params["timeout"]; !exists {
 		params["timeout"] = f.config.Benchmark.Timeout
 	}
-	
+
 	return params, nil
 }
 
@@ -241,12 +241,12 @@ func (f *KafkaOperationFactory) createConsumeBatchParams(params map[string]inter
 	if _, exists := params["max_messages"]; !exists {
 		params["max_messages"] = f.selectBatchSize()
 	}
-	
+
 	// 设置读取超时
 	if _, exists := params["timeout"]; !exists {
 		params["timeout"] = f.config.Benchmark.Timeout
 	}
-	
+
 	return params, nil
 }
 
@@ -255,7 +255,7 @@ func (f *KafkaOperationFactory) selectBatchSize() int {
 	if len(f.config.Benchmark.BatchSizes) == 0 {
 		return 10 // 默认批量大小
 	}
-	
+
 	// 从配置的批量大小中随机选择
 	return f.config.Benchmark.BatchSizes[f.rand.Intn(len(f.config.Benchmark.BatchSizes))]
 }
@@ -278,23 +278,23 @@ func (f *KafkaOperationFactory) generateMessageValue() string {
 	// 根据配置的消息大小范围生成消息
 	minSize := f.config.Benchmark.MessageSizeRange.Min
 	maxSize := f.config.Benchmark.MessageSizeRange.Max
-	
+
 	if minSize <= 0 {
 		minSize = f.config.Benchmark.DataSize
 	}
 	if maxSize <= minSize {
 		maxSize = minSize + 100
 	}
-	
+
 	messageSize := minSize + f.rand.Intn(maxSize-minSize+1)
-	
+
 	// 生成指定长度的随机字符串
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	message := make([]byte, messageSize)
 	for i := range message {
 		message[i] = charset[f.rand.Intn(len(charset))]
 	}
-	
+
 	return string(message)
 }
 
@@ -311,7 +311,7 @@ func (f *KafkaOperationFactory) ValidateParams(params map[string]interface{}) er
 			return fmt.Errorf("topic is required when default_topic is not configured")
 		}
 	}
-	
+
 	// 如果指定了operation_type，验证是否有效
 	if opType, exists := params["operation_type"]; exists {
 		if opTypeStr, ok := opType.(string); ok {
@@ -320,6 +320,6 @@ func (f *KafkaOperationFactory) ValidateParams(params map[string]interface{}) er
 			}
 		}
 	}
-	
+
 	return nil
 }

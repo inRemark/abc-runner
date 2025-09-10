@@ -1,48 +1,48 @@
-# Redis-Runner Command架构重构验证报告
+# abc-runner Command架构重构验证报告
 
 ## 项目概述
 
-本报告总结了redis-runner项目的模块Command入口分析与优化的完整实现情况。该项目成功建立了一个统一的、可扩展的、向后兼容的Command架构。
+本报告总结了abc-runner项目的模块Command入口分析与优化的完整实现情况。该项目成功建立了一个统一的、可扩展的、向后兼容的Command架构。
 
 ## 完成的核心功能
 
 ### ✅ Phase 1: 核心架构实现
 
-1. **统一Command接口** ([interfaces.go](file:///Users/remark/gitHub/myPro/redis-runner/app/core/command/interfaces.go))
+1. **统一Command接口** ([interfaces.go](file:///Users/remark/gitHub/myPro/abc-runner/app/core/command/interfaces.go))
    - 实现了`CommandHandler`接口，定义了统一的命令处理规范
    - 创建了`BaseCommandHandler`基础类，提供通用功能
    - 支持命令版本管理（Enhanced/Legacy）和弃用标记
 
-2. **命令注册和路由系统** ([registry.go](file:///Users/remark/gitHub/myPro/redis-runner/app/core/command/registry.go))
+2. **命令注册和路由系统** ([registry.go](file:///Users/remark/gitHub/myPro/abc-runner/app/core/command/registry.go))
    - `CommandRegistry`: 线程安全的命令注册器
    - `CommandRouter`: 智能命令路由器，支持弃用警告和帮助系统
    - 自动查找增强版本并提供迁移建议
 
-3. **传统版本兼容** ([legacy.go](file:///Users/remark/gitHub/myPro/redis-runner/app/core/command/legacy.go))
+3. **传统版本兼容** ([legacy.go](file:///Users/remark/gitHub/myPro/abc-runner/app/core/command/legacy.go))
    - `LegacyCommandWrapper`: 包装传统命令，显示弃用警告
    - 100%保持向后兼容性
    - 智能迁移提示和文档链接
 
 ### ✅ Phase 2: Enhanced Command实现
 
-1. **Redis增强处理器** ([redis_enhanced.go](file:///Users/remark/gitHub/myPro/redis-runner/app/commands/redis_enhanced.go))
+1. **Redis增强处理器** ([redis_enhanced.go](file:///Users/remark/gitHub/myPro/abc-runner/app/commands/redis_enhanced.go))
    - 集成新架构的Redis适配器
    - 支持配置文件和命令行参数
    - 增强的性能监控和报告
 
-2. **HTTP增强处理器** ([http_enhanced.go](file:///Users/remark/gitHub/myPro/redis-runner/app/commands/http_enhanced.go))
+2. **HTTP增强处理器** ([http_enhanced.go](file:///Users/remark/gitHub/myPro/abc-runner/app/commands/http_enhanced.go))
    - 完整的HTTP负载测试功能
    - 支持多种HTTP方法和配置选项
    - 连接池管理和性能优化
 
-3. **Kafka增强处理器** ([kafka_enhanced.go](file:///Users/remark/gitHub/myPro/redis-runner/app/commands/kafka_enhanced.go))
+3. **Kafka增强处理器** ([kafka_enhanced.go](file:///Users/remark/gitHub/myPro/abc-runner/app/commands/kafka_enhanced.go))
    - 生产者/消费者性能测试
    - 连接池和批量处理支持
    - 详细的Kafka特定指标
 
 ### ✅ Phase 3: 主入口整合
 
-1. **重构main.go** ([main.go](file:///Users/remark/gitHub/myPro/redis-runner/main.go))
+1. **重构main.go** ([main.go](file:///Users/remark/gitHub/myPro/abc-runner/main.go))
    - 统一的命令路由系统
    - 优雅的错误处理和上下文管理
    - 保持向后兼容的接口
@@ -59,12 +59,12 @@
 
 ### ✅ Phase 4: 测试与验证
 
-1. **单元测试** ([command_test.go](file:///Users/remark/gitHub/myPro/redis-runner/app/core/command/command_test.go))
+1. **单元测试** ([command_test.go](file:///Users/remark/gitHub/myPro/abc-runner/app/core/command/command_test.go))
    - Command架构的完整单元测试
    - 覆盖注册器、路由器、处理器等核心组件
    - 模拟和集成测试
 
-2. **集成测试** ([command_integration_test.go](file:///Users/remark/gitHub/myPro/redis-runner/test/integration/command_integration_test.go))
+2. **集成测试** ([command_integration_test.go](file:///Users/remark/gitHub/myPro/abc-runner/test/integration/command_integration_test.go))
    - 新旧版本功能对等性验证
    - 命令注册完整性测试
    - 迁移路径验证
@@ -75,14 +75,14 @@
 
 ```bash
 # 增强版命令（推荐）
-redis-runner redis-enhanced --config conf/redis.yaml
-redis-runner http-enhanced --url https://api.example.com -n 10000 -c 50
-redis-runner kafka-enhanced --broker localhost:9092 --topic test
+abc-runner redis-enhanced --config conf/redis.yaml
+abc-runner http-enhanced --url https://api.example.com -n 10000 -c 50
+abc-runner kafka-enhanced --broker localhost:9092 --topic test
 
 # 传统版命令（兼容但已弃用）
-redis-runner redis -h 127.0.0.1 -p 6379 -n 1000  # 显示迁移警告
-redis-runner http --url http://localhost:8080      # 自动提示增强版
-redis-runner kafka --broker 127.0.0.1:9092        # 引导用户升级
+abc-runner redis -h 127.0.0.1 -p 6379 -n 1000  # 显示迁移警告
+abc-runner http --url http://localhost:8080      # 自动提示增强版
+abc-runner kafka --broker 127.0.0.1:9092        # 引导用户升级
 ```
 
 ### 2. 智能弃用管理
@@ -117,8 +117,8 @@ redis-runner kafka --broker 127.0.0.1:9092        # 引导用户升级
 ### 帮助系统
 
 ```bash
-$ redis-runner --help
-Usage: redis-runner <command> [options]
+$ abc-runner --help
+Usage: abc-runner <command> [options]
 
 Enhanced Commands (Recommended):
   redis-enhanced    Redis performance testing with advanced features
@@ -130,13 +130,13 @@ Legacy Commands (DEPRECATED):
   http             ⚠️ DEPRECATED: Use http-enhanced instead
   kafka            ⚠️ DEPRECATED: Use kafka-enhanced instead
 
-Migration Guide: https://docs.redis-runner.com/migration
+Migration Guide: https://docs.abc-runner.com/migration
 ```
 
 ### 弃用警告示例
 
 ```bash
-$ redis-runner redis -h 127.0.0.1 -p 6379
+$ abc-runner redis -h 127.0.0.1 -p 6379
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 WARNING: Using DEPRECATED command 'redis'
@@ -146,7 +146,7 @@ Enhanced version provides:
   ✓ Advanced metrics and monitoring
   ✓ Flexible configuration management
   ✓ Improved error handling and retry mechanisms
-Migration guide: https://docs.redis-runner.com/migration
+Migration guide: https://docs.abc-runner.com/migration
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
 [继续执行传统命令...]
@@ -194,13 +194,13 @@ func (r *CommandRouter) Route(ctx context.Context, command string, args []string
 1. **评估当前使用**
 
    ```bash
-   redis-runner --help  # 查看可用命令
+   abc-runner --help  # 查看可用命令
    ```
 
 2. **测试enhanced版本**
 
    ```bash
-   redis-runner redis-enhanced --config conf/redis.yaml
+   abc-runner redis-enhanced --config conf/redis.yaml
    ```
 
 3. **渐进式迁移**
@@ -254,7 +254,7 @@ func (r *CommandRouter) Route(ctx context.Context, command string, args []string
 
 ## 结论
 
-redis-runner项目的Command架构重构已经成功完成，实现了以下关键目标：
+abc-runner项目的Command架构重构已经成功完成，实现了以下关键目标：
 
 1. ✅ **统一架构**: 建立了一致的命令处理框架
 2. ✅ **向后兼容**: 保持了100%的功能兼容性
@@ -262,4 +262,4 @@ redis-runner项目的Command架构重构已经成功完成，实现了以下关�
 4. ✅ **扩展性**: 为未来功能扩展奠定了基础
 5. ✅ **用户体验**: 提供了清晰的使用指导和帮助
 
-该架构为redis-runner项目的长期发展提供了坚实的技术基础，用户可以安全地从传统版本迁移到功能更强大的增强版本。
+该架构为abc-runner项目的长期发展提供了坚实的技术基础，用户可以安全地从传统版本迁移到功能更强大的增强版本。

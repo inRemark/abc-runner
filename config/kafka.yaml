@@ -74,18 +74,3 @@ kafka:
     random_keys: 10000
     test_case: "produce"
     timeout: "30s"
-
-  # 报告配置
-  reports:
-    enabled: true
-    formats: ["console", "json", "csv"]     # 支持的格式: console, json, csv, text, all
-    output_dir: "./reports"                # 报告输出目录
-    file_prefix: "kafka_performance"       # 报告文件前缀
-    include_producer_metrics: true         # 包含生产者指标
-    include_consumer_metrics: true         # 包含消费者指标
-    include_partition_metrics: true        # 包含分区指标
-    include_throughput_metrics: true       # 包含吞吐量指标
-    include_lag_monitoring: true           # 包含消费者滞后监控
-    include_timestamp: true                # 文件名包含时间戳
-    enable_console_report: true            # 启用控制台详细报告
-    overwrite_existing: false              # 是否覆盖已存在文件

@@ -132,17 +132,3 @@ http:
     disable_compression: false
     enable_http2: true
     user_agent: "abc-runner-http-client/1.0"
-
-  # 报告配置
-  reports:
-    enabled: true
-    formats: ["console", "json", "text"]   # 支持的格式: console, json, csv, text, all
-    output_dir: "./reports"               # 报告输出目录
-    file_prefix: "http_loadtest"          # 报告文件前缀
-    include_detailed_metrics: true        # 包含HTTP详细指标
-    include_status_codes: true            # 包含状态码统计
-    include_response_times: true          # 包含响应时间分析
-    include_network_metrics: true         # 包含网络指标(连接时间、DNS等)
-    include_timestamp: true               # 文件名包含时间戳
-    enable_console_report: true           # 启用控制台详细报告
-    overwrite_existing: false             # 是否覆盖已存在文件

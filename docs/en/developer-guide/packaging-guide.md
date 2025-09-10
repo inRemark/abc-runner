@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document describes how to use the `release` target in the Makefile to create redis-runner release packages.
+This document describes how to use the `release` target in the Makefile to create abc-runner release packages.
 
 ## Packaging Process
 
@@ -42,22 +42,22 @@ After packaging is complete, the following content will be generated in the `rel
 ```
 releases/
 ├── v0.2.0/                    # Version directory
-│   ├── redis-runner-darwin-amd64     # macOS AMD64 binary
-│   ├── redis-runner-darwin-arm64     # macOS ARM64 binary
-│   ├── redis-runner-linux-amd64      # Linux AMD64 binary
-│   ├── redis-runner-linux-arm64      # Linux ARM64 binary
-│   ├── redis-runner-windows-amd64.exe # Windows AMD64 binary
+│   ├── abc-runner-darwin-amd64     # macOS AMD64 binary
+│   ├── abc-runner-darwin-arm64     # macOS ARM64 binary
+│   ├── abc-runner-linux-amd64      # Linux AMD64 binary
+│   ├── abc-runner-linux-arm64      # Linux ARM64 binary
+│   ├── abc-runner-windows-amd64.exe # Windows AMD64 binary
 │   ├── config/                       # Configuration directory
 │   │   ├── redis.yaml
 │   │   ├── http.yaml
 │   │   └── kafka.yaml
 │   ├── README.md                     # Project README
 │   └── LICENSE                       # License file
-├── redis-runner-v0.2.0-darwin-amd64.tar.gz     # Platform-specific archive
-├── redis-runner-v0.2.0-darwin-arm64.tar.gz
-├── redis-runner-v0.2.0-linux-amd64.tar.gz
-├── redis-runner-v0.2.0-linux-arm64.tar.gz
-└── redis-runner-v0.2.0-windows-amd64.zip
+├── abc-runner-v0.2.0-darwin-amd64.tar.gz     # Platform-specific archive
+├── abc-runner-v0.2.0-darwin-arm64.tar.gz
+├── abc-runner-v0.2.0-linux-amd64.tar.gz
+├── abc-runner-v0.2.0-linux-arm64.tar.gz
+└── abc-runner-v0.2.0-windows-amd64.zip
 ```
 
 ## Using Release Packages
@@ -73,13 +73,13 @@ Users can download the archive for their platform and use it after extraction:
 
 ```bash
 # Download and extract
-tar -xzf redis-runner-v0.2.0-darwin-amd64.tar.gz
+tar -xzf abc-runner-v0.2.0-darwin-amd64.tar.gz
 
 # Edit configuration files (optional)
 nano config/redis.yaml
 
 # Run
-./redis-runner-darwin-amd64 redis --help
+./abc-runner-darwin-amd64 redis --help
 ```
 
 ## Supported Platforms

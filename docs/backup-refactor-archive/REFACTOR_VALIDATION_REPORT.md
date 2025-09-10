@@ -60,12 +60,12 @@ qps: 0, avg: 3630.653ms, min: 630.506ms, p90: 10001.413ms, p95: 10001.413ms, p99
 
 ```bash
 $ go build -v .
-redis-runner/app/utils
-redis-runner/app/runner  
-redis-runner/app/http_cases
-redis-runner/app/redis_cases
-redis-runner/app/kafka_cases
-redis-runner
+abc-runner/app/utils
+abc-runner/app/runner  
+abc-runner/app/http_cases
+abc-runner/app/redis_cases
+abc-runner/app/kafka_cases
+abc-runner
 ```
 
 - ✅ 编译成功：所有模块正常编译
@@ -194,4 +194,4 @@ redis-runner
 ✅ **向后兼容性**：现有用户无需修改任何配置或使用方式
 ✅ **测试覆盖**：100%的单元测试通过率，完整的集成测试验证
 
-重构后的redis-runner项目已具备了扩展支持更多协议（ZooKeeper、RabbitMQ、MySQL等）的坚实基础，为未来的功能扩展奠定了良好的架构基础。
+重构后的abc-runner项目已具备了扩展支持更多协议（ZooKeeper、RabbitMQ、MySQL等）的坚实基础，为未来的功能扩展奠定了良好的架构基础。

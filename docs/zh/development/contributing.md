@@ -2,12 +2,12 @@
 
 [English](contributing.md) | [中文](contributing.zh.md)
 
-感谢您有兴趣为redis-runner做贡献！本文档提供了贡献项目的指南和最佳实践。
+感谢您有兴趣为abc-runner做贡献！本文档提供了贡献项目的指南和最佳实践。
 
 ## 开始贡献
 
 1. Fork仓库
-2. 克隆您的fork：`git clone https://github.com/your-username/redis-runner.git`
+2. 克隆您的fork：`git clone https://github.com/your-username/abc-runner.git`
 3. 创建新分支：`git checkout -b feature/your-feature-name`
 4. 进行您的修改
 5. 提交更改：`git commit -am 'Add some feature'`
@@ -27,11 +27,11 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # 构建二进制文件
-go build -o redis-runner .
+go build -o abc-runner .
 ```
 
 ### 运行测试
@@ -76,7 +76,7 @@ go test -tags=integration ./...
 
 报告bug时，请包含以下内容：
 
-1. 您使用的redis-runner版本
+1. 您使用的abc-runner版本
 2. 操作系统和架构
 3. 重现问题的确切步骤
 4. 预期行为

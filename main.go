@@ -180,7 +180,7 @@ func showGlobalHelp() {
 	fmt.Println("  --version, -v    Show version information")
 	fmt.Println()
 	fmt.Println("EXAMPLES:")
-	fmt.Println("  abc-runner redis --config config/templates/redis.yaml")
+	fmt.Println("  abc-runner redis --config config/redis.yaml")
 	fmt.Println("  abc-runner r -n 1000 -c 10")
 	fmt.Println("  abc-runner http --url http://localhost:8080")
 	fmt.Println("  abc-runner kafka --brokers localhost:9092")

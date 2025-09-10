@@ -2,7 +2,7 @@
 
 [English](kafka.md) | [中文](kafka.zh.md)
 
-This guide covers Kafka-specific features and usage patterns for redis-runner.
+This guide covers Kafka-specific features and usage patterns for abc-runner.
 
 ## Basic Kafka Testing
 
@@ -11,7 +11,7 @@ This guide covers Kafka-specific features and usage patterns for redis-runner.
 Test Kafka producer performance:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 ```
 
 ### Consumer Testing
@@ -19,7 +19,7 @@ Test Kafka producer performance:
 Test Kafka consumer performance:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -28,7 +28,7 @@ Test Kafka consumer performance:
 Test end-to-end Kafka performance:
 
 ```bash
-./redis-runner kafka --brokers localhost:9092,localhost:9093 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093 \
   --topic high-throughput --test-type produce_consume \
   --message-size 4096 --duration 60s -c 8
 ```
@@ -38,13 +38,13 @@ Test end-to-end Kafka performance:
 ### Single Broker
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000
 ```
 
 ### Multiple Brokers
 
 ```bash
-./redis-runner kafka --brokers localhost:9092,localhost:9093,localhost:9094 \
+./abc-runner kafka --brokers localhost:9092,localhost:9093,localhost:9094 \
   --topic test-topic -n 10000
 ```
 
@@ -53,21 +53,21 @@ Test end-to-end Kafka performance:
 ### Produce Only (Default)
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type produce -n 10000
 ```
 
 ### Consume Only
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id test-group -n 1000
 ```
 
 ### Produce and Consume
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type produce_consume -n 10000
 ```
 
@@ -78,7 +78,7 @@ Test end-to-end Kafka performance:
 Control the size of messages produced:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --message-size 1024 -n 10000
 ```
 
@@ -87,7 +87,7 @@ Control the size of messages produced:
 Test with different compression algorithms:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --compression lz4 --message-size 4096 -n 10000
 ```
 
@@ -123,7 +123,7 @@ benchmark:
 Run with configuration:
 
 ```bash
-./redis-runner kafka --config kafka.yaml
+./abc-runner kafka --config kafka.yaml
 ```
 
 ## Advanced Features
@@ -133,7 +133,7 @@ Run with configuration:
 Test with SSL/TLS enabled Kafka clusters:
 
 ```bash
-./redis-runner kafka --broker localhost:9093 --topic test-topic \
+./abc-runner kafka --broker localhost:9093 --topic test-topic \
   --tls-enabled --tls-skip-verify -n 1000
 ```
 
@@ -142,7 +142,7 @@ Test with SSL/TLS enabled Kafka clusters:
 Test with SASL/PLAIN authentication:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --sasl-enabled --sasl-user user --sasl-password pass -n 1000
 ```
 
@@ -151,7 +151,7 @@ Test with SASL/PLAIN authentication:
 Test with specific consumer group settings:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id performance-test \
   --consumer-group-reset earliest -n 1000
 ```
@@ -163,7 +163,7 @@ Test with specific consumer group settings:
 Optimize producer batch size for throughput:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --batch-size 32768 --message-size 1024 -n 100000
 ```
 
@@ -172,7 +172,7 @@ Optimize producer batch size for throughput:
 Test with different acknowledgement settings:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --acks all --message-size 1024 -n 10000
 ```
 
@@ -181,7 +181,7 @@ Test with different acknowledgement settings:
 Adjust the number of parallel connections:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   -n 100000 -c 20
 ```
 
@@ -190,6 +190,6 @@ Adjust the number of parallel connections:
 Run tests for a specific duration instead of a fixed number of messages:
 
 ```bash
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --duration 300s -c 10
 ```

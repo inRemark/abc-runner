@@ -13,13 +13,3 @@ http:
       headers:
         Accept: "application/json"
       weight: 100
-  reports:
-    enabled: true
-    formats: ["console", "json"]
-    output_dir: "./reports"
-    file_prefix: "http_loadtest"
-    include_detailed_metrics: true
-    include_status_codes: true
-    include_timestamp: true
-    enable_console_report: true
-    overwrite_existing: false

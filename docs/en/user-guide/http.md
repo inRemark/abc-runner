@@ -4,7 +4,7 @@
 
 ## Supported HTTP Methods
 
-redis-runner supports all standard HTTP methods:
+abc-runner supports all standard HTTP methods:
 
 - GET
 - POST
@@ -63,17 +63,17 @@ http:
 
 ```bash
 # Simple GET request test
-./redis-runner http --url http://httpbin.org/get -n 1000 -c 50
+./abc-runner http --url http://httpbin.org/get -n 1000 -c 50
 
 # Duration-based test
-./redis-runner http --url http://localhost:8080 --duration 60s -c 100
+./abc-runner http --url http://localhost:8080 --duration 60s -c 100
 ```
 
 ### POST Request Testing
 
 ```bash
 # POST request with body
-./redis-runner http --url http://httpbin.org/post \
+./abc-runner http --url http://httpbin.org/post \
   --method POST \
   --body '{"name":"test"}' \
   --content-type application/json \
@@ -84,7 +84,7 @@ http:
 
 ```bash
 # Request with custom headers
-./redis-runner http --url http://api.example.com \
+./abc-runner http --url http://api.example.com \
   --header "Authorization:Bearer token123" \
   --header "X-API-Key:secret" \
   -n 1000
@@ -94,7 +94,7 @@ http:
 
 ```bash
 # Complex testing using configuration file
-./redis-runner http --config config/examples/http-complex.yaml
+./abc-runner http --config config/examples/http-complex.yaml
 ```
 
 ## Request Weights
@@ -137,7 +137,7 @@ auth:
 
 ## File Upload Testing
 
-redis-runner supports file upload testing:
+abc-runner supports file upload testing:
 
 ```yaml
 upload:
@@ -150,7 +150,7 @@ upload:
 
 ## Result Interpretation
 
-After HTTP testing is completed, redis-runner will output detailed performance reports:
+After HTTP testing is completed, abc-runner will output detailed performance reports:
 
 - **RPS**: Requests Per Second
 - **Success Rate**: Percentage of successful requests

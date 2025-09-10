@@ -2,7 +2,7 @@
 
 [English](contributing.md) | [中文](../zh/developer-guide/contributing.md)
 
-Thank you for considering contributing to the redis-runner project! We welcome all forms of contributions, including code, documentation, bug reports, and feature suggestions.
+Thank you for considering contributing to the abc-runner project! We welcome all forms of contributions, including code, documentation, bug reports, and feature suggestions.
 
 ## Code of Conduct
 
@@ -14,7 +14,7 @@ Please adhere to our [Code of Conduct](code-of-conduct.md) to ensure that all pa
 
 When reporting bugs, please include the following information:
 
-1. **Version Information**: redis-runner version
+1. **Version Information**: abc-runner version
 2. **Environment Information**: Operating system, Go version, etc.
 3. **Reproduction Steps**: Detailed steps to reproduce
 4. **Expected Behavior**: What you expected to see
@@ -36,8 +36,8 @@ When submitting feature suggestions, please include:
 
 1. **Clone Repository**:
    ```bash
-   git clone https://github.com/your-org/redis-runner.git
-   cd redis-runner
+   git clone https://github.com/your-org/abc-runner.git
+   cd abc-runner
    ```
 
 2. **Install Dependencies**:
@@ -252,5 +252,5 @@ We will acknowledge all contributors in README and contributor lists.
 
 If you have any questions, please contact us through the following methods:
 
-- GitHub Issues: [https://github.com/your-org/redis-runner/issues](https://github.com/your-org/redis-runner/issues)
-- Email: maintainers@redis-runner.org
+- GitHub Issues: [https://github.com/your-org/abc-runner/issues](https://github.com/your-org/abc-runner/issues)
+- Email: maintainers@abc-runner.org

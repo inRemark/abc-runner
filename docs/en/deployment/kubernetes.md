@@ -4,7 +4,7 @@
 
 ## Helm Chart
 
-redis-runner provides Helm Charts for deployment in Kubernetes clusters.
+abc-runner provides Helm Charts for deployment in Kubernetes clusters.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ redis-runner provides Helm Charts for deployment in Kubernetes clusters.
 ## Adding Helm Repository
 
 ```bash
-helm repo add redis-runner https://redis-runner.github.io/helm-charts
+helm repo add abc-runner https://abc-runner.github.io/helm-charts
 helm repo update
 ```
 
@@ -23,13 +23,13 @@ helm repo update
 ### Basic Installation
 
 ```bash
-helm install my-redis-runner redis-runner/redis-runner
+helm install my-abc-runner abc-runner/abc-runner
 ```
 
 ### Custom Installation
 
 ```bash
-helm install my-redis-runner redis-runner/redis-runner \
+helm install my-abc-runner abc-runner/abc-runner \
   --set redis.host=redis-master \
   --set redis.port=6379 \
   --set replicaCount=3
@@ -92,7 +92,7 @@ persistence:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: redis-runner-config
+  name: abc-runner-config
 data:
   redis.yaml: |
     redis:
@@ -110,20 +110,20 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis-runner
+  name: abc-runner
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: redis-runner
+      app: abc-runner
   template:
     metadata:
       labels:
-        app: redis-runner
+        app: abc-runner
     spec:
       containers:
-      - name: redis-runner
-        image: redis-runner/redis-runner:latest
+      - name: abc-runner
+        image: abc-runner/abc-runner:latest
         args: ["redis", "--config", "/config/redis.yaml"]
         volumeMounts:
         - name: config
@@ -131,7 +131,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: redis-runner-config
+          name: abc-runner-config
 ```
 
 ## Batch Jobs
@@ -147,8 +147,8 @@ spec:
   template:
     spec:
       containers:
-      - name: redis-runner
-        image: redis-runner/redis-runner:latest
+      - name: abc-runner
+        image: abc-runner/abc-runner:latest
         args: ["redis", "-h", "redis-master", "-p", "6379", "-n", "10000", "-c", "50"]
       restartPolicy: Never
   backoffLimit: 4
@@ -168,8 +168,8 @@ spec:
       template:
         spec:
           containers:
-          - name: redis-runner
-            image: redis-runner/redis-runner:latest
+          - name: abc-runner
+            image: abc-runner/abc-runner:latest
             args: ["redis", "-h", "redis-master", "-p", "6379", "-n", "10000", "-c", "50"]
           restartPolicy: OnFailure
 ```
@@ -182,13 +182,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis-runner-metrics
+  name: abc-runner-metrics
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8080"
 spec:
   selector:
-    app: redis-runner
+    app: abc-runner
   ports:
   - name: metrics
     port: 8080
@@ -197,7 +197,7 @@ spec:
 
 ### Grafana Dashboard
 
-Create Grafana dashboard JSON files to visualize redis-runner metrics.
+Create Grafana dashboard JSON files to visualize abc-runner metrics.
 
 ## Auto Scaling
 
@@ -207,12 +207,12 @@ Create Grafana dashboard JSON files to visualize redis-runner metrics.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: redis-runner-hpa
+  name: abc-runner-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: redis-runner
+    name: abc-runner
   minReplicas: 1
   maxReplicas: 10
   metrics:
@@ -232,11 +232,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: redis-runner-policy
+  name: abc-runner-policy
 spec:
   podSelector:
     matchLabels:
-      app: redis-runner
+      app: abc-runner
   policyTypes:
   - Ingress
   - Egress
@@ -260,7 +260,7 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: redis-runner-psp
+  name: abc-runner-psp
 spec:
   privileged: false
   allowPrivilegeEscalation: false
@@ -298,12 +298,12 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: redis-runner
+  name: abc-runner
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: redis-runner-role
+  name: abc-runner-role
 rules:
 - apiGroups: [""]
   resources: ["pods", "configmaps"]
@@ -312,13 +312,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: redis-runner-rolebinding
+  name: abc-runner-rolebinding
 subjects:
 - kind: ServiceAccount
-  name: redis-runner
+  name: abc-runner
 roleRef:
   kind: Role
-  name: redis-runner-role
+  name: abc-runner-role
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -327,13 +327,13 @@ roleRef:
 ### Viewing Pod Logs
 
 ```bash
-kubectl logs -f deployment/redis-runner
+kubectl logs -f deployment/abc-runner
 ```
 
 ### Entering Pod for Debugging
 
 ```bash
-kubectl exec -it deployment/redis-runner -- sh
+kubectl exec -it deployment/abc-runner -- sh
 ```
 
 ### Checking Events

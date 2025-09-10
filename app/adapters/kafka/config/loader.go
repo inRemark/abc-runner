@@ -335,7 +335,7 @@ func (l *ConfigLoader) expandEnvVars(s string) string {
 func getDefaultConfig() *KafkaAdapterConfig {
 	return &KafkaAdapterConfig{
 		Brokers:  []string{"localhost:9092"},
-		ClientID: "redis-runner-kafka-client",
+		ClientID: "abc-runner-kafka-client",
 		Version:  "2.8.0",
 
 		Producer: ProducerConfig{
@@ -352,7 +352,7 @@ func getDefaultConfig() *KafkaAdapterConfig {
 		},
 
 		Consumer: ConsumerConfig{
-			GroupID:            "redis-runner-group",
+			GroupID:            "abc-runner-group",
 			AutoOffsetReset:    "latest",
 			EnableAutoCommit:   true,
 			AutoCommitInterval: 1 * time.Second,

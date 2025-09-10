@@ -2,18 +2,18 @@
 
 [English](redis.md) | [中文](redis.zh.md)
 
-This guide covers Redis-specific features and usage patterns for redis-runner.
+This guide covers Redis-specific features and usage patterns for abc-runner.
 
 ## Redis Connection Modes
 
-redis-runner supports three Redis deployment modes:
+abc-runner supports three Redis deployment modes:
 
 ### 1. Standalone Mode (Default)
 
 For single Redis instances:
 
 ```bash
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 ```
 
 ### 2. Cluster Mode
@@ -21,7 +21,7 @@ For single Redis instances:
 For Redis cluster deployments:
 
 ```bash
-./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
 ```
 
 ### 3. Sentinel Mode
@@ -29,7 +29,7 @@ For Redis cluster deployments:
 For Redis sentinel-managed instances:
 
 ```bash
-./redis-runner redis --mode sentinel -h localhost -p 26379 -n 10000 -c 50
+./abc-runner redis --mode sentinel -h localhost -p 26379 -n 10000 -c 50
 ```
 
 ## Authentication
@@ -37,19 +37,19 @@ For Redis sentinel-managed instances:
 To test Redis instances with authentication:
 
 ```bash
-./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
 ```
 
 ## Test Cases
 
-redis-runner supports multiple Redis test cases:
+abc-runner supports multiple Redis test cases:
 
 ### set_get_random
 
 Mixed SET and GET operations with random keys:
 
 ```bash
-./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
+./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 ```
 
 ### set_only
@@ -57,7 +57,7 @@ Mixed SET and GET operations with random keys:
 SET operations only:
 
 ```bash
-./redis-runner redis -t set_only -n 100000 -c 100
+./abc-runner redis -t set_only -n 100000 -c 100
 ```
 
 ### get_only
@@ -65,7 +65,7 @@ SET operations only:
 GET operations only (requires pre-existing keys):
 
 ```bash
-./redis-runner redis -t get_only -n 100000 -c 100
+./abc-runner redis -t get_only -n 100000 -c 100
 ```
 
 ### incr
@@ -73,7 +73,7 @@ GET operations only (requires pre-existing keys):
 INCR operations on counter keys:
 
 ```bash
-./redis-runner redis -t incr -n 50000 -c 100
+./abc-runner redis -t incr -n 50000 -c 100
 ```
 
 ### append
@@ -81,7 +81,7 @@ INCR operations on counter keys:
 APPEND operations on string keys:
 
 ```bash
-./redis-runner redis -t append -n 50000 -c 100
+./abc-runner redis -t append -n 50000 -c 100
 ```
 
 ### lpush_lpop
@@ -89,7 +89,7 @@ APPEND operations on string keys:
 LPUSH and LPOP operations on list keys:
 
 ```bash
-./redis-runner redis -t lpush_lpop -n 10000 -c 50
+./abc-runner redis -t lpush_lpop -n 10000 -c 50
 ```
 
 ## Key Generation Strategies
@@ -99,7 +99,7 @@ LPUSH and LPOP operations on list keys:
 When `-r 0` (default), keys are globally self-increasing:
 
 ```bash
-./redis-runner redis -n 100000 -c 100 -r 0
+./abc-runner redis -n 100000 -c 100 -r 0
 ```
 
 ### Random Keys
@@ -107,7 +107,7 @@ When `-r 0` (default), keys are globally self-increasing:
 When `-r > 0`, keys are randomly generated:
 
 ```bash
-./redis-runner redis -n 100000 -c 100 -r 1000
+./abc-runner redis -n 100000 -c 100 -r 1000
 ```
 
 ## TTL Configuration
@@ -115,7 +115,7 @@ When `-r > 0`, keys are randomly generated:
 Set expiration time for keys:
 
 ```bash
-./redis-runner redis -n 100000 -c 100 --ttl 300s
+./abc-runner redis -n 100000 -c 100 --ttl 300s
 ```
 
 ## Configuration File Example
@@ -143,7 +143,7 @@ benchmark:
 Run with configuration:
 
 ```bash
-./redis-runner redis --config redis.yaml
+./abc-runner redis --config redis.yaml
 ```
 
 ## Performance Tuning
@@ -153,7 +153,7 @@ Run with configuration:
 Adjust the number of parallel connections based on your Redis server capacity:
 
 ```bash
-./redis-runner redis -n 100000 -c 100  # 100 parallel connections
+./abc-runner redis -n 100000 -c 100  # 100 parallel connections
 ```
 
 ### Data Size
@@ -161,7 +161,7 @@ Adjust the number of parallel connections based on your Redis server capacity:
 Control the size of data used in SET operations:
 
 ```bash
-./redis-runner redis -n 100000 -c 50 -d 1024  # 1KB values
+./abc-runner redis -n 100000 -c 50 -d 1024  # 1KB values
 ```
 
 ### Read Ratio
@@ -169,5 +169,5 @@ Control the size of data used in SET operations:
 For mixed workloads, control the ratio of read to write operations:
 
 ```bash
-./redis-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80  # 80% reads
+./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80  # 80% reads
 ```

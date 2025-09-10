@@ -2,7 +2,7 @@
 
 [English](document-translation-guide.md) | [中文](document-translation-guide.zh.md)
 
-This guide provides guidelines for maintaining multilingual documentation in the redis-runner project.
+This guide provides guidelines for maintaining multilingual documentation in the abc-runner project.
 
 ## 1. File Naming Conventions
 
@@ -79,4 +79,4 @@ Each document should include language switching links at the top:
 - Check the validity of all links when updating documents
 - Ensure language switching links point to the correct files
 
-By following these guidelines, we can ensure that the multilingual documentation of the redis-runner project maintains high quality and consistency.
+By following these guidelines, we can ensure that the multilingual documentation of the abc-runner project maintains high quality and consistency.

@@ -2,12 +2,12 @@
 
 [English](contributing.md) | [中文](contributing.zh.md)
 
-Thank you for your interest in contributing to redis-runner! This document provides guidelines and best practices for contributing to the project.
+Thank you for your interest in contributing to abc-runner! This document provides guidelines and best practices for contributing to the project.
 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/redis-runner.git`
+2. Clone your fork: `git clone https://github.com/your-username/abc-runner.git`
 3. Create a new branch: `git checkout -b feature/your-feature-name`
 4. Make your changes
 5. Commit your changes: `git commit -am 'Add some feature'`
@@ -27,11 +27,11 @@ Thank you for your interest in contributing to redis-runner! This document provi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # Build the binary
-go build -o redis-runner .
+go build -o abc-runner .
 ```
 
 ### Running Tests
@@ -76,7 +76,7 @@ go test -tags=integration ./...
 
 When reporting bugs, please include:
 
-1. Version of redis-runner you are using
+1. Version of abc-runner you are using
 2. Operating system and architecture
 3. Exact steps to reproduce the issue
 4. Expected behavior

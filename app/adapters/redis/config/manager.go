@@ -25,19 +25,19 @@ func (m *RedisConfigManager) LoadConfiguration(sources ...ConfigSource) error {
 	sort.Slice(sources, func(i, j int) bool {
 		return sources[i].Priority() > sources[j].Priority()
 	})
-	
+
 	m.loader = NewMultiSourceConfigLoader(sources...)
-	
+
 	config, err := m.loader.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load Redis configuration: %w", err)
 	}
-	
+
 	// 验证配置
 	if err := m.validator.Validate(config); err != nil {
 		return fmt.Errorf("Redis configuration validation failed: %w", err)
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -55,7 +55,7 @@ func (m *RedisConfigManager) LoadFromFile(filePath string) error {
 func (m *RedisConfigManager) LoadFromArgs(args []string) error {
 	sources := []ConfigSource{
 		NewDefaultConfigSource(),
-		NewEnvConfigSource("REDIS_RUNNER"),
+		NewEnvConfigSource("ABC_RUNNER"),
 		NewCommandLineConfigSource(args),
 	}
 	return m.LoadConfiguration(sources...)
@@ -65,17 +65,17 @@ func (m *RedisConfigManager) LoadFromArgs(args []string) error {
 func (m *RedisConfigManager) LoadFromMultipleSources(configPath string, args []string) error {
 	loader := CreateStandardLoader(configPath, args)
 	m.loader = loader
-	
+
 	config, err := loader.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load Redis configuration: %w", err)
 	}
-	
+
 	// 验证配置
 	if err := m.validator.Validate(config); err != nil {
 		return fmt.Errorf("Redis configuration validation failed: %w", err)
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -93,7 +93,7 @@ func (m *RedisConfigManager) SetConfig(config *RedisConfig) error {
 	if err := m.validator.Validate(config); err != nil {
 		return fmt.Errorf("Redis configuration validation failed: %w", err)
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -103,16 +103,16 @@ func (m *RedisConfigManager) ReloadConfiguration() error {
 	if m.loader == nil {
 		return fmt.Errorf("no configuration loader available")
 	}
-	
+
 	config, err := m.loader.Load()
 	if err != nil {
 		return fmt.Errorf("failed to reload Redis configuration: %w", err)
 	}
-	
+
 	if err := m.validator.Validate(config); err != nil {
 		return fmt.Errorf("Redis configuration validation failed: %w", err)
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -132,7 +132,7 @@ func (m *RedisConfigManager) ValidateConfiguration() error {
 	if m.config == nil {
 		return fmt.Errorf("no configuration loaded")
 	}
-	
+
 	return m.validator.Validate(m.config)
 }
 
@@ -145,10 +145,10 @@ func (m *RedisConfigManager) IsConfigurationLoaded() bool {
 func (m *RedisConfigManager) GetConnectionInfo() map[string]interface{} {
 	config := m.GetConfig()
 	info := make(map[string]interface{})
-	
+
 	info["protocol"] = config.GetProtocol()
 	info["mode"] = config.GetMode()
-	
+
 	switch config.GetMode() {
 	case "standalone":
 		info["addr"] = config.Standalone.Addr
@@ -160,7 +160,7 @@ func (m *RedisConfigManager) GetConnectionInfo() map[string]interface{} {
 	case "cluster":
 		info["addrs"] = config.Cluster.Addrs
 	}
-	
+
 	return info
 }
 
@@ -168,7 +168,7 @@ func (m *RedisConfigManager) GetConnectionInfo() map[string]interface{} {
 func (m *RedisConfigManager) GetBenchmarkInfo() map[string]interface{} {
 	config := m.GetConfig()
 	benchmark := config.GetBenchmark()
-	
+
 	return map[string]interface{}{
 		"total":        benchmark.GetTotal(),
 		"parallels":    benchmark.GetParallels(),

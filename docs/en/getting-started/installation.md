@@ -14,8 +14,8 @@
 #### Clone Repository
 
 ```bash
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 ```
 
 #### Build Binary
@@ -25,7 +25,7 @@ cd redis-runner
 make build
 
 # Or build directly with Go
-go build -o redis-runner .
+go build -o abc-runner .
 
 # Build binaries for all platforms
 make build-all
@@ -33,42 +33,42 @@ make build-all
 
 ### 2. Using Pre-compiled Binaries
 
-Download pre-compiled binaries suitable for your system from the [GitHub Releases page](https://github.com/your-org/redis-runner/releases).
+Download pre-compiled binaries suitable for your system from the [GitHub Releases page](https://github.com/your-org/abc-runner/releases).
 
 #### Linux
 
 ```bash
-wget https://github.com/your-org/redis-runner/releases/download/v0.2.0/redis-runner-linux-amd64
-chmod +x redis-runner-linux-amd64
-sudo mv redis-runner-linux-amd64 /usr/local/bin/redis-runner
+wget https://github.com/your-org/abc-runner/releases/download/v0.2.0/abc-runner-linux-amd64
+chmod +x abc-runner-linux-amd64
+sudo mv abc-runner-linux-amd64 /usr/local/bin/abc-runner
 ```
 
 #### macOS
 
 ```bash
-wget https://github.com/your-org/redis-runner/releases/download/v0.2.0/redis-runner-darwin-amd64
-chmod +x redis-runner-darwin-amd64
-sudo mv redis-runner-darwin-amd64 /usr/local/bin/redis-runner
+wget https://github.com/your-org/abc-runner/releases/download/v0.2.0/abc-runner-darwin-amd64
+chmod +x abc-runner-darwin-amd64
+sudo mv abc-runner-darwin-amd64 /usr/local/bin/abc-runner
 ```
 
 #### Windows
 
-Download the `redis-runner-windows-amd64.exe` file, rename it to `redis-runner.exe`, and add it to your system PATH.
+Download the `abc-runner-windows-amd64.exe` file, rename it to `abc-runner.exe`, and add it to your system PATH.
 
 ### 3. Using Go Install
 
 ```bash
-go install github.com/your-org/redis-runner@latest
+go install github.com/your-org/abc-runner@latest
 ```
 
 ## Verifying Installation
 
 ```bash
 # Check version
-redis-runner --version
+abc-runner --version
 
 # Show help
-redis-runner --help
+abc-runner --help
 ```
 
 ## Configuration Files
@@ -77,7 +77,7 @@ After installation, you can copy configuration templates to your working directo
 
 ```bash
 # Copy configuration templates
-cp -r config/templates/* conf/
+cp -r config/* conf/
 ```
 
 Or use the Makefile command:
@@ -88,10 +88,10 @@ make config
 
 ## Environment Variables
 
-redis-runner supports the following environment variables:
+abc-runner supports the following environment variables:
 
-- `REDIS_RUNNER_CONFIG`: Configuration file path
-- `REDIS_RUNNER_LOG_LEVEL`: Log level (debug, info, warn, error)
+- `ABC_RUNNER_CONFIG`: Configuration file path
+- `ABC_RUNNER_LOG_LEVEL`: Log level (debug, info, warn, error)
 
 ## Upgrading
 

@@ -297,10 +297,10 @@ func testExtendedOperations(cfg *config.RedisConfig) {
 	}
 
 	fmt.Println("\nAll extended Redis operations testing completed!")
-	fmt.Println("\nYou can now use these operations with the redis-runner tool:")
-	fmt.Println("  ./redis-runner redis -t incr -n 10000 -c 50")
-	fmt.Println("  ./redis-runner redis -t lpush -n 10000 -c 50")
-	fmt.Println("  ./redis-runner redis -t sadd -n 10000 -c 50")
-	fmt.Println("  ./redis-runner redis -t zadd -n 10000 -c 50")
-	fmt.Println("  ./redis-runner redis -t hmset -n 10000 -c 50")
+	fmt.Println("\nYou can now use these operations with the abc-runner tool:")
+	fmt.Println("  ./abc-runner redis -t incr -n 10000 -c 50")
+	fmt.Println("  ./abc-runner redis -t lpush -n 10000 -c 50")
+	fmt.Println("  ./abc-runner redis -t sadd -n 10000 -c 50")
+	fmt.Println("  ./abc-runner redis -t zadd -n 10000 -c 50")
+	fmt.Println("  ./abc-runner redis -t hmset -n 10000 -c 50")
 }

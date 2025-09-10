@@ -1,12 +1,12 @@
-# Extending redis-runner
+# Extending abc-runner
 
 [English](extending.md) | [中文](../zh/developer-guide/extending.md)
 
-redis-runner is designed with an extensible architecture that allows developers to add new protocol support, operation types, and functional modules.
+abc-runner is designed with an extensible architecture that allows developers to add new protocol support, operation types, and functional modules.
 
 ## Architecture Overview
 
-redis-runner adopts a plugin architecture with core components including:
+abc-runner adopts a plugin architecture with core components including:
 
 1. **Command Router**: Responsible for parsing and routing commands
 2. **Protocol Adapters**: Provide unified interfaces for different protocols
@@ -27,7 +27,7 @@ package myprotocol
 
 import (
     "context"
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyProtocolAdapter struct {
@@ -66,7 +66,7 @@ func (a *MyProtocolAdapter) GetMetricsCollector() interfaces.MetricsCollector {
 package config
 
 import (
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyProtocolConfig struct {
@@ -92,7 +92,7 @@ package commands
 
 import (
     "context"
-    "redis-runner/app/adapters/myprotocol"
+    "abc-runner/app/adapters/myprotocol"
 )
 
 type MyProtocolCommandHandler struct {
@@ -166,7 +166,7 @@ registry.Register("my_operation", &MyOperationFactory{})
 package reports
 
 import (
-    "redis-runner/app/core/interfaces"
+    "abc-runner/app/core/interfaces"
 )
 
 type MyReportGenerator struct {

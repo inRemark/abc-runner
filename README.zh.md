@@ -124,7 +124,10 @@ go build -o abc-runner .
 ./abc-runner redis -t set_get_random -n 100000 -c 100 --read-ratio 80
 
 # 使用配置文件
-./abc-runner redis --config config/templates/redis.yaml
+./abc-runner redis --config config/redis.yaml
+
+# 使用配置文件和核心配置
+./abc-runner redis --config config/redis.yaml --core-config config/core.yaml
 ```
 
 支持的Redis测试用例 (`-t` 选项):
@@ -168,6 +171,9 @@ go build -o abc-runner .
 
 # 自定义头部
 ./abc-runner http --url http://api.example.com \n  --header "Authorization:Bearer token123" \n  --header "X-API-Key:secret" -n 1000
+
+# 使用配置文件和核心配置
+./abc-runner http --config config/http.yaml --core-config config/core.yaml
 ```
 
 ### Kafka命令
@@ -184,72 +190,162 @@ go build -o abc-runner .
 
 # 高性能测试与压缩
 ./abc-runner kafka --broker localhost:9092 --topic perf-test \n  --compression lz4 --acks all --batch-size 32768 -n 50000
+
+# 使用配置文件和核心配置
+./abc-runner kafka --config config/kafka.yaml --core-config config/core.yaml
 ```
 
 ## 配置文件
 
 您可以使用YAML配置文件进行复杂设置：
 
-### Redis配置 (config/templates/redis.yaml)
+### 核心配置 (config/core.yaml)
 
+核心配置文件包含所有协议共享的通用设置：
+
+```yaml
+core:
+  # 日志配置
+  logging:
+    level: "info"              # 日志级别: debug, info, warn, error
+    format: "json"             # 日志格式: json, text
+    output: "stdout"           # 输出目标: stdout, file, 或文件路径
+    file_path: "./logs"        # 日志文件目录
+    max_size: "100MB"          # 单个日志文件最大大小
+    max_age: 7                 # 日志文件保留天数
+    max_backups: 5             # 最大备份文件数
+    compress: true             # 是否压缩旧日志文件
+
+  # 报告配置
+  reports:
+    enabled: true              # 是否启用报告
+    formats: ["console"]       # 报告格式: console, json, csv, text, all
+    output_dir: "./reports"    # 报告输出目录
+    file_prefix: "benchmark"   # 报告文件前缀
+    include_timestamp: true    # 文件名包含时间戳
+    enable_console_report: true # 启用控制台详细报告
+    overwrite_existing: false  # 是否覆盖已存在文件
+
+  # 监控配置
+  monitoring:
+    enabled: true              # 是否启用监控
+    metrics_interval: "5s"     # 指标收集间隔
+    prometheus:
+      enabled: false           # 是否启用Prometheus导出
+      port: 9090               # Prometheus导出端口
+    statsd:
+      enabled: false           # 是否启用StatsD导出
+      host: "localhost:8125"   # StatsD服务器地址
+
+  # 全局连接配置
+  connection:
+    timeout: "30s"             # 默认连接超时
+    keep_alive: "30s"          # 连接保持时间
+    max_idle_conns: 100        # 最大空闲连接数
+    idle_conn_timeout: "90s"   # 空闲连接超时时间
 ```
-protocol: redis
-connection:
-  host: localhost
-  port: 6379
-  mode: standalone  # standalone, cluster, sentinel
-  timeout: 30s
 
-benchmark:
-  total: 10000
-  parallels: 50
-  test_case: "set_get_random"
-  data_size: 64
-  read_ratio: 0.5
+### Redis配置 (config/redis.yaml)
+
+```yaml
+redis:
+  mode: "standalone"    # 选项: standalone, sentinel, cluster
+  benchmark:
+    total: 10000              # 默认10000个请求
+    parallels: 50             # 默认50个并行连接
+    random_keys: 50           # 0:递增键, >0:随机键范围是[0, r]
+    read_percent: 50          # 默认50%读取和50%写入
+    data_size: 3              # 默认3字节
+    ttl: 120                  # 默认120秒
+    case: "set_get_random"    # 操作类型: set_get_random, set, get, del, pub, sub
+  pool:
+    pool_size: 10
+    min_idle: 2
+  standalone:
+    addr: 127.0.0.1:6379
+    password: "pwd@redis"
+    db: 0
+  sentinel:
+    master_name: "mymaster"
+    addrs:
+      - "127.0.0.1:26371"
+      - "127.0.0.1:26372"
+      - "127.0.0.1:26373"
+    password: "pwd@redis"
+    db: 0
+  cluster:
+    addrs:
+      - "127.0.0.1:6371"
+      - "127.0.0.1:6372"
+      - "127.0.0.1:6373"
+    password: "pwd@redis"
 ```
 
-### HTTP配置 (config/templates/http.yaml)
+### HTTP配置 (config/http.yaml)
 
+```yaml
+http:
+  connection:
+    base_url: "http://localhost:8080"
+    timeout: 30s
+    keep_alive: 90s
+    max_idle_conns: 50
+    max_conns_per_host: 20
+    idle_conn_timeout: 90s
+    disable_compression: false
+  benchmark:
+    total: 100000
+    parallels: 50
+    duration: "5m"
+    ramp_up: "30s"
+    data_size: 1024
+    ttl: 0s
+    read_percent: 70
+    random_keys: 0
+    test_case: "mixed_operations"
+    timeout: 30s
+  requests:
+    - method: "GET"
+      path: "/api/users"
+      headers:
+        Accept: "application/json"
+      weight: 100
 ```
-protocol: http
-connection:
-  base_url: "http://localhost:8080"
-  timeout: 30s
-  max_conns_per_host: 50
 
-benchmark:
-  total: 10000
-  parallels: 50
-  method: "GET"
-  path: "/api/test"
-  headers:
-    "Content-Type": "application/json"
-    "Authorization": "Bearer token"
-```
+### Kafka配置 (config/kafka.yaml)
 
-### Kafka配置 (config/templates/kafka.yaml)
-
-```
-protocol: kafka
-brokers: ["localhost:9092"]
-topic_configs:
-  - name: "test-topic"
-    partitions: 3
-
-producer:
-  batch_size: 16384
-  compression: "snappy"
-  required_acks: 1
-
-consumer:
-  group_id: "test-group"
-  auto_offset_reset: "earliest"
-
-benchmark:
-  total: 10000
-  parallels: 5
-  message_size: 1024
-  test_type: "produce"
+```yaml
+kafka:
+  brokers:
+    - "localhost:9092"
+  client_id: "abc-runner-kafka-client"
+  version: "2.8.0"
+  producer:
+    acks: "all"
+    retries: 3
+    batch_size: 16384
+    linger_ms: "5ms"
+    compression: "snappy"
+    idempotence: true
+    max_in_flight: 5
+    request_timeout: "30s"
+    write_timeout: "10s"
+    read_timeout: "10s"
+  benchmark:
+    default_topic: "benchmark-topic"
+    message_size_range:
+      min: 100
+      max: 10240
+    batch_sizes: [1, 10, 100, 1000]
+    partition_strategy: "round_robin"
+    total: 100000
+    parallels: 50
+    data_size: 1024
+    ttl: 0
+    read_percent: 50
+    random_keys: 10000
+    test_case: "produce"
+    timeout: "30s"
 ```
 
 ## 文档

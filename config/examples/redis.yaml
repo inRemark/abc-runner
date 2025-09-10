@@ -16,12 +16,3 @@ redis:
     addr: "127.0.0.1:6379"
     password: ""
     db: 0
-  reports:
-    enabled: true
-    formats: ["console", "json", "csv"]
-    output_dir: "./reports"
-    file_prefix: "redis_benchmark"
-    include_protocol_metrics: true
-    include_timestamp: true
-    enable_console_report: true
-    overwrite_existing: false

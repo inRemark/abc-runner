@@ -4,7 +4,7 @@
 
 ## 支持的Redis模式
 
-redis-runner支持以下Redis部署模式：
+abc-runner支持以下Redis部署模式：
 
 - **单机模式 (Standalone)**: 标准的单实例Redis
 - **哨兵模式 (Sentinel)**: Redis Sentinel高可用配置
@@ -12,7 +12,7 @@ redis-runner支持以下Redis部署模式：
 
 ## 测试用例
 
-redis-runner支持多种Redis操作测试：
+abc-runner支持多种Redis操作测试：
 
 - `set_get_random`: 随机SET/GET操作
 - `set_only`: 仅SET操作
@@ -90,45 +90,45 @@ redis:
 
 ```bash
 # 简单的SET/GET测试
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # 持续时间测试
-./redis-runner redis -h localhost -p 6379 --duration 60s -c 100
+./abc-runner redis -h localhost -p 6379 --duration 60s -c 100
 ```
 
 ### 集群模式测试
 
 ```bash
 # 使用命令行参数
-./redis-runner redis --mode cluster -h localhost -p 6371 -n 10000 -c 10
+./abc-runner redis --mode cluster -h localhost -p 6371 -n 10000 -c 10
 
 # 使用配置文件
-./redis-runner redis --config config/examples/redis-cluster.yaml
+./abc-runner redis --config config/examples/redis-cluster.yaml
 ```
 
 ### 自定义测试用例
 
 ```bash
 # 计数器操作测试
-./redis-runner redis -t incr -n 10000 -c 50 -d 10
+./abc-runner redis -t incr -n 10000 -c 50 -d 10
 
 # 列表操作测试
-./redis-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
+./abc-runner redis -t lpush_lpop -n 10000 -c 50 -d 64
 
 # 集合操作测试
-./redis-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
+./abc-runner redis -t sadd_smembers -n 10000 -c 50 -d 32
 ```
 
 ### 哨兵模式测试
 
 ```bash
 # 使用配置文件进行哨兵模式测试
-./redis-runner redis --config config/examples/redis-sentinel.yaml
+./abc-runner redis --config config/examples/redis-sentinel.yaml
 ```
 
 ## 结果解读
 
-测试完成后，redis-runner会输出详细的性能报告：
+测试完成后，abc-runner会输出详细的性能报告：
 
 - **RPS**: 每秒请求数
 - **成功率**: 成功请求的百分比

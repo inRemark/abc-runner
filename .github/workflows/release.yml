@@ -27,7 +27,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          bin/redis-runner-*
+          bin/abc-runner-*
         body_path: config/CHANGELOG.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

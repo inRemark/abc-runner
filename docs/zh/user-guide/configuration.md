@@ -4,7 +4,7 @@
 
 ## 配置文件结构
 
-redis-runner使用YAML格式的配置文件，支持三种协议的配置：
+abc-runner使用YAML格式的配置文件，支持三种协议的配置：
 
 ```
 config/
@@ -124,7 +124,7 @@ auth:
 kafka:
   brokers:
     - "localhost:9092"
-  client_id: "redis-runner-client"
+  client_id: "abc-runner-client"
 ```
 
 ### 生产者配置
@@ -141,7 +141,7 @@ producer:
 
 ```yaml
 consumer:
-  group_id: "redis-runner-group"
+  group_id: "abc-runner-group"
   auto_offset_reset: "latest"
 ```
 
@@ -149,8 +149,8 @@ consumer:
 
 支持以下环境变量：
 
-- `REDIS_RUNNER_CONFIG`: 配置文件路径
-- `REDIS_RUNNER_LOG_LEVEL`: 日志级别
+- `ABC_RUNNER_CONFIG`: 配置文件路径
+- `ABC_RUNNER_LOG_LEVEL`: 日志级别
 - `REDIS_HOST`: Redis主机
 - `REDIS_PORT`: Redis端口
 - `REDIS_PASSWORD`: Redis密码
@@ -162,14 +162,14 @@ consumer:
 
 ```bash
 # 验证配置文件
-./redis-runner redis --config config/redis.yaml --validate
+./abc-runner redis --config config/redis.yaml --validate
 ```
 
 ### 配置示例验证
 
 ```bash
 # 使用示例配置验证
-./redis-runner redis --config config/examples/redis.yaml --dry-run
+./abc-runner redis --config config/examples/redis.yaml --dry-run
 ```
 
 ## 最佳实践

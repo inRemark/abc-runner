@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Configuration Migration Script for Redis-Runner
+# Configuration Migration Script for abc-runner
 # This script helps migrate legacy configuration files to the new unified format
 
 set -e
@@ -38,7 +38,7 @@ log_success() {
 
 show_usage() {
     cat << EOF
-Configuration Migration Script for Redis-Runner
+Configuration Migration Script for abc-runner
 
 USAGE:
     $0 [OPTIONS] <config_file>
@@ -316,7 +316,7 @@ fi
 
 # Main execution
 main() {
-    echo "=== Redis-Runner Configuration Migration ==="
+    echo "=== abc-runner Configuration Migration ==="
     echo ""
     
     # Check dependencies

@@ -2,7 +2,7 @@
 
 [English](quickstart.md) | [中文](quickstart.zh.md)
 
-This guide will help you get started with redis-runner quickly.
+This guide will help you get started with abc-runner quickly.
 
 ## Installation
 
@@ -10,19 +10,19 @@ This guide will help you get started with redis-runner quickly.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/redis-runner.git
-cd redis-runner
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
 
 # Build the binary
-go build -o redis-runner .
+go build -o abc-runner .
 
 # Run the tool
-./redis-runner --help
+./abc-runner --help
 ```
 
 ### Using Pre-built Binaries
 
-Download pre-built binaries from the [releases page](https://github.com/your-org/redis-runner/releases).
+Download pre-built binaries from the [releases page](https://github.com/your-org/abc-runner/releases).
 
 ## Basic Usage
 
@@ -30,23 +30,23 @@ Download pre-built binaries from the [releases page](https://github.com/your-org
 
 ```bash
 # Basic Redis test
-./redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # Redis with authentication
-./redis-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
+./abc-runner redis -h localhost -p 6379 -a password -n 10000 -c 50
 
 # Redis cluster mode
-./redis-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
+./abc-runner redis --mode cluster -h localhost -p 6379 -n 10000 -c 50
 ```
 
 ### HTTP Load Testing
 
 ```bash
 # Basic HTTP GET test
-./redis-runner http --url http://localhost:8080 -n 10000 -c 50
+./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
 # HTTP POST with body
-./redis-runner http --url http://api.example.com/users \
+./abc-runner http --url http://api.example.com/users \
   --method POST --body '{"name":"test"}' \
   --content-type application/json -n 1000 -c 20
 ```
@@ -55,10 +55,10 @@ Download pre-built binaries from the [releases page](https://github.com/your-org
 
 ```bash
 # Basic producer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
+./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
 # Consumer test
-./redis-runner kafka --broker localhost:9092 --topic test-topic \
+./abc-runner kafka --broker localhost:9092 --topic test-topic \
   --test-type consume --group-id my-group -n 1000
 ```
 
@@ -88,7 +88,7 @@ benchmark:
 Run with configuration file:
 
 ```bash
-./redis-runner redis --config redis.yaml
+./abc-runner redis --config redis.yaml
 ```
 
 ## Command Aliases
@@ -97,19 +97,19 @@ For quicker testing, you can use short aliases:
 
 ```bash
 # Short aliases for quick testing
-./redis-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
-./redis-runner h --url http://httpbin.org/get -n 100  # HTTP
-./redis-runner k --broker localhost:9092 -n 100      # Kafka
+./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
+./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
+./abc-runner k --broker localhost:9092 -n 100      # Kafka
 ```
 
 ## Viewing Help
 
 ```bash
 # Show general help
-./redis-runner --help
+./abc-runner --help
 
 # Show help for specific protocol
-./redis-runner redis --help
-./redis-runner http --help
-./redis-runner kafka --help
+./abc-runner redis --help
+./abc-runner http --help
+./abc-runner kafka --help
 ```

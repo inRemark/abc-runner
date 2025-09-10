@@ -1,8 +1,8 @@
-# Redis-Runner 架构迁移用户指南
+# abc-runner 架构迁移用户指南
 
 ## 概述
 
-Redis-Runner正在从分散式架构迁移到统一的适配器框架架构。本指南将帮助您顺利迁移到新版本，享受更好的性能、更统一的接口和更强的扩展能力。
+abc-runner正在从分散式架构迁移到统一的适配器框架架构。本指南将帮助您顺利迁移到新版本，享受更好的性能、更统一的接口和更强的扩展能力。
 
 ## 📋 迁移清单
 
@@ -11,7 +11,7 @@ Redis-Runner正在从分散式架构迁移到统一的适配器框架架构。�
 - [ ] 备份现有配置文件
 - [ ] 记录当前使用的命令和参数
 - [ ] 准备测试环境
-- [ ] 下载最新版本的redis-runner
+- [ ] 下载最新版本的abc-runner
 
 ### 迁移步骤
 
@@ -27,12 +27,12 @@ Redis-Runner正在从分散式架构迁移到统一的适配器框架架构。�
 
 ```bash
 # 老命令（已弃用）
-redis-runner redis -h localhost -p 6379 -n 10000 -c 50
+abc-runner redis -h localhost -p 6379 -n 10000 -c 50
 
 # 新命令（推荐）
-redis-runner redis-enhanced --config conf/redis.yaml
+abc-runner redis-enhanced --config conf/redis.yaml
 # 或者简化版本
-redis-runner r --config conf/redis.yaml
+abc-runner r --config conf/redis.yaml
 ```
 
 #### 参数映射表
@@ -55,24 +55,24 @@ redis-runner r --config conf/redis.yaml
 
 ```bash
 # 老命令（已弃用）
-redis-runner http --url http://example.com -n 1000 -c 10
+abc-runner http --url http://example.com -n 1000 -c 10
 
 # 新命令（推荐）
-redis-runner http-enhanced --config conf/http.yaml
+abc-runner http-enhanced --config conf/http.yaml
 # 或者简化版本
-redis-runner h --config conf/http.yaml
+abc-runner h --config conf/http.yaml
 ```
 
 ### Kafka命令迁移
 
 ```bash
 # 老命令（已弃用）
-redis-runner kafka --broker localhost:9092 --topic test -n 1000
+abc-runner kafka --broker localhost:9092 --topic test -n 1000
 
 # 新命令（推荐）
-redis-runner kafka-enhanced --config conf/kafka.yaml
+abc-runner kafka-enhanced --config conf/kafka.yaml
 # 或者简化版本
-redis-runner k --config conf/kafka.yaml
+abc-runner k --config conf/kafka.yaml
 ```
 
 ## 📝 配置文件迁移
@@ -171,10 +171,10 @@ redis:
 
 ```bash
 # 标准格式
-redis-runner <protocol>-enhanced [options]
+abc-runner <protocol>-enhanced [options]
 
 # 简化别名
-redis-runner <alias> [options]
+abc-runner <alias> [options]
 ```
 
 ### 2. 增强的配置管理
@@ -185,10 +185,10 @@ redis-runner <alias> [options]
 
 ```bash
 # 使用环境变量覆盖配置
-REDIS_HOST=prod-redis redis-runner redis-enhanced --config conf/redis.yaml
+REDIS_HOST=prod-redis abc-runner redis-enhanced --config conf/redis.yaml
 
 # 命令行覆盖配置
-redis-runner redis-enhanced --config conf/redis.yaml --redis.benchmark.total=50000
+abc-runner redis-enhanced --config conf/redis.yaml --redis.benchmark.total=50000
 ```
 
 ### 3. 连接池管理
@@ -234,10 +234,10 @@ Error: command 'redis' not found
 
 ```bash
 # 检查是否使用了正确的命令名
-redis-runner redis-enhanced --config conf/redis.yaml
+abc-runner redis-enhanced --config conf/redis.yaml
 
 # 或者使用别名
-redis-runner r --config conf/redis.yaml
+abc-runner r --config conf/redis.yaml
 ```
 
 #### 2. 配置文件格式错误
@@ -319,8 +319,8 @@ redis:
 
 ```bash
 # 为不同环境使用不同配置
-redis-runner redis-enhanced --config conf/redis-dev.yaml    # 开发环境
-redis-runner redis-enhanced --config conf/redis-prod.yaml   # 生产环境
+abc-runner redis-enhanced --config conf/redis-dev.yaml    # 开发环境
+abc-runner redis-enhanced --config conf/redis-prod.yaml   # 生产环境
 ```
 
 ### 2. 监控和日志
@@ -329,7 +329,7 @@ redis-runner redis-enhanced --config conf/redis-prod.yaml   # 生产环境
 redis:
   logging:
     level: info
-    output: logs/redis-runner.log
+    output: logs/abc-runner.log
   monitoring:
     enabled: true
     export_to: prometheus
@@ -341,7 +341,7 @@ redis:
 # .github/workflows/performance-test.yml
 - name: Run Redis Performance Test
   run: |
-    redis-runner redis-enhanced \
+    abc-runner redis-enhanced \
       --config conf/redis-ci.yaml \
       --output results/redis-performance.json
 ```
@@ -355,7 +355,7 @@ redis:
 protocols=("redis" "http" "kafka")
 for protocol in "${protocols[@]}"; do
     echo "Testing $protocol..."
-    redis-runner ${protocol}-enhanced \
+    abc-runner ${protocol}-enhanced \
         --config conf/${protocol}.yaml \
         --output results/${protocol}-results.json
 done
@@ -369,10 +369,10 @@ done
 
 ```bash
 # 下载老版本
-wget https://github.com/redis-runner/releases/v1.x.x/redis-runner
+wget https://github.com/abc-runner/releases/v1.x.x/abc-runner
 
 # 使用老配置
-./redis-runner-old redis -h localhost -p 6379 -n 1000
+./abc-runner-old redis -h localhost -p 6379 -n 1000
 ```
 
 ### 2. 兼容模式
@@ -381,9 +381,9 @@ wget https://github.com/redis-runner/releases/v1.x.x/redis-runner
 
 ```bash
 # 这些命令仍然可以工作，但会显示弃用警告
-redis-runner redis -h localhost -p 6379 -n 1000
-redis-runner http --url http://example.com
-redis-runner kafka --broker localhost:9092
+abc-runner redis -h localhost -p 6379 -n 1000
+abc-runner http --url http://example.com
+abc-runner kafka --broker localhost:9092
 ```
 
 ## 📞 获取帮助
@@ -392,27 +392,27 @@ redis-runner kafka --broker localhost:9092
 
 ```bash
 # 全局帮助
-redis-runner --help
+abc-runner --help
 
 # 特定命令帮助
-redis-runner redis-enhanced --help
-redis-runner http-enhanced --help
-redis-runner kafka-enhanced --help
+abc-runner redis-enhanced --help
+abc-runner http-enhanced --help
+abc-runner kafka-enhanced --help
 ```
 
 ### 在线资源
 
-- **文档网站**: <https://docs.redis-runner.com>
-- **GitHub Issues**: <https://github.com/redis-runner/issues>
-- **社区讨论**: <https://github.com/redis-runner/discussions>
-- **迁移支持**: <https://docs.redis-runner.com/migration-support>
+- **文档网站**: <https://docs.abc-runner.com>
+- **GitHub Issues**: <https://github.com/abc-runner/issues>
+- **社区讨论**: <https://github.com/abc-runner/discussions>
+- **迁移支持**: <https://docs.abc-runner.com/migration-support>
 
 ### 专业支持
 
 如果您的组织需要迁移支持，请联系：
 
-- 邮箱：<support@redis-runner.com>
-- 企业支持：<enterprise@redis-runner.com>
+- 邮箱：<support@abc-runner.com>
+- 企业支持：<enterprise@abc-runner.com>
 
 ## 🎯 迁移时间表
 
@@ -439,10 +439,10 @@ cp conf/redis.yaml conf/redis.yaml.backup
 ./tools/migrate_config.sh conf/redis.yaml
 
 # 3. 测试新配置
-redis-runner redis-enhanced --config conf/redis.new.yaml
+abc-runner redis-enhanced --config conf/redis.new.yaml
 
 # 4. 如果一切正常，替换原配置
 mv conf/redis.new.yaml conf/redis.yaml
 ```
 
-欢迎使用新版Redis-Runner！🚀
+欢迎使用新版abc-runner！🚀

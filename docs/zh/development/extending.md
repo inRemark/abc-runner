@@ -1,12 +1,12 @@
-# 扩展redis-runner
+# 扩展abc-runner
 
 [English](extending.md) | [中文](extending.zh.md)
 
-本指南解释了如何扩展redis-runner以支持额外的协议或功能。
+本指南解释了如何扩展abc-runner以支持额外的协议或功能。
 
 ## 架构概述
 
-redis-runner遵循基于适配器模式的模块化架构。每种协议（Redis、HTTP、Kafka）都实现为一个符合通用接口的独立适配器。
+abc-runner遵循基于适配器模式的模块化架构。每种协议（Redis、HTTP、Kafka）都实现为一个符合通用接口的独立适配器。
 
 ## 添加新协议
 

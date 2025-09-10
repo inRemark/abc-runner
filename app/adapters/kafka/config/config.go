@@ -12,7 +12,7 @@ func LoadDefaultKafkaConfig() *KafkaAdapterConfig {
 	return &KafkaAdapterConfig{
 		Protocol: "kafka",
 		Brokers:  []string{"localhost:9092"},
-		ClientID: "redis-runner",
+		ClientID: "abc-runner",
 		Version:  "2.6.0",
 		TopicConfigs: []TopicConfig{
 			{

@@ -110,7 +110,7 @@ type EnvConfigSource struct {
 // NewEnvConfigSource 创建环境变量配置源
 func NewEnvConfigSource(prefix string) *EnvConfigSource {
 	if prefix == "" {
-		prefix = "REDIS_RUNNER"
+		prefix = "ABC_RUNNER"
 	}
 	return &EnvConfigSource{Prefix: prefix}
 }
@@ -384,10 +384,10 @@ func CreateStandardLoader(configPath string, args []string) ConfigLoader {
 
 	// 尝试查找配置文件
 	configPaths := []string{
-		"config/templates/redis.yaml",
+		"config/redis.yaml",
 		"config/redis.yaml",
 		"redis.yaml",
-		filepath.Join(os.Getenv("HOME"), ".redis-runner", "redis.yaml"),
+		filepath.Join(os.Getenv("HOME"), ".abc-runner", "redis.yaml"),
 	}
 
 	for _, path := range configPaths {
@@ -398,7 +398,7 @@ func CreateStandardLoader(configPath string, args []string) ConfigLoader {
 	}
 
 	// 添加环境变量配置源
-	loader.AddSource(NewEnvConfigSource("REDIS_RUNNER"))
+	loader.AddSource(NewEnvConfigSource("ABC_RUNNER"))
 
 	// 添加命令行参数配置源（最高优先级）
 	if len(args) > 0 {

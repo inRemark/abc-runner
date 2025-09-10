@@ -175,13 +175,13 @@ jobs:
 ````markdown
 ```bash
 # Command example
-redis-runner redis -h localhost -p 6379
+abc-runner redis -h localhost -p 6379
 ```
 
 ```go
 // Go code example
 func main() {
-    fmt.Println("Hello, redis-runner!")
+    fmt.Println("Hello, abc-runner!")
 }
 ```
 

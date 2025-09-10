@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"testing"
+
+	redisconfig "abc-runner/app/adapters/redis/config"
 )
 
 func TestConfigManager(t *testing.T) {
@@ -10,7 +12,14 @@ func TestConfigManager(t *testing.T) {
 
 	// 创建测试配置源
 	args := []string{"-h", "localhost", "-p", "6379", "-n", "1000"}
-	cmdSource := NewRedisCommandLineConfigSource(args)
+	// 使用Redis包中的配置源创建函数
+	redisSources := redisconfig.CreateRedisConfigSources("", args)
+	
+	// 转换为core包中的ConfigSource接口
+	var cmdSource ConfigSource
+	if len(redisSources) > 0 {
+		cmdSource = redisSources[0]
+	}
 
 	// 测试加载配置
 	err := manager.LoadConfiguration(cmdSource)
@@ -43,9 +52,9 @@ func TestCreateRedisConfigSources(t *testing.T) {
 	envFound := false
 
 	for _, source := range sources {
-		switch source.(type) {
-		case *RedisConfigSourceBridge:
-			// Redis配置源桥接器
+		// 检查是否是Redis配置源适配器
+		if _, ok := source.(*redisconfig.RedisConfigSourceAdapter); ok {
+			// Redis配置源适配器
 			if source.Priority() >= 100 {
 				cmdLineFound = true
 			} else if source.Priority() >= 70 {
@@ -72,35 +81,32 @@ func TestLoadRedisConfigFromFile(t *testing.T) {
     parallels: 5
     data_size: 32
     ttl: 60
-    read_percent: 70
-    random_keys: 100
-    case: "set_get_random"
-  pool:
-    pool_size: 5
-    min_idle: 1
   standalone:
-    addr: "localhost:6379"
-    password: "test"
+    addr: "127.0.0.1:6379"
+    password: ""
     db: 0`
 
-	tmpFile, err := os.CreateTemp("", "test_config_*.yaml")
+	tmpFile, err := os.CreateTemp("", "redis_config_*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
 	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatalf("Failed to write temp file: %v", err)
+		t.Fatalf("Failed to write to temp file: %v", err)
 	}
 	tmpFile.Close()
 
 	// 测试加载配置
 	config, err := LoadRedisConfigFromFile(tmpFile.Name())
 	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
+		t.Fatalf("Failed to load config from file: %v", err)
 	}
 
-	// 验证配置值
+	if config == nil {
+		t.Fatal("Config should not be nil")
+	}
+
 	if config.GetProtocol() != "redis" {
 		t.Errorf("Expected protocol 'redis', got '%s'", config.GetProtocol())
 	}

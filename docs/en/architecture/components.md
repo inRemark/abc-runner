@@ -6,7 +6,7 @@
 
 ### 1. Main Program (main.go)
 
-The main program is the entry point of redis-runner, responsible for initializing the system and starting the command processing flow.
+The main program is the entry point of abc-runner, responsible for initializing the system and starting the command processing flow.
 
 **Main Functions**:
 - Initialize logging system

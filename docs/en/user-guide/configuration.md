@@ -4,7 +4,7 @@
 
 ## Configuration File Structure
 
-redis-runner uses YAML format configuration files, supporting configurations for three protocols:
+abc-runner uses YAML format configuration files, supporting configurations for three protocols:
 
 ```
 config/
@@ -124,7 +124,7 @@ auth:
 kafka:
   brokers:
     - "localhost:9092"
-  client_id: "redis-runner-client"
+  client_id: "abc-runner-client"
 ```
 
 ### Producer Configuration
@@ -141,7 +141,7 @@ producer:
 
 ```yaml
 consumer:
-  group_id: "redis-runner-group"
+  group_id: "abc-runner-group"
   auto_offset_reset: "latest"
 ```
 
@@ -149,8 +149,8 @@ consumer:
 
 The following environment variables are supported:
 
-- `REDIS_RUNNER_CONFIG`: Configuration file path
-- `REDIS_RUNNER_LOG_LEVEL`: Log level
+- `ABC_RUNNER_CONFIG`: Configuration file path
+- `ABC_RUNNER_LOG_LEVEL`: Log level
 - `REDIS_HOST`: Redis host
 - `REDIS_PORT`: Redis port
 - `REDIS_PASSWORD`: Redis password
@@ -162,14 +162,14 @@ The following environment variables are supported:
 
 ```bash
 # Validate configuration file
-./redis-runner redis --config config/redis.yaml --validate
+./abc-runner redis --config config/redis.yaml --validate
 ```
 
 ### Example Configuration Validation
 
 ```bash
 # Validate using example configuration
-./redis-runner redis --config config/examples/redis.yaml --dry-run
+./abc-runner redis --config config/examples/redis.yaml --dry-run
 ```
 
 ## Best Practices

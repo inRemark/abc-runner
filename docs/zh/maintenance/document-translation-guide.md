@@ -2,7 +2,7 @@
 
 [English](document-translation-guide.md) | [中文](document-translation-guide.zh.md)
 
-本文档提供了在 redis-runner 项目中维护多语言文档的指南。
+本文档提供了在 abc-runner 项目中维护多语言文档的指南。
 
 ## 1. 文件命名规范
 
@@ -79,4 +79,4 @@
 - 更新文档时检查所有链接的有效性
 - 确保语言切换链接指向正确的文件
 
-通过遵循这些指南，我们可以确保 redis-runner 项目的多语言文档保持高质量和一致性。
+通过遵循这些指南，我们可以确保 abc-runner 项目的多语言文档保持高质量和一致性。

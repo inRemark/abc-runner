@@ -30,7 +30,7 @@ func DefaultReportArgs() *ReportArgs {
 // ParseReportArgs 从命令行参数解析报告配置
 func ParseReportArgs(args []string) (*ReportArgs, error) {
 	reportArgs := DefaultReportArgs()
-	
+
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--report-format":
@@ -42,35 +42,35 @@ func ParseReportArgs(args []string) (*ReportArgs, error) {
 				return nil, fmt.Errorf("invalid report format: %w", err)
 			}
 			i++
-			
+
 		case "--report-dir":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--report-dir requires a directory path")
 			}
 			reportArgs.ReportDir = args[i+1]
 			i++
-			
+
 		case "--report-prefix":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--report-prefix requires a prefix string")
 			}
 			reportArgs.ReportPrefix = args[i+1]
 			i++
-			
+
 		case "--no-console-report":
 			reportArgs.NoConsoleReport = true
-			
+
 		case "--enable-protocol-metrics":
 			reportArgs.EnableProtocolMetrics = true
-			
+
 		case "--disable-protocol-metrics":
 			reportArgs.EnableProtocolMetrics = false
-			
+
 		case "--disable-reports":
 			reportArgs.DisableReports = true
 		}
 	}
-	
+
 	return reportArgs, nil
 }
 
@@ -85,28 +85,28 @@ func (args *ReportArgs) ToReportConfig(protocol string) *ReportConfig {
 	}
 
 	config := DefaultReportConfig()
-	
+
 	// 设置输出目录
 	if args.ReportDir != "" {
 		config.OutputDirectory = args.ReportDir
 	}
-	
+
 	// 设置文件前缀
 	if args.ReportPrefix != "" {
 		config.FilePrefix = args.ReportPrefix
 	} else {
 		config.FilePrefix = fmt.Sprintf("%s_benchmark", protocol)
 	}
-	
+
 	// 设置报告格式
 	config.Formats = ParseReportFormats(args.ReportFormat)
-	
+
 	// 设置控制台报告
 	config.EnableConsoleReport = !args.NoConsoleReport
-	
+
 	// 设置协议指标
 	config.EnableProtocolMetrics = args.EnableProtocolMetrics
-	
+
 	return config
 }
 
@@ -115,7 +115,7 @@ func validateReportFormat(formatStr string) error {
 	if formatStr == "" {
 		return nil
 	}
-	
+
 	parts := strings.Split(formatStr, ",")
 	validFormats := map[string]bool{
 		"console": true,
@@ -124,14 +124,14 @@ func validateReportFormat(formatStr string) error {
 		"text":    true,
 		"all":     true,
 	}
-	
+
 	for _, part := range parts {
 		part = strings.TrimSpace(strings.ToLower(part))
 		if !validFormats[part] {
 			return fmt.Errorf("invalid format '%s', valid formats: console, json, csv, text, all", part)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -176,7 +176,7 @@ func RemoveReportArgs(args []string) []string {
 		"--disable-protocol-metrics": true,
 		"--disable-reports":          true,
 	}
-	
+
 	for i := 0; i < len(args); i++ {
 		if reportFlags[args[i]] {
 			// 跳过有值的参数
@@ -187,7 +187,7 @@ func RemoveReportArgs(args []string) []string {
 			filteredArgs = append(filteredArgs, args[i])
 		}
 	}
-	
+
 	return filteredArgs
 }
 
