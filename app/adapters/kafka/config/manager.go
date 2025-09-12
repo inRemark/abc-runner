@@ -102,19 +102,6 @@ func (m *KafkaConfigManager) ReloadConfiguration() error {
 	return fmt.Errorf("reload not implemented in unified config system")
 }
 
-// GetAdapter 获取适配器以兼容统一接口
-func (m *KafkaConfigManager) GetAdapter() *KafkaAdapterConfig {
-	if m.config == nil {
-		return LoadDefaultKafkaConfig()
-	}
-
-	if kafkaConfig, ok := m.config.(*KafkaAdapterConfig); ok {
-		return kafkaConfig
-	}
-
-	return LoadDefaultKafkaConfig()
-}
-
 // ValidateConfiguration 验证当前配置
 func (m *KafkaConfigManager) ValidateConfiguration() error {
 	if m.config == nil {

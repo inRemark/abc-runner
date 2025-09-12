@@ -102,19 +102,6 @@ func (m *HttpConfigManager) ReloadConfiguration() error {
 	return fmt.Errorf("reload not implemented in unified config system")
 }
 
-// GetAdapter 获取适配器以兼容统一接口
-func (m *HttpConfigManager) GetAdapter() *HttpAdapterConfig {
-	if m.config == nil {
-		return LoadDefaultHttpConfig()
-	}
-
-	if httpConfig, ok := m.config.(*HttpAdapterConfig); ok {
-		return httpConfig
-	}
-
-	return LoadDefaultHttpConfig()
-}
-
 // ValidateConfiguration 验证当前配置
 func (m *HttpConfigManager) ValidateConfiguration() error {
 	if m.config == nil {

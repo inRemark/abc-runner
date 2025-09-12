@@ -38,6 +38,6 @@ func (c *CoreConfigSource) Load() (interfaces.Config, error) {
 
 // LoadCoreConfig 加载核心配置（专用方法）
 func (c *CoreConfigSource) LoadCoreConfig() (*CoreConfig, error) {
-	loader := NewCoreConfigLoader()
+	loader := NewUnifiedCoreConfigLoader()
 	return loader.LoadFromFile(c.FilePath)
 }

@@ -7,16 +7,16 @@ import (
 
 // TestCoreConfigLoader 测试核心配置加载器
 func TestCoreConfigLoader(t *testing.T) {
-	loader := NewCoreConfigLoader()
+	loader := NewUnifiedCoreConfigLoader()
 
 	if loader == nil {
-		t.Error("Failed to create core config loader")
+		t.Fatal("Failed to create core config loader")
 	}
 
 	// 测试默认配置
 	defaultConfig := loader.GetDefaultConfig()
 	if defaultConfig == nil {
-		t.Error("Failed to get default config")
+		t.Fatal("Failed to get default config")
 	}
 
 	// 验证默认配置值
@@ -35,7 +35,10 @@ func TestCoreConfigLoader(t *testing.T) {
 
 // TestCoreConfigLoaderFromFile 测试从文件加载核心配置
 func TestCoreConfigLoaderFromFile(t *testing.T) {
-	loader := NewCoreConfigLoader()
+	loader := NewUnifiedCoreConfigLoader()
+	if loader == nil {
+		t.Fatal("Failed to create core config loader")
+	}
 
 	// 测试加载不存在的文件（应该返回默认配置）
 	config, err := loader.LoadFromFile("nonexistent.yaml")
@@ -44,6 +47,6 @@ func TestCoreConfigLoaderFromFile(t *testing.T) {
 	}
 
 	if config == nil {
-		t.Error("LoadFromFile should return default config for nonexistent file")
+		t.Fatal("LoadFromFile should return default config for nonexistent file")
 	}
 }

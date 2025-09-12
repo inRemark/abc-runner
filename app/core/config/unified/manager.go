@@ -35,7 +35,6 @@ func (s *StandardConfigManager) LoadConfiguration(sources ...ConfigSource) error
 	// 依次加载配置，后面的配置源会覆盖前面的配置
 	var baseConfig interfaces.Config
 	var lastError error
-	
 	for _, source := range sources {
 		if source.CanLoad() {
 			// 如果是环境变量或命令行参数源，设置基础配置
@@ -45,33 +44,27 @@ func (s *StandardConfigManager) LoadConfiguration(sources ...ConfigSource) error
 			if argSource, ok := source.(*ArgConfigSource); ok && baseConfig != nil {
 				argSource.SetConfig(baseConfig)
 			}
-			
 			config, err := source.Load()
 			if err != nil {
 				lastError = err
 				continue
 			}
-			
 			// 验证配置
 			if err := s.validator.Validate(config); err != nil {
 				lastError = err
 				continue
 			}
-			
 			// 更新基础配置
 			baseConfig = config
 		}
 	}
-	
 	if baseConfig != nil {
 		s.config = baseConfig
 		return nil
 	}
-	
 	if lastError != nil {
 		return lastError
 	}
-	
 	return fmt.Errorf("no configuration source could be loaded")
 }
 

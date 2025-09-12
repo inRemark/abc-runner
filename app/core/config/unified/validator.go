@@ -17,7 +17,7 @@ func (s *SimpleConfigValidator) Validate(config interfaces.Config) error {
 	if config == nil {
 		return nil // Allow nil config for now
 	}
-	
+
 	// Delegate to the config's own validation method
 	return config.Validate()
 }

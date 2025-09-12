@@ -103,16 +103,16 @@ func (e *EnvConfigSource) Load() (interfaces.Config, error) {
 	if e.config == nil {
 		return nil, fmt.Errorf("no config provided for env source")
 	}
-	
+
 	// 复制配置以避免修改原始配置
 	config := e.config.Clone()
-	
+
 	// 映射环境变量到配置
 	err := e.mapper.MapEnvVarsToConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map env vars to config: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -156,16 +156,16 @@ func (a *ArgConfigSource) Load() (interfaces.Config, error) {
 	if a.config == nil {
 		return nil, fmt.Errorf("no config provided for arg source")
 	}
-	
+
 	// 复制配置以避免修改原始配置
 	config := a.config.Clone()
-	
+
 	// 解析命令行参数到配置
 	err := a.parser.ParseArgs(a.Args, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse args: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -195,7 +195,7 @@ func NewProtocolConfigFactory(protocol string) *ProtocolConfigFactory {
 }
 
 // CreateConfigSources 创建配置源列表
-func (p *ProtocolConfigFactory) CreateConfigSources(configFile string, args []string, 
+func (p *ProtocolConfigFactory) CreateConfigSources(configFile string, args []string,
 	configFactory func() interfaces.Config,
 	yamlParser ConfigParser,
 	envMapper EnvVarMapper,

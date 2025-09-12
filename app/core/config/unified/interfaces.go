@@ -8,10 +8,10 @@ import (
 type ConfigSource interface {
 	// Load 加载配置
 	Load() (interfaces.Config, error)
-	
+
 	// CanLoad 检查是否可以加载配置
 	CanLoad() bool
-	
+
 	// Priority 获取配置源优先级
 	Priority() int
 }
@@ -20,10 +20,10 @@ type ConfigSource interface {
 type ConfigManager interface {
 	// LoadConfiguration 从多个配置源加载配置
 	LoadConfiguration(sources ...ConfigSource) error
-	
+
 	// GetConfig 获取当前配置
 	GetConfig() interfaces.Config
-	
+
 	// ReloadConfiguration 重新加载配置
 	ReloadConfiguration() error
 }
@@ -32,16 +32,16 @@ type ConfigManager interface {
 type Config interface {
 	// GetProtocol 获取协议名称
 	GetProtocol() string
-	
+
 	// GetConnection 获取连接配置
 	GetConnection() interfaces.ConnectionConfig
-	
+
 	// GetBenchmark 获取基准测试配置
 	GetBenchmark() interfaces.BenchmarkConfig
-	
+
 	// Validate 验证配置
 	Validate() error
-	
+
 	// Clone 克隆配置
 	Clone() interfaces.Config
 }

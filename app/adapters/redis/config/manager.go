@@ -10,8 +10,8 @@ import (
 
 // RedisConfigManager Redis配置管理器
 type RedisConfigManager struct {
-	manager   unified.ConfigManager
-	config    interfaces.Config
+	manager unified.ConfigManager
+	config  interfaces.Config
 }
 
 // NewRedisConfigManager 创建Redis配置管理器
@@ -28,7 +28,7 @@ func (m *RedisConfigManager) LoadConfiguration(sources ...unified.ConfigSource) 
 	// 按优先级排序配置源
 	sortedSources := make([]unified.ConfigSource, len(sources))
 	copy(sortedSources, sources)
-	
+
 	sort.Slice(sortedSources, func(i, j int) bool {
 		return sortedSources[i].Priority() > sortedSources[j].Priority()
 	})
@@ -49,7 +49,7 @@ func (m *RedisConfigManager) LoadFromFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -61,7 +61,7 @@ func (m *RedisConfigManager) LoadFromArgs(args []string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	m.config = config
 	return nil
 }
@@ -83,11 +83,11 @@ func (m *RedisConfigManager) GetConfig() *RedisConfig {
 	if m.config == nil {
 		return NewDefaultRedisConfig()
 	}
-	
+
 	if redisConfig, ok := m.config.(*RedisConfig); ok {
 		return redisConfig
 	}
-	
+
 	return NewDefaultRedisConfig()
 }
 
