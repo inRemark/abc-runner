@@ -17,13 +17,13 @@ type ConfigValidator struct {
 // NewConfigValidator 创建配置验证器
 func NewConfigValidator() *ConfigValidator {
 	validator := &ConfigValidator{}
-	
+
 	// 添加默认验证规则
 	validator.AddRule(validateProtocol)
 	validator.AddRule(validateMode)
 	validator.AddRule(validateConnection)
 	validator.AddRule(validateBenchmark)
-	
+
 	return validator
 }
 
@@ -47,18 +47,18 @@ func validateProtocol(config *RedisConfig) error {
 	if config.Protocol == "" {
 		return fmt.Errorf("protocol cannot be empty")
 	}
-	
+
 	if config.Protocol != "redis" {
 		return fmt.Errorf("unsupported protocol: %s", config.Protocol)
 	}
-	
+
 	return nil
 }
 
 // validateMode 验证模式
 func validateMode(config *RedisConfig) error {
 	mode := config.GetMode()
-	
+
 	switch mode {
 	case "standalone", "sentinel", "cluster":
 		return nil
@@ -70,7 +70,7 @@ func validateMode(config *RedisConfig) error {
 // validateConnection 验证连接配置
 func validateConnection(config *RedisConfig) error {
 	mode := config.GetMode()
-	
+
 	switch mode {
 	case "standalone":
 		if config.Standalone.Addr == "" {
@@ -80,7 +80,7 @@ func validateConnection(config *RedisConfig) error {
 		if !isValidAddr(config.Standalone.Addr) {
 			return fmt.Errorf("invalid standalone addr format: %s", config.Standalone.Addr)
 		}
-		
+
 	case "sentinel":
 		if len(config.Sentinel.Addrs) == 0 {
 			return fmt.Errorf("sentinel addrs cannot be empty")
@@ -94,7 +94,7 @@ func validateConnection(config *RedisConfig) error {
 				return fmt.Errorf("invalid sentinel addr format: %s", addr)
 			}
 		}
-		
+
 	case "cluster":
 		if len(config.Cluster.Addrs) == 0 {
 			return fmt.Errorf("cluster addrs cannot be empty")
@@ -106,38 +106,38 @@ func validateConnection(config *RedisConfig) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // validateBenchmark 验证基准测试配置
 func validateBenchmark(config *RedisConfig) error {
 	benchmark := &config.BenchMark
-	
+
 	if benchmark.Total <= 0 {
 		return fmt.Errorf("benchmark total must be positive, got: %d", benchmark.Total)
 	}
-	
+
 	if benchmark.Parallels <= 0 {
 		return fmt.Errorf("benchmark parallels must be positive, got: %d", benchmark.Parallels)
 	}
-	
+
 	if benchmark.DataSize <= 0 {
 		return fmt.Errorf("benchmark data_size must be positive, got: %d", benchmark.DataSize)
 	}
-	
+
 	if benchmark.ReadPercent < 0 || benchmark.ReadPercent > 100 {
 		return fmt.Errorf("benchmark read_percent must be between 0 and 100, got: %d", benchmark.ReadPercent)
 	}
-	
+
 	if benchmark.RandomKeys < 0 {
 		return fmt.Errorf("benchmark random_keys cannot be negative, got: %d", benchmark.RandomKeys)
 	}
-	
+
 	if benchmark.TTL < 0 {
 		return fmt.Errorf("benchmark ttl cannot be negative, got: %d", benchmark.TTL)
 	}
-	
+
 	// 验证测试用例
 	validCases := []string{"get", "set", "set_get", "set_get_random", "pub", "sub"}
 	if benchmark.Case != "" {
@@ -152,7 +152,7 @@ func validateBenchmark(config *RedisConfig) error {
 			return fmt.Errorf("invalid test case: %s, valid cases: %v", benchmark.Case, validCases)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -161,25 +161,25 @@ func isValidAddr(addr string) bool {
 	if addr == "" {
 		return false
 	}
-	
+
 	// 简单的地址格式验证：host:port
 	// 这里可以根据需要添加更严格的验证
 	parts := strings.Split(addr, ":")
 	if len(parts) != 2 {
 		return false
 	}
-	
+
 	host := parts[0]
 	port := parts[1]
-	
+
 	if host == "" || port == "" {
 		return false
 	}
-	
+
 	// 验证端口是否为数字
 	if _, err := strconv.Atoi(port); err != nil {
 		return false
 	}
-	
+
 	return true
 }

@@ -18,7 +18,8 @@ import (
 
 // RedisSimpleHandler 简化的Redis命令处理器
 type RedisSimpleHandler struct {
-	adapter           *redis.RedisAdapter
+	adapterFactory    interfaces.AdapterFactory
+	adapter           interfaces.ProtocolAdapter
 	configManager     *config.ConfigManager
 	operationRegistry *utils.OperationRegistry
 	keyGenerator      *utils.DefaultKeyGenerator
@@ -29,10 +30,10 @@ type RedisSimpleHandler struct {
 }
 
 // NewRedisCommandHandler 创建Redis命令处理器（统一接口）
-func NewRedisCommandHandler() *RedisSimpleHandler {
+func NewRedisCommandHandler(adapterFactory interfaces.AdapterFactory) *RedisSimpleHandler {
 	handler := &RedisSimpleHandler{
-		adapter:           redis.NewRedisAdapter(),
-		configManager:     config.NewConfigManager(),
+		adapterFactory:    adapterFactory,
+		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}
@@ -72,23 +73,37 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
+	// 4. 初始化适配器
+	if h.adapterFactory != nil {
+		h.adapter = h.adapterFactory.CreateRedisAdapter()
+	} else {
+		// 向后兼容：如果未提供工厂，则直接创建适配器
+		h.adapter = redis.NewRedisAdapter(nil) // TODO: 注入指标收集器
+	}
+
+	// 5. 连接适配器
+	if err := h.adapter.Connect(ctx, h.configManager.GetConfig()); err != nil {
+		return fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+	defer h.adapter.Close()
+
 	// 4. 初始化指标收集器
 	h.metricsCollector = h.adapter.GetMetricsCollector()
 
-	// 5. 初始化报告管理器
+	// 7. 初始化报告管理器
 	h.initializeReportManager()
 
-	// 6. 初始化运行器
+	// 8. 初始化运行器
 	h.runner = runner.NewEnhancedRunner(h.adapter, h.configManager.GetConfig(), h.metricsCollector, h.keyGenerator, h.operationRegistry)
 
-	// 7. 运行测试
+	// 9. 运行测试
 	log.Println("Running Redis benchmark...")
 	_, err = h.runner.RunBenchmark(ctx)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	// 8. 生成报告
+	// 10. 生成报告
 	log.Println("Generating reports...")
 	if err := h.reportManager.GenerateReports(); err != nil {
 		return fmt.Errorf("report generation failed: %w", err)
@@ -153,18 +168,24 @@ func (h *RedisSimpleHandler) loadConfiguration(args []string) error {
 		}
 	}
 
+	// 使用统一配置加载器
+	loader := redisconfig.NewUnifiedRedisConfigLoader()
+
+	var configPath string
 	if h.hasConfigFlag(args) {
-		configPath := h.getConfigFlagValue(args)
-		log.Println("Loading Redis configuration from file...")
-		// 使用多源配置加载器
-		sources := config.CreateRedisConfigSources(configPath, nil)
-		return h.configManager.LoadConfiguration(sources...)
+		configPath = h.getConfigFlagValue(args)
+		log.Printf("Loading Redis configuration from file: %s", configPath)
+	} else {
+		configPath = "" // 让加载器使用默认查找机制
 	}
 
-	// 使用命令行参数创建配置
-	log.Println("Loading Redis configuration from command line...")
-	redisCfg := h.createConfigFromArgs(args)
-	h.configManager.SetConfig(redisCfg)
+	// 加载配置
+	cfg, err := loader.LoadConfig(configPath, args)
+	if err != nil {
+		return fmt.Errorf("failed to load Redis configuration: %w", err)
+	}
+
+	h.configManager.SetConfig(cfg)
 	return nil
 }
 
@@ -216,7 +237,7 @@ func (h *RedisSimpleHandler) getCoreConfigFlag(args []string) string {
 }
 
 // createConfigFromArgs 从命令行参数创建配置
-func (h *RedisSimpleHandler) createConfigFromArgs(args []string) *redisconfig.RedisConfigAdapter {
+func (h *RedisSimpleHandler) createConfigFromArgs(args []string) *redisconfig.RedisConfig {
 	// 默认配置
 	cfg := redisconfig.NewDefaultRedisConfig()
 
@@ -297,7 +318,7 @@ func (h *RedisSimpleHandler) createConfigFromArgs(args []string) *redisconfig.Re
 		}
 	}
 
-	return redisconfig.NewRedisConfigAdapter(cfg)
+	return cfg
 }
 
 // initializeReportManager 初始化报告管理器
@@ -335,35 +356,27 @@ func (h *RedisSimpleHandler) initializeReportManager() {
 func (h *RedisSimpleHandler) validateArgs(args []string) error {
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
-		case "-h":
+		case "--addr":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-h requires a hostname")
+				return fmt.Errorf("--addr requires a address")
 			}
 			i++
-		case "-p":
+		case "--total":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-p requires a port number")
+				return fmt.Errorf("--total requires a value")
 			}
 			if _, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid port number: %s", args[i+1])
+				return fmt.Errorf("invalid value for --total: %s", args[i+1])
 			}
 			i++
-		case "-n":
+		case "--parallels":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-n requires a value")
-			}
-			if _, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -n: %s", args[i+1])
-			}
-			i++
-		case "-c":
-			if i+1 >= len(args) {
-				return fmt.Errorf("-c requires a value")
+				return fmt.Errorf("--parallels requires a value")
 			}
 			if parallels, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -c: %s", args[i+1])
+				return fmt.Errorf("invalid value for --parallels: %s", args[i+1])
 			} else if parallels <= 0 {
-				return fmt.Errorf("-c must be greater than 0")
+				return fmt.Errorf("--parallels must be greater than 0")
 			}
 			i++
 		case "--mode":
@@ -375,14 +388,89 @@ func (h *RedisSimpleHandler) validateArgs(args []string) error {
 				return fmt.Errorf("invalid mode: %s (valid: standalone, cluster, sentinel)", mode)
 			}
 			i++
-		case "--read-ratio":
+		case "--read-percent":
 			if i+1 >= len(args) {
-				return fmt.Errorf("--read-ratio requires a value")
+				return fmt.Errorf("--read-percent requires a value")
 			}
 			if ratio, err := strconv.ParseFloat(args[i+1], 64); err != nil {
-				return fmt.Errorf("invalid read ratio: %s", args[i+1])
+				return fmt.Errorf("invalid read percent: %s", args[i+1])
 			} else if ratio < 0 || ratio > 100 {
-				return fmt.Errorf("read ratio must be between 0 and 100")
+				return fmt.Errorf("read percent must be between 0 and 100")
+			}
+			i++
+		case "--data-size":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--data-size requires a value")
+			}
+			if _, err := strconv.Atoi(args[i+1]); err != nil {
+				return fmt.Errorf("invalid value for --data-size: %s", args[i+1])
+			}
+			i++
+		case "--ttl":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--ttl requires a value")
+			}
+			if _, err := strconv.Atoi(args[i+1]); err != nil {
+				return fmt.Errorf("invalid value for --ttl: %s", args[i+1])
+			}
+			i++
+		case "--random-keys":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--random-keys requires a value")
+			}
+			if _, err := strconv.Atoi(args[i+1]); err != nil {
+				return fmt.Errorf("invalid value for --random-keys: %s", args[i+1])
+			}
+			i++
+		case "--case":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--case requires a value")
+			}
+			i++
+		case "--password":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--password requires a value")
+			}
+			i++
+		case "--db":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--db requires a value")
+			}
+			if _, err := strconv.Atoi(args[i+1]); err != nil {
+				return fmt.Errorf("invalid value for --db: %s", args[i+1])
+			}
+			i++
+		case "--sentinel-master-name":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--sentinel-master-name requires a value")
+			}
+			i++
+		case "--sentinel-addrs":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--sentinel-addrs requires a value")
+			}
+			i++
+		case "--sentinel-password":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--sentinel-password requires a value")
+			}
+			i++
+		case "--sentinel-db":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--sentinel-db requires a value")
+			}
+			if _, err := strconv.Atoi(args[i+1]); err != nil {
+				return fmt.Errorf("invalid value for --sentinel-db: %s", args[i+1])
+			}
+			i++
+		case "--cluster-addrs":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--cluster-addrs requires a value")
+			}
+			i++
+		case "--cluster-password":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--cluster-password requires a value")
 			}
 			i++
 		}

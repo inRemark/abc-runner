@@ -36,13 +36,11 @@ type HttpAdapter struct {
 }
 
 // NewHttpAdapter 创建HTTP适配器
-func NewHttpAdapter() *HttpAdapter {
-	metricsCollector := metrics.NewHttpMetricsCollector()
-
+func NewHttpAdapter(metricsCollector interfaces.MetricsCollector) *HttpAdapter {
 	return &HttpAdapter{
 		BaseAdapter:      base.NewBaseAdapter("http"),
-		metricsCollector: metricsCollector,
-		metricsReporter:  metrics.NewHttpMetricsReporter(metricsCollector),
+		metricsCollector: metrics.NewHttpMetricsCollector(),
+		metricsReporter:  metrics.NewHttpMetricsReporter(metrics.NewHttpMetricsCollector()),
 	}
 }
 

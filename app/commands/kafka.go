@@ -19,7 +19,8 @@ import (
 
 // KafkaSimpleHandler 简化的Kafka命令处理器
 type KafkaSimpleHandler struct {
-	adapter           *kafka.KafkaAdapter
+	adapterFactory    interfaces.AdapterFactory
+	adapter           interfaces.ProtocolAdapter
 	configManager     *config.ConfigManager
 	operationRegistry *utils.OperationRegistry
 	keyGenerator      *utils.DefaultKeyGenerator
@@ -30,10 +31,10 @@ type KafkaSimpleHandler struct {
 }
 
 // NewKafkaCommandHandler 创建Kafka命令处理器（统一接口）
-func NewKafkaCommandHandler() *KafkaSimpleHandler {
+func NewKafkaCommandHandler(adapterFactory interfaces.AdapterFactory) *KafkaSimpleHandler {
 	handler := &KafkaSimpleHandler{
-		adapter:           kafka.NewKafkaAdapter(),
-		configManager:     config.NewConfigManager(),
+		adapterFactory:    adapterFactory,
+		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}
@@ -164,19 +165,24 @@ func (k *KafkaSimpleHandler) loadConfiguration(args []string) error {
 		}
 	}
 
-	// 检查是否使用配置文件
+	// 使用统一配置加载器
+	loader := kafkaConfig.NewUnifiedKafkaConfigLoader()
+
+	var configPath string
 	if k.hasConfigFlag(args) {
-		configPath := k.getConfigFlagValue(args)
-		log.Println("Loading Kafka configuration from file...")
-		// 使用多源配置加载器
-		sources := config.CreateKafkaConfigSources(configPath, nil)
-		return k.configManager.LoadConfiguration(sources...)
+		configPath = k.getConfigFlagValue(args)
+		log.Printf("Loading Kafka configuration from file: %s", configPath)
+	} else {
+		configPath = "" // 让加载器使用默认查找机制
 	}
 
-	// 使用命令行参数创建配置
-	log.Println("Loading Kafka configuration from command line...")
-	kafkaCfg := k.createConfigFromArgs(args)
-	k.configManager.SetConfig(kafkaCfg)
+	// 加载配置
+	cfg, err := loader.LoadConfig(configPath, args)
+	if err != nil {
+		return fmt.Errorf("failed to load Kafka configuration: %w", err)
+	}
+
+	k.configManager.SetConfig(cfg)
 	return nil
 }
 
@@ -433,22 +439,22 @@ func (k *KafkaSimpleHandler) validateArgs(args []string) error {
 				return fmt.Errorf("invalid acks value: %s (valid: 0, 1, all, -1)", acks)
 			}
 			i++
-		case "-n":
+		case "--total":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-n requires a value")
+				return fmt.Errorf("--total requires a value")
 			}
 			if _, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -n: %s", args[i+1])
+				return fmt.Errorf("invalid value for --total: %s", args[i+1])
 			}
 			i++
-		case "-c":
+		case "--parallels":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-c requires a value")
+				return fmt.Errorf("--parallels requires a value")
 			}
 			if parallels, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -c: %s", args[i+1])
+				return fmt.Errorf("invalid value for --parallels: %s", args[i+1])
 			} else if parallels <= 0 {
-				return fmt.Errorf("-c must be greater than 0")
+				return fmt.Errorf("--parallels must be greater than 0")
 			}
 			i++
 		case "--duration":

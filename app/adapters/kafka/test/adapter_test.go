@@ -12,7 +12,7 @@ import (
 
 // TestKafkaAdapter 测试Kafka适配器基本功能
 func TestKafkaAdapter(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter()
+	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
 
 	// 测试适配器基本属性
 	if adapter.GetProtocolName() != "kafka" {
@@ -27,7 +27,7 @@ func TestKafkaAdapter(t *testing.T) {
 
 // TestKafkaAdapterConnect 测试Kafka适配器连接
 func TestKafkaAdapterConnect(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter()
+	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -52,7 +52,7 @@ func TestKafkaAdapterConnect(t *testing.T) {
 
 // TestKafkaAdapterMetrics 测试Kafka指标收集
 func TestKafkaAdapterMetrics(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter()
+	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -87,7 +87,7 @@ func TestKafkaAdapterMetrics(t *testing.T) {
 
 // TestKafkaOperationFactory 测试Kafka操作工厂
 func TestKafkaOperationFactory(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter()
+	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()

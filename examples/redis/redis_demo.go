@@ -13,21 +13,19 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// Redis适配器新架构示例
 func main() {
-	fmt.Println("=== Redis 新架构示例 ===")
+	fmt.Println("=== Redis适配器演示 ===")
 
-	// 1. 创建配置
+	// 1. 创建和加载配置
 	fmt.Println("\n1. 创建和加载配置")
 	cfg := config.NewDefaultRedisConfig()
 	cfg.Standalone.Addr = "localhost:6379"
 	fmt.Printf("配置协议: %s\n", cfg.GetProtocol())
 	fmt.Printf("配置模式: %s\n", cfg.GetMode())
 
-	// 使用配置加载器
-	loader := config.NewMultiSourceConfigLoader()
-	loader.AddSource(config.NewDefaultConfigSource())
-	loadedCfg, err := loader.Load()
+	// 使用新的统一配置加载器
+	loader := config.NewUnifiedRedisConfigLoader()
+	loadedCfg, err := loader.LoadConfig("", nil)
 	if err != nil {
 		log.Printf("配置加载失败: %v", err)
 	} else {
@@ -143,10 +141,16 @@ func main() {
 
 	// 8. 演示配置克隆
 	fmt.Println("\n8. 配置克隆")
-	clonedCfg := cfg.Clone()
-	clonedCfg.Standalone.Addr = "localhost:6380"
-	fmt.Printf("原始配置地址: %s\n", cfg.Standalone.Addr)
-	fmt.Printf("克隆配置地址: %s\n", clonedCfg.Standalone.Addr)
+	// 注意：克隆方法现在返回interfaces.Config接口
+	clonedCfgInterface := cfg.Clone()
+	// 需要类型断言回具体的Redis配置类型
+	if clonedCfg, ok := clonedCfgInterface.(*config.RedisConfig); ok {
+		clonedCfg.Standalone.Addr = "localhost:6380"
+		fmt.Printf("原始配置地址: %s\n", cfg.Standalone.Addr)
+		fmt.Printf("克隆配置地址: %s\n", clonedCfg.Standalone.Addr)
+	} else {
+		fmt.Println("克隆配置类型转换失败")
+	}
 
 	// 9. 扩展操作测试 (从extended_operations_example.go整合)
 	fmt.Println("\n9. 扩展操作测试")

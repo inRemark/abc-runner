@@ -24,6 +24,9 @@ type ProtocolAdapter interface {
 
 	// GetProtocolName 获取协议名称
 	GetProtocolName() string
+	
+	// GetMetricsCollector 获取指标收集器
+	GetMetricsCollector() MetricsCollector
 }
 
 // Operation 操作定义

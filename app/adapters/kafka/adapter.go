@@ -36,7 +36,7 @@ type KafkaAdapter struct {
 }
 
 // NewKafkaAdapter 创建Kafka适配器
-func NewKafkaAdapter() *KafkaAdapter {
+func NewKafkaAdapter(metricsCollector interfaces.MetricsCollector) *KafkaAdapter {
 	return &KafkaAdapter{
 		BaseAdapter:      base.NewBaseAdapter("kafka"),
 		metricsCollector: metrics.NewKafkaMetricsCollector(),

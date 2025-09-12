@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"abc-runner/app/adapters/http"
 	httpConfig "abc-runner/app/adapters/http/config"
 	"abc-runner/app/adapters/http/operations"
 	"abc-runner/app/core/config"
@@ -20,7 +19,8 @@ import (
 
 // HttpSimpleHandler 简化的HTTP命令处理器
 type HttpSimpleHandler struct {
-	adapter           *http.HttpAdapter
+	adapterFactory    interfaces.AdapterFactory
+	adapter           interfaces.ProtocolAdapter
 	configManager     *config.ConfigManager
 	operationRegistry *utils.OperationRegistry
 	keyGenerator      *utils.DefaultKeyGenerator
@@ -31,17 +31,17 @@ type HttpSimpleHandler struct {
 }
 
 // NewHttpCommandHandler 创建HTTP命令处理器（统一接口）
-func NewHttpCommandHandler() *HttpSimpleHandler {
+func NewHttpCommandHandler(adapterFactory interfaces.AdapterFactory) *HttpSimpleHandler {
 	handler := &HttpSimpleHandler{
-		adapter:           http.NewHttpAdapter(),
-		configManager:     config.NewConfigManager(),
+		adapterFactory:    adapterFactory,
+		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}
 
 	// 注册HTTP操作工厂
 	// 使用默认配置创建HTTP操作工厂
-	httpCfg := httpConfig.DefaultHTTPConfig()
+	httpCfg := httpConfig.LoadDefaultHttpConfig()
 	httpOpsFactory := operations.NewHttpOperationFactory(httpCfg)
 	handler.operationRegistry.Register("http_get", httpOpsFactory)
 	handler.operationRegistry.Register("http_post", httpOpsFactory)
@@ -169,19 +169,24 @@ func (h *HttpSimpleHandler) loadConfiguration(args []string) error {
 		}
 	}
 
-	// 检查是否使用配置文件
+	// 使用统一配置加载器
+	loader := httpConfig.NewUnifiedHttpConfigLoader()
+
+	var configPath string
 	if h.hasConfigFlag(args) {
-		configPath := h.getConfigFlagValue(args)
-		log.Println("Loading HTTP configuration from file...")
-		// 使用多源配置加载器
-		sources := config.CreateHttpConfigSources(configPath, nil)
-		return h.configManager.LoadConfiguration(sources...)
+		configPath = h.getConfigFlagValue(args)
+		log.Printf("Loading HTTP configuration from file: %s", configPath)
+	} else {
+		configPath = "" // 让加载器使用默认查找机制
 	}
 
-	// 使用命令行参数创建配置
-	log.Println("Loading HTTP configuration from command line...")
-	httpCfg := h.createConfigFromArgs(args)
-	h.configManager.SetConfig(httpCfg)
+	// 加载配置
+	cfg, err := loader.LoadConfig(configPath, args)
+	if err != nil {
+		return fmt.Errorf("failed to load HTTP configuration: %w", err)
+	}
+
+	h.configManager.SetConfig(cfg)
 	return nil
 }
 
@@ -235,7 +240,7 @@ func (h *HttpSimpleHandler) getCoreConfigFlag(args []string) string {
 // createConfigFromArgs 从命令行参数创建配置
 func (h *HttpSimpleHandler) createConfigFromArgs(args []string) *httpConfig.HttpAdapterConfig {
 	// 默认配置
-	cfg := httpConfig.DefaultHTTPConfig()
+	cfg := httpConfig.LoadDefaultHttpConfig()
 
 	// 设置默认测试用例
 	cfg.Benchmark.TestCase = "http_get"
@@ -389,22 +394,22 @@ func (h *HttpSimpleHandler) validateArgs(args []string) error {
 				return fmt.Errorf("invalid HTTP method: %s", method)
 			}
 			i++
-		case "-n":
+		case "--total":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-n requires a value")
+				return fmt.Errorf("--total requires a value")
 			}
 			if _, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -n: %s", args[i+1])
+				return fmt.Errorf("invalid value for --total: %s", args[i+1])
 			}
 			i++
-		case "-c":
+		case "--parallels":
 			if i+1 >= len(args) {
-				return fmt.Errorf("-c requires a value")
+				return fmt.Errorf("--parallels requires a value")
 			}
 			if parallels, err := strconv.Atoi(args[i+1]); err != nil {
-				return fmt.Errorf("invalid value for -c: %s", args[i+1])
+				return fmt.Errorf("invalid value for --parallels: %s", args[i+1])
 			} else if parallels <= 0 {
-				return fmt.Errorf("-c must be greater than 0")
+				return fmt.Errorf("--parallels must be greater than 0")
 			}
 			i++
 		case "--timeout", "--duration", "--ramp-up":

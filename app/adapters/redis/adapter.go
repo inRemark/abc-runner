@@ -25,7 +25,7 @@ type RedisAdapter struct {
 }
 
 // NewRedisAdapter 创建Redis适配器
-func NewRedisAdapter() *RedisAdapter {
+func NewRedisAdapter(metricsCollector interfaces.MetricsCollector) *RedisAdapter {
 	return &RedisAdapter{
 		BaseAdapter: base.NewBaseAdapter("redis"),
 	}
@@ -35,15 +35,11 @@ func NewRedisAdapter() *RedisAdapter {
 func (r *RedisAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	// 提取Redis配置
 	var redisConfig *redisconfig.RedisConfig
-	if adapter, ok := cfg.(*redisconfig.RedisConfigAdapter); ok {
-		redisConfig = adapter.GetRedisConfig()
+	if cfg, ok := cfg.(*redisconfig.RedisConfig); ok {
+		redisConfig = cfg
 	} else {
-		// 如果不是适配器，尝试转换
-		var err error
-		redisConfig, err = redisconfig.ExtractRedisConfig(cfg)
-		if err != nil {
-			return fmt.Errorf("failed to extract Redis config: %w", err)
-		}
+		// 如果不是Redis配置，返回错误
+		return fmt.Errorf("invalid config type: expected *redisconfig.RedisConfig, got %T", cfg)
 	}
 
 	if err := r.ValidateConfig(cfg); err != nil {

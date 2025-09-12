@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"time"
+
+	"abc-runner/app/core/interfaces"
 )
 
 // RedisConfig Redis配置实现
@@ -65,6 +67,11 @@ type ConnectionConfigImpl struct {
 	Timeout     time.Duration     `json:"timeout"`
 }
 
+// GetPoolConfig 获取连接池配置
+func (c *ConnectionConfigImpl) GetPoolConfig() interfaces.PoolConfig {
+	return &c.Pool
+}
+
 // GetProtocol 获取协议类型
 func (c *RedisConfig) GetProtocol() string {
 	if c.Protocol == "" {
@@ -107,7 +114,7 @@ func (c *RedisConfig) ValidateMode() error {
 }
 
 // GetConnection 获取连接配置
-func (c *RedisConfig) GetConnection() *ConnectionConfigImpl {
+func (c *RedisConfig) GetConnection() interfaces.ConnectionConfig {
 	conn := &ConnectionConfigImpl{
 		Pool:    c.Pool,
 		Timeout: 30 * time.Second,
@@ -141,7 +148,7 @@ func (c *RedisConfig) GetConnection() *ConnectionConfigImpl {
 }
 
 // GetBenchmark 获取基准测试配置
-func (c *RedisConfig) GetBenchmark() *BenchmarkConfigImpl {
+func (c *RedisConfig) GetBenchmark() interfaces.BenchmarkConfig {
 	return &c.BenchMark
 }
 
@@ -173,7 +180,7 @@ func (c *RedisConfig) Validate() error {
 }
 
 // Clone 克隆配置
-func (c *RedisConfig) Clone() *RedisConfig {
+func (c *RedisConfig) Clone() interfaces.Config {
 	cloned := *c
 
 	// 深拷贝切片

@@ -2,6 +2,7 @@ package main
 
 import (
 	"abc-runner/app/commands"
+	"abc-runner/app/core/di"
 	"context"
 	"flag"
 	"fmt"
@@ -14,11 +15,15 @@ import (
 var (
 	commandRouter *SimpleCommandRouter
 	logFile       *os.File
+	container     *di.Container
 )
 
 func main() {
 	initLogging()
 	defer closeLogFile()
+
+	// 初始化依赖注入容器
+	container = di.NewContainer()
 
 	// 初始化简化命令系统
 	if err := initializeCommandSystem(); err != nil {
@@ -41,7 +46,7 @@ func initLogging() {
 
 	// 生成日志文件名
 	timestamp := time.Now().Format("20060102")
-	base := fmt.Sprintf("logs/record_%s", timestamp)
+	base := fmt.Sprintf("logs/abc-runner_%s", timestamp)
 	logFileName := base + "_1.log"
 	seq := 1
 
@@ -86,17 +91,17 @@ func initializeCommandSystem() error {
 // registerCommandHandlers 注册命令处理器
 func registerCommandHandlers() error {
 	// 注册Redis命令
-	redisHandler := commands.NewRedisCommandHandler()
+	redisHandler := commands.NewRedisCommandHandler(nil) // TODO: 注入适配器工厂
 	commandRouter.RegisterCommand("redis", redisHandler)
 	commandRouter.RegisterAlias("r", "redis")
 
 	// 注册HTTP命令
-	httpHandler := commands.NewHttpCommandHandler()
+	httpHandler := commands.NewHttpCommandHandler(nil) // TODO: 注入适配器工厂
 	commandRouter.RegisterCommand("http", httpHandler)
 	commandRouter.RegisterAlias("h", "http")
 
 	// 注册Kafka命令
-	kafkaHandler := commands.NewKafkaCommandHandler()
+	kafkaHandler := commands.NewKafkaCommandHandler(nil) // TODO: 注入适配器工厂
 	commandRouter.RegisterCommand("kafka", kafkaHandler)
 	commandRouter.RegisterAlias("k", "kafka")
 

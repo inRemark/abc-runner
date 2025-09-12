@@ -63,14 +63,25 @@ func TestKafkaAdapterConfig_Validate(t *testing.T) {
 }
 
 func TestConfigLoader_LoadFromDefault(t *testing.T) {
-	loader := config.NewConfigLoader()
-	cfg := loader.LoadFromDefault()
+	// 使用新的统一配置加载器
+	loader := config.NewUnifiedKafkaConfigLoader()
+	cfg, err := loader.LoadConfig("", nil)
 
-	if cfg == nil {
-		t.Fatal("LoadFromDefault() returned nil")
+	if err != nil {
+		t.Fatalf("LoadConfig() failed: %v", err)
 	}
 
-	if len(cfg.Brokers) == 0 {
+	if cfg == nil {
+		t.Fatal("LoadConfig() returned nil")
+	}
+
+	// 类型断言回具体的Kafka配置类型
+	kafkaCfg, ok := cfg.(*config.KafkaAdapterConfig)
+	if !ok {
+		t.Fatal("Config is not of type *config.KafkaAdapterConfig")
+	}
+
+	if len(kafkaCfg.Brokers) == 0 {
 		t.Error("Default config should have brokers")
 	}
 }

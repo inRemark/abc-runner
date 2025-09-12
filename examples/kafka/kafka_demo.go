@@ -90,10 +90,17 @@ func demonstrateConfig(cfg *config.KafkaAdapterConfig) {
 	fmt.Println("✓ 配置克隆功能正常")
 
 	// 配置加载器演示
-	loader := config.NewConfigLoader()
-	defaultCfg := loader.LoadFromDefault()
-	fmt.Printf("默认配置 Brokers: %v\\n", defaultCfg.Brokers)
-	fmt.Println("✓ 配置加载器功能正常")
+	loader := config.NewUnifiedKafkaConfigLoader()
+	defaultCfg, err := loader.LoadConfig("", nil)
+	if err != nil {
+		log.Printf("加载默认配置失败: %v", err)
+	} else {
+		// 类型断言回具体的Kafka配置类型
+		if kafkaCfg, ok := defaultCfg.(*config.KafkaAdapterConfig); ok {
+			fmt.Printf("默认配置 Brokers: %v\\n", kafkaCfg.Brokers)
+			fmt.Println("✓ 配置加载器功能正常")
+		}
+	}
 }
 
 func demonstrateAdapter(ctx context.Context, adapter *kafka.KafkaAdapter, cfg *config.KafkaAdapterConfig) {

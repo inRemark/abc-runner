@@ -4,20 +4,6 @@ import (
 	"time"
 )
 
-// ConfigSource 配置源接口
-type ConfigSource interface {
-	Load() (*RedisConfig, error)
-	CanLoad() bool
-	Priority() int
-}
-
-// ConfigLoader 配置加载器接口
-type ConfigLoader interface {
-	Load() (*RedisConfig, error)
-	AddSource(source ConfigSource)
-	GetSources() []ConfigSource
-}
-
 // RedisClientFactory Redis客户端工厂接口
 type RedisClientFactory interface {
 	CreateStandaloneClient(config StandAloneInfo) (interface{}, error)

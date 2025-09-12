@@ -1,13 +1,121 @@
 package integration
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"abc-runner/app/core/config"
+	"abc-runner/app/core/interfaces"
 )
 
+// CoreConfigSourceAdapter 核心配置源适配器
+// 用于将 config.ConfigSource 适配为 interfaces.ConfigSource
+type CoreConfigSourceAdapter struct {
+	source config.ConfigSource
+}
+
+// Priority 获取优先级
+func (c *CoreConfigSourceAdapter) Priority() int {
+	return c.source.Priority()
+}
+
+// CanLoad 检查是否可以加载
+func (c *CoreConfigSourceAdapter) CanLoad() bool {
+	return c.source.CanLoad()
+}
+
+// Load 加载配置
+func (c *CoreConfigSourceAdapter) Load(ctx context.Context) (interfaces.Config, error) {
+	return c.source.Load()
+}
+
+// GetProtocol 获取协议名称
+func (c *CoreConfigSourceAdapter) GetProtocol() string {
+	return "core"
+}
+
+// MockConfigSource 实现 config.ConfigSource 接口
+type MockConfigSource struct{}
+
+func (m *MockConfigSource) Priority() int {
+	return 1
+}
+
+func (m *MockConfigSource) CanLoad() bool {
+	return true
+}
+
+func (m *MockConfigSource) Load() (interfaces.Config, error) {
+	return nil, nil
+}
+
+// MockInterfaceConfigSource 实现 interfaces.ConfigSource 接口
+type MockInterfaceConfigSource struct{}
+
+func (m *MockInterfaceConfigSource) Priority() int {
+	return 1
+}
+
+func (m *MockInterfaceConfigSource) CanLoad() bool {
+	return true
+}
+
+func (m *MockInterfaceConfigSource) Load(ctx context.Context) (interfaces.Config, error) {
+	return nil, nil
+}
+
+func (m *MockInterfaceConfigSource) GetProtocol() string {
+	return "mock"
+}
+
+// mockConfigSourceFactory 模拟配置源工厂
+type mockConfigSourceFactory struct{}
+
+func (m *mockConfigSourceFactory) CreateRedisConfigSource() interfaces.ConfigSource {
+	// 创建一个模拟的Redis配置源
+	mockSource := &MockConfigSource{}
+	adapter := &CoreConfigSourceAdapter{source: mockSource}
+	return adapter
+}
+
+func (m *mockConfigSourceFactory) CreateHttpConfigSource() interfaces.ConfigSource {
+	// 创建一个模拟的HTTP配置源
+	return &MockInterfaceConfigSource{}
+}
+
+func (m *mockConfigSourceFactory) CreateKafkaConfigSource() interfaces.ConfigSource {
+	// 创建一个模拟的Kafka配置源
+	return &MockInterfaceConfigSource{}
+}
+
+// Validate 实现unified.ConfigValidator接口
+func (m *mockConfigSourceFactory) Validate(config interfaces.Config) error {
+	// 模拟验证，总是返回nil表示验证通过
+	return nil
+}
+
+// TestConfigManagerIntegration 测试配置管理器集成
+func TestConfigManagerIntegration(t *testing.T) {
+	manager := config.NewConfigManager(&mockConfigSourceFactory{})
+
+	if manager == nil {
+		t.Error("Failed to create config manager")
+	}
+}
+
+// TestCoreConfigIntegration 测试核心配置集成
 func TestCoreConfigIntegration(t *testing.T) {
+	// 测试核心配置加载
+	loader := config.NewCoreConfigLoader()
+
+	defaultConfig := loader.GetDefaultConfig()
+	if defaultConfig == nil {
+		t.Error("Failed to get default core config")
+	}
+}
+
+func TestCoreConfigIntegration_Load(t *testing.T) {
 	// 创建临时核心配置文件用于测试
 	tempConfig := `core:
   logging:
@@ -43,8 +151,8 @@ func TestCoreConfigIntegration(t *testing.T) {
 	}
 
 	t.Run("ConfigManagerWithCoreConfig", func(t *testing.T) {
-		manager := config.NewConfigManager()
-		
+		manager := config.NewConfigManager(nil)
+
 		// 加载核心配置
 		err := manager.LoadCoreConfiguration(tempFile.Name())
 		if err != nil {
@@ -71,8 +179,8 @@ func TestCoreConfigIntegration(t *testing.T) {
 	})
 
 	t.Run("ConfigManagerWithDefaultCoreConfig", func(t *testing.T) {
-		manager := config.NewConfigManager()
-		
+		manager := config.NewConfigManager(nil)
+
 		// 不加载核心配置，应该使用默认配置
 		coreConfig := manager.GetCoreConfig()
 		if coreConfig == nil {

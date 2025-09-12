@@ -5,87 +5,59 @@ import (
 	"log"
 
 	"abc-runner/app/core/config"
+	"abc-runner/app/core/interfaces"
 )
 
+// mockConfigSourceFactory 模拟配置源工厂
+type mockConfigSourceFactory struct{}
+
+func (m *mockConfigSourceFactory) CreateRedisConfigSource() interfaces.ConfigSource {
+	return nil
+}
+
+func (m *mockConfigSourceFactory) CreateHttpConfigSource() interfaces.ConfigSource {
+	return nil
+}
+
+func (m *mockConfigSourceFactory) CreateKafkaConfigSource() interfaces.ConfigSource {
+	return nil
+}
+
 func main() {
-	fmt.Println("=== 核心配置示例 ===")
-
-	// 1. 创建核心配置加载器
-	fmt.Println("\n1. 加载核心配置")
-	loader := config.NewCoreConfigLoader()
-
-	// 2. 加载默认核心配置
-	defaultConfig := loader.GetDefaultConfig()
-	fmt.Printf("默认日志级别: %s\n", defaultConfig.Core.Logging.Level)
-	fmt.Printf("默认报告输出目录: %s\n", defaultConfig.Core.Reports.OutputDir)
-	fmt.Printf("默认监控启用状态: %t\n", defaultConfig.Core.Monitoring.Enabled)
-
-	// 3. 从文件加载核心配置（如果文件存在）
-	coreConfig, err := loader.LoadFromFile("config/examples/core.yaml")
-	if err != nil {
-		log.Printf("警告: 无法加载核心配置文件: %v", err)
-		fmt.Println("使用默认核心配置")
-		coreConfig = defaultConfig
-	} else {
-		fmt.Println("成功加载核心配置文件")
-		fmt.Printf("配置的日志级别: %s\n", coreConfig.Core.Logging.Level)
-		fmt.Printf("配置的报告输出目录: %s\n", coreConfig.Core.Reports.OutputDir)
-	}
-
-	// 4. 使用配置管理器
-	fmt.Println("\n2. 使用配置管理器")
-	manager := config.NewConfigManager()
-
+	// 创建配置管理器
+	manager := config.NewConfigManager(&mockConfigSourceFactory{})
+	
 	// 加载核心配置
-	err = manager.LoadCoreConfiguration("config/examples/core.yaml")
+	err := manager.LoadCoreConfiguration("")
 	if err != nil {
-		log.Printf("警告: 无法加载核心配置: %v", err)
-		fmt.Println("使用默认核心配置")
+		log.Printf("Warning: Failed to load core config: %v", err)
+		// 使用默认配置继续
 	}
-
-	// 获取核心配置
-	loadedCoreConfig := manager.GetCoreConfig()
-	fmt.Printf("管理器中的日志级别: %s\n", loadedCoreConfig.Core.Logging.Level)
-	fmt.Printf("管理器中的报告格式: %v\n", loadedCoreConfig.Core.Reports.Formats)
-
-	// 5. 保存配置到文件
-	fmt.Println("\n3. 保存配置到文件")
-	newConfig := &config.CoreConfig{
-		Core: config.CoreConfigSection{
-			Logging: config.LoggingConfig{
-				Level:    "debug",
-				Format:   "text",
-				Output:   "file",
-				FilePath: "./logs",
-			},
-			Reports: config.ReportsConfig{
-				Enabled:   true,
-				Formats:   []string{"console", "json"},
-				OutputDir: "./my-reports",
-			},
-			Monitoring: config.MonitoringConfig{
-				Enabled:         true,
-				MetricsInterval: 10000000000, // 10秒
-				Prometheus: config.PrometheusConfig{
-					Enabled: true,
-					Port:    9090,
-				},
-			},
-			Connection: config.ConnectionConfig{
-				Timeout:         30000000000, // 30秒
-				KeepAlive:       30000000000, // 30秒
-				MaxIdleConns:    100,
-				IdleConnTimeout: 90000000000, // 90秒
-			},
-		},
+	
+	coreConfig := manager.GetCoreConfig()
+	
+	// 显示核心配置信息
+	fmt.Println("=== Core Configuration ===")
+	fmt.Printf("Logging Level: %s\n", coreConfig.Core.Logging.Level)
+	fmt.Printf("Reports Enabled: %t\n", coreConfig.Core.Reports.Enabled)
+	fmt.Printf("Monitoring Enabled: %t\n", coreConfig.Core.Monitoring.Enabled)
+	
+	// 显示报告配置
+	fmt.Println("\n=== Reports Configuration ===")
+	fmt.Printf("Formats: %v\n", coreConfig.Core.Reports.Formats)
+	fmt.Printf("Output Directory: %s\n", coreConfig.Core.Reports.OutputDir)
+	fmt.Printf("File Prefix: %s\n", coreConfig.Core.Reports.FilePrefix)
+	
+	// 显示监控配置
+	fmt.Println("\n=== Monitoring Configuration ===")
+	fmt.Printf("Metrics Interval: %v\n", coreConfig.Core.Monitoring.MetricsInterval)
+	fmt.Printf("Prometheus Enabled: %t\n", coreConfig.Core.Monitoring.Prometheus.Enabled)
+	if coreConfig.Core.Monitoring.Prometheus.Enabled {
+		fmt.Printf("Prometheus Port: %d\n", coreConfig.Core.Monitoring.Prometheus.Port)
 	}
-
-	err = loader.SaveToFile(newConfig, "example_core_config.yaml")
-	if err != nil {
-		log.Printf("保存配置文件失败: %v", err)
-	} else {
-		fmt.Println("配置已保存到 example_core_config.yaml")
+	
+	fmt.Printf("StatsD Enabled: %t\n", coreConfig.Core.Monitoring.Statsd.Enabled)
+	if coreConfig.Core.Monitoring.Statsd.Enabled {
+		fmt.Printf("StatsD Host: %s\n", coreConfig.Core.Monitoring.Statsd.Host)
 	}
-
-	fmt.Println("\n=== 示例完成 ===")
 }

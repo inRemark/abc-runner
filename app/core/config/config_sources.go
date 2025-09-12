@@ -4,8 +4,6 @@ import (
 	"log"
 
 	httpconfig "abc-runner/app/adapters/http/config"
-	kafkaconfig "abc-runner/app/adapters/kafka/config"
-	redisconfig "abc-runner/app/adapters/redis/config"
 	"abc-runner/app/core/interfaces"
 )
 
@@ -18,44 +16,17 @@ type ConfigSource interface {
 
 // CreateRedisConfigSources 创建Redis配置源列表
 func CreateRedisConfigSources(yamlFile string, args []string) []ConfigSource {
-	// 使用Redis包中的函数创建配置源
-	redisSources := redisconfig.CreateRedisConfigSources(yamlFile, args)
-
-	// 转换为core包中的ConfigSource接口
-	sources := make([]ConfigSource, len(redisSources))
-	for i, source := range redisSources {
-		sources[i] = source
-	}
-
-	return sources
+	return CreateRedisConfigSourcesInCore(yamlFile, args)
 }
 
 // CreateHttpConfigSources 创建HTTP配置源列表
 func CreateHttpConfigSources(yamlFile string, args []string) []ConfigSource {
-	// 使用HTTP包中的函数创建配置源
-	httpSources := httpconfig.CreateHttpConfigSources(yamlFile, args)
-
-	// 转换为core包中的ConfigSource接口
-	sources := make([]ConfigSource, len(httpSources))
-	for i, source := range httpSources {
-		sources[i] = &HttpConfigSourceAdapter{source: source}
-	}
-
-	return sources
+	return CreateHttpConfigSourcesInCore(yamlFile, args)
 }
 
 // CreateKafkaConfigSources 创建Kafka配置源列表
 func CreateKafkaConfigSources(yamlFile string, args []string) []ConfigSource {
-	// 使用Kafka包中的函数创建配置源
-	kafkaSources := kafkaconfig.CreateKafkaConfigSources(yamlFile, args)
-
-	// 转换为core包中的ConfigSource接口
-	sources := make([]ConfigSource, len(kafkaSources))
-	for i, source := range kafkaSources {
-		sources[i] = &KafkaConfigSourceAdapter{source: source}
-	}
-
-	return sources
+	return CreateKafkaConfigSourcesInCore(yamlFile, args)
 }
 
 // CreateConfigSourcesWithCore 创建包含核心配置的配置源列表
@@ -75,8 +46,6 @@ func CreateConfigSourcesWithCore(coreConfigPath string, protocolSources []Config
 
 	return allSources, coreConfig
 }
-
-
 
 // HttpConfigSourceAdapter HTTP配置源适配器
 type HttpConfigSourceAdapter struct {
@@ -102,26 +71,3 @@ func (h *HttpConfigSourceAdapter) Load() (interfaces.Config, error) {
 	return httpConfig, nil
 }
 
-// KafkaConfigSourceAdapter Kafka配置源适配器
-type KafkaConfigSourceAdapter struct {
-	source kafkaconfig.KafkaConfigSource
-}
-
-// Priority 获取优先级
-func (k *KafkaConfigSourceAdapter) Priority() int {
-	return k.source.Priority()
-}
-
-// CanLoad 检查是否可以加载
-func (k *KafkaConfigSourceAdapter) CanLoad() bool {
-	return k.source.CanLoad()
-}
-
-// Load 加载配置
-func (k *KafkaConfigSourceAdapter) Load() (interfaces.Config, error) {
-	kafkaConfig, err := k.source.Load()
-	if err != nil {
-		return nil, err
-	}
-	return kafkaConfig, nil
-}

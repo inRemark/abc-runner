@@ -31,8 +31,6 @@ func LoadDefaultHttpConfig() *HttpAdapterConfig {
 	}
 }
 
-
-
 // HttpAdapterConfig HTTP适配器配置
 type HttpAdapterConfig struct {
 	// 基础连接配置

@@ -12,7 +12,7 @@ import (
 
 // TestHttpAdapter 测试HTTP适配器基本功能
 func TestHttpAdapter(t *testing.T) {
-	adapter := httpAdapter.NewHttpAdapter()
+	adapter := httpAdapter.NewHttpAdapter(nil) // 注入nil指标收集器用于测试
 
 	// 测试适配器基本属性
 	if adapter.GetProtocolName() != "http" {
@@ -27,7 +27,7 @@ func TestHttpAdapter(t *testing.T) {
 
 // TestHttpAdapterConnect 测试HTTP适配器连接
 func TestHttpAdapterConnect(t *testing.T) {
-	adapter := httpAdapter.NewHttpAdapter()
+	adapter := httpAdapter.NewHttpAdapter(nil) // 注入nil指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -52,7 +52,7 @@ func TestHttpAdapterConnect(t *testing.T) {
 
 // TestHttpAdapterMetrics 测试HTTP指标收集
 func TestHttpAdapterMetrics(t *testing.T) {
-	adapter := httpAdapter.NewHttpAdapter()
+	adapter := httpAdapter.NewHttpAdapter(nil) // 注入nil指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
