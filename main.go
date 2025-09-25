@@ -7,12 +7,12 @@ import (
 	"abc-runner/app/commands"
 	"abc-runner/app/core/di"
 	"abc-runner/app/core/interfaces"
-	"abc-runner/app/core/monitoring"
 	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -22,6 +22,93 @@ var (
 	logFile       *os.File
 	container     *di.Container
 )
+
+// SimpleMetricsCollector 简单指标收集器实现
+type SimpleMetricsCollector struct {
+	operations []interfaces.OperationResult
+	startTime  time.Time
+	mutex      sync.RWMutex
+}
+
+func (s *SimpleMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.operations = append(s.operations, *result)
+}
+
+func (s *SimpleMetricsCollector) GetMetrics() *interfaces.Metrics {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	totalOps := int64(len(s.operations))
+	var successOps, failedOps, readOps, writeOps int64
+	var totalLatency time.Duration
+	var minLatency, maxLatency time.Duration
+
+	if totalOps > 0 {
+		minLatency = s.operations[0].Duration
+		for _, op := range s.operations {
+			if op.Success {
+				successOps++
+			} else {
+				failedOps++
+			}
+			if op.IsRead {
+				readOps++
+			} else {
+				writeOps++
+			}
+			totalLatency += op.Duration
+			if op.Duration < minLatency {
+				minLatency = op.Duration
+			}
+			if op.Duration > maxLatency {
+				maxLatency = op.Duration
+			}
+		}
+	}
+
+	errorRate := float64(0)
+	if totalOps > 0 {
+		errorRate = float64(failedOps) / float64(totalOps) * 100
+	}
+
+	avgLatency := time.Duration(0)
+	if totalOps > 0 {
+		avgLatency = totalLatency / time.Duration(totalOps)
+	}
+
+	return &interfaces.Metrics{
+		TotalOps:   totalOps,
+		SuccessOps: successOps,
+		FailedOps:  failedOps,
+		ReadOps:    readOps,
+		WriteOps:   writeOps,
+		AvgLatency: avgLatency,
+		MinLatency: minLatency,
+		MaxLatency: maxLatency,
+		ErrorRate:  errorRate,
+		StartTime:  s.startTime,
+		EndTime:    time.Now(),
+		Duration:   time.Since(s.startTime),
+	}
+}
+
+func (s *SimpleMetricsCollector) Reset() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.operations = make([]interfaces.OperationResult, 0)
+	s.startTime = time.Now()
+}
+
+func (s *SimpleMetricsCollector) Export() map[string]interface{} {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return map[string]interface{}{
+		"total_ops":  len(s.operations),
+		"start_time": s.startTime,
+	}
+}
 
 // CustomAdapterFactory 自定义适配器工厂
 type CustomAdapterFactory struct {
@@ -115,8 +202,11 @@ func initializeCommandSystem() error {
 
 // registerCommandHandlers 注册命令处理器
 func registerCommandHandlers() error {
-	// 在应用层创建具体的指标收集器实现
-	metricsCollector := monitoring.NewEnhancedMetricsCollector()
+	// 创建简单的指标收集器实现，兼容 interfaces.MetricsCollector 接口
+	metricsCollector := &SimpleMetricsCollector{
+		operations: make([]interfaces.OperationResult, 0),
+		startTime:  time.Now(),
+	}
 
 	// 创建自定义适配器工厂，注入具体实现
 	adapterFactory := &CustomAdapterFactory{
