@@ -5,9 +5,10 @@ import (
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/utils"
 	"fmt"
+	"sort"
 )
 
-// ConfigManager 配置管理器
+// ConfigManager 统一配置管理器（合并了StandardConfigManager功能）
 type ConfigManager struct {
 	config     interfaces.Config
 	coreConfig *CoreConfig
@@ -29,6 +30,7 @@ func (m *ConfigManager) GetConfig() interfaces.Config {
 	return m.config
 }
 
+// SetConfig 设置配置（主要用于测试）
 func (m *ConfigManager) SetConfig(config interfaces.Config) {
 	m.config = config
 }
@@ -65,9 +67,52 @@ func (m *ConfigManager) GetCoreConfig() *CoreConfig {
 	return m.coreConfig
 }
 
+// LoadConfiguration 从多个配置源加载配置（合并自StandardConfigManager）
+func (m *ConfigManager) LoadConfiguration(sources ...unified.ConfigSource) error {
+	// 按优先级排序配置源（低优先级在前，高优先级在后）
+	sort.Slice(sources, func(i, j int) bool {
+		return sources[i].Priority() < sources[j].Priority()
+	})
+
+	// 依次加载配置，后面的配置源会覆盖前面的配置
+	var baseConfig interfaces.Config
+	var lastError error
+	for _, source := range sources {
+		if source.CanLoad() {
+			// 如果是环境变量或命令行参数源，设置基础配置
+			if envSource, ok := source.(*unified.EnvConfigSource); ok && baseConfig != nil {
+				envSource.SetConfig(baseConfig)
+			}
+			if argSource, ok := source.(*unified.ArgConfigSource); ok && baseConfig != nil {
+				argSource.SetConfig(baseConfig)
+			}
+			config, err := source.Load()
+			if err != nil {
+				lastError = err
+				continue
+			}
+			// 验证配置
+			if err := m.validator.Validate(config); err != nil {
+				lastError = err
+				continue
+			}
+			// 更新基础配置
+			baseConfig = config
+		}
+	}
+	if baseConfig != nil {
+		m.config = baseConfig
+		return nil
+	}
+	if lastError != nil {
+		return lastError
+	}
+	return fmt.Errorf("no configuration source could be loaded")
+}
+
 // ReloadConfiguration 重新加载配置
 func (m *ConfigManager) ReloadConfiguration() error {
-	// 重新加载配置的逻辑需要根据具体实现来定
-	// 这里我们简单地返回一个错误，表示此功能未实现
-	return fmt.Errorf("reload configuration not implemented")
+	// 重新加载逻辑与LoadConfiguration相同
+	// 实际实现中可能需要保存配置源信息
+	return fmt.Errorf("reload not implemented")
 }

@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 	
-	"abc-runner/app/core/base"
+	"abc-runner/app/core/monitoring"
 )
 
 // KafkaMetricsCollector Kafka特定指标收集器
 type KafkaMetricsCollector struct {
-	*base.DefaultMetricsCollector
+	*monitoring.EnhancedMetricsCollector
 	
 	// Kafka特定指标
 	kafkaMetrics map[string]interface{}
@@ -58,7 +58,7 @@ type PartitionMetrics struct {
 // NewKafkaMetricsCollector 创建Kafka指标收集器
 func NewKafkaMetricsCollector() *KafkaMetricsCollector {
 	return &KafkaMetricsCollector{
-		DefaultMetricsCollector: base.NewDefaultMetricsCollector(),
+		EnhancedMetricsCollector: monitoring.NewEnhancedMetricsCollector(),
 		kafkaMetrics:           make(map[string]interface{}),
 		produceLatencies:       make([]time.Duration, 0),
 		produceBatchSizes:      make([]int, 0),
@@ -447,8 +447,8 @@ func (k *KafkaMetricsCollector) Reset() {
 	defer k.mutex.Unlock()
 	
 	// 重置基础指标
-	if k.DefaultMetricsCollector != nil {
-		k.DefaultMetricsCollector.Reset()
+	if k.EnhancedMetricsCollector != nil {
+		k.EnhancedMetricsCollector.Reset()
 	}
 	
 	// 重置Kafka特定指标

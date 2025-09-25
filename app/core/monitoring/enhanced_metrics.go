@@ -1,22 +1,31 @@
 package monitoring
 
 import (
+	"sort"
 	"sync"
 	"time"
 
-	"abc-runner/app/core/base"
 	"abc-runner/app/core/interfaces"
 )
 
-// EnhancedMetricsCollector 增强的指标收集器
+// EnhancedMetricsCollector 增强的指标收集器（直接实现所有功能）
 type EnhancedMetricsCollector struct {
-	*base.DefaultMetricsCollector
+	// 基础指标收集功能（原 DefaultMetricsCollector 功能）
+	operations     []interfaces.OperationResult
+	startTime      time.Time
+	totalOps       int64
+	successOps     int64
+	failedOps      int64
+	readOps        int64
+	writeOps       int64
+	durations      []time.Duration
+	
+	// 增强功能
 	systemMonitor      *SystemMonitor
 	performanceMonitor *PerformanceMonitor
 	protocolMetrics    map[string]interface{}
 	operationMetrics   map[string]*OperationTypeMetrics
 	mutex              sync.RWMutex
-	startTime          time.Time
 }
 
 // OperationTypeMetrics 操作类型指标
@@ -34,12 +43,16 @@ type OperationTypeMetrics struct {
 // NewEnhancedMetricsCollector 创建增强指标收集器
 func NewEnhancedMetricsCollector() *EnhancedMetricsCollector {
 	return &EnhancedMetricsCollector{
-		DefaultMetricsCollector: base.NewDefaultMetricsCollector(),
-		systemMonitor:           NewSystemMonitor(),
-		performanceMonitor:      NewPerformanceMonitor(200),
-		protocolMetrics:         make(map[string]interface{}),
-		operationMetrics:        make(map[string]*OperationTypeMetrics),
-		startTime:               time.Now(),
+		// 初始化基础指标收集功能
+		operations:         make([]interfaces.OperationResult, 0),
+		durations:         make([]time.Duration, 0),
+		startTime:         time.Now(),
+		
+		// 初始化增强功能
+		systemMonitor:      NewSystemMonitor(),
+		performanceMonitor: NewPerformanceMonitor(200),
+		protocolMetrics:    make(map[string]interface{}),
+		operationMetrics:   make(map[string]*OperationTypeMetrics),
 	}
 }
 
@@ -55,20 +68,34 @@ func (c *EnhancedMetricsCollector) Stop() {
 	c.performanceMonitor.Stop()
 }
 
-// RecordOperation 记录操作结果（重写基类方法）
+// RecordOperation 记录操作结果（实现基础功能 + 增强功能）
 func (c *EnhancedMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
-	// 调用基类方法
-	c.DefaultMetricsCollector.RecordOperation(result)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	
+	// 基础指标记录（原 DefaultMetricsCollector 功能）
+	c.operations = append(c.operations, *result)
+	c.durations = append(c.durations, result.Duration)
+	c.totalOps++
 
-	// 记录操作类型指标
+	if result.Success {
+		c.successOps++
+	} else {
+		c.failedOps++
+	}
+
+	if result.IsRead {
+		c.readOps++
+	} else {
+		c.writeOps++
+	}
+
+	// 增强功能：记录操作类型指标
 	c.recordOperationTypeMetrics(result)
 }
 
 // recordOperationTypeMetrics 记录操作类型指标
 func (c *EnhancedMetricsCollector) recordOperationTypeMetrics(result *interfaces.OperationResult) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	// 从结果元数据中获取操作类型
 	operationType := "unknown"
 	if result.Metadata != nil {
@@ -109,6 +136,97 @@ func (c *EnhancedMetricsCollector) recordOperationTypeMetrics(result *interfaces
 	metrics.AvgLatency = metrics.TotalTime / time.Duration(metrics.Count)
 }
 
+// GetMetrics 获取基础指标（实现 interfaces.MetricsCollector 接口）
+func (c *EnhancedMetricsCollector) GetMetrics() *interfaces.Metrics {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if len(c.durations) == 0 {
+		return &interfaces.Metrics{
+			StartTime: c.startTime,
+			EndTime:   time.Now(),
+		}
+	}
+
+	// 计算统计数据
+	durations := make([]time.Duration, len(c.durations))
+	copy(durations, c.durations)
+
+	return c.calculateMetrics(durations)
+}
+
+// calculateMetrics 计算指标
+func (c *EnhancedMetricsCollector) calculateMetrics(durations []time.Duration) *interfaces.Metrics {
+	if len(durations) == 0 {
+		return &interfaces.Metrics{}
+	}
+
+	// 排序计算分位数
+	sort.Slice(durations, func(i, j int) bool {
+		return durations[i] < durations[j]
+	})
+
+	endTime := time.Now()
+	totalDuration := endTime.Sub(c.startTime)
+
+	metrics := &interfaces.Metrics{
+		TotalOps:   c.totalOps,
+		SuccessOps: c.successOps,
+		FailedOps:  c.failedOps,
+		ReadOps:    c.readOps,
+		WriteOps:   c.writeOps,
+		MinLatency: durations[0],
+		MaxLatency: durations[len(durations)-1],
+		StartTime:  c.startTime,
+		EndTime:    endTime,
+		Duration:   totalDuration,
+	}
+
+	// 计算平均延迟
+	var totalLatency time.Duration
+	for _, d := range durations {
+		totalLatency += d
+	}
+	metrics.AvgLatency = totalLatency / time.Duration(len(durations))
+
+	// 计算分位数
+	metrics.P90Latency = durations[int(float64(len(durations))*0.9)]
+	metrics.P95Latency = durations[int(float64(len(durations))*0.95)]
+	metrics.P99Latency = durations[int(float64(len(durations))*0.99)]
+
+	// 计算RPS
+	if totalDuration.Seconds() > 0 {
+		metrics.RPS = int32(float64(c.totalOps) / totalDuration.Seconds())
+	}
+
+	// 计算错误率
+	if c.totalOps > 0 {
+		metrics.ErrorRate = float64(c.failedOps) / float64(c.totalOps) * 100
+	}
+
+	return metrics
+}
+
+// Reset 重置指标（实现 interfaces.MetricsCollector 接口）
+func (c *EnhancedMetricsCollector) Reset() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	// 重置基础指标
+	c.operations = make([]interfaces.OperationResult, 0)
+	c.durations = make([]time.Duration, 0)
+	c.startTime = time.Now()
+	c.totalOps = 0
+	c.successOps = 0
+	c.failedOps = 0
+	c.readOps = 0
+	c.writeOps = 0
+
+	// 重置增强指标
+	c.operationMetrics = make(map[string]*OperationTypeMetrics)
+	c.protocolMetrics = make(map[string]interface{})
+}
+
 // RecordProtocolMetric 记录协议特定指标
 func (c *EnhancedMetricsCollector) RecordProtocolMetric(key string, value interface{}) {
 	c.mutex.Lock()
@@ -118,7 +236,7 @@ func (c *EnhancedMetricsCollector) RecordProtocolMetric(key string, value interf
 
 // GetEnhancedMetrics 获取增强指标
 func (c *EnhancedMetricsCollector) GetEnhancedMetrics() *EnhancedMetrics {
-	basicMetrics := c.DefaultMetricsCollector.GetMetrics()
+	basicMetrics := c.GetMetrics()
 
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -154,18 +272,29 @@ func (c *EnhancedMetricsCollector) GetEnhancedMetrics() *EnhancedMetrics {
 	}
 }
 
-// Export 导出指标（重写基类方法）
+// Export 导出指标（实现 interfaces.MetricsCollector 接口）
 func (c *EnhancedMetricsCollector) Export() map[string]interface{} {
-	baseExport := c.DefaultMetricsCollector.Export()
+	basicMetrics := c.GetMetrics()
 	enhancedMetrics := c.GetEnhancedMetrics()
 
 	// 合并指标
 	result := make(map[string]interface{})
 
 	// 基础指标
-	for k, v := range baseExport {
-		result[k] = v
-	}
+	result["rps"] = basicMetrics.RPS
+	result["total_ops"] = basicMetrics.TotalOps
+	result["success_ops"] = basicMetrics.SuccessOps
+	result["failed_ops"] = basicMetrics.FailedOps
+	result["read_ops"] = basicMetrics.ReadOps
+	result["write_ops"] = basicMetrics.WriteOps
+	result["avg_latency"] = basicMetrics.AvgLatency.Nanoseconds()
+	result["min_latency"] = basicMetrics.MinLatency.Nanoseconds()
+	result["max_latency"] = basicMetrics.MaxLatency.Nanoseconds()
+	result["p90_latency"] = basicMetrics.P90Latency.Nanoseconds()
+	result["p95_latency"] = basicMetrics.P95Latency.Nanoseconds()
+	result["p99_latency"] = basicMetrics.P99Latency.Nanoseconds()
+	result["error_rate"] = basicMetrics.ErrorRate
+	result["duration"] = basicMetrics.Duration.Nanoseconds()
 
 	// 操作类型指标
 	result["operation_metrics"] = enhancedMetrics.OperationMetrics
@@ -183,18 +312,6 @@ func (c *EnhancedMetricsCollector) Export() map[string]interface{} {
 	result["collection_duration"] = enhancedMetrics.CollectionDuration.Nanoseconds()
 
 	return result
-}
-
-// Reset 重置指标（重写基类方法）
-func (c *EnhancedMetricsCollector) Reset() {
-	c.DefaultMetricsCollector.Reset()
-
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.operationMetrics = make(map[string]*OperationTypeMetrics)
-	c.protocolMetrics = make(map[string]interface{})
-	c.startTime = time.Now()
 }
 
 // EnhancedMetrics 增强指标结构

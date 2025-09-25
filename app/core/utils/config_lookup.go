@@ -6,25 +6,28 @@ import (
 	"path/filepath"
 )
 
+// ConfigDirName 配置目录名称常量
+const ConfigDirName = ".abc-runner"
+
 // StandardConfigPaths 标准配置文件查找路径
 var StandardConfigPaths = map[string][]string{
 	"redis": {
 		"config/redis.yaml",
 		"./config/redis.yaml",
 		"../config/redis.yaml",
-		filepath.Join(os.Getenv("HOME"), ".abc-runner", "redis.yaml"),
+		filepath.Join(os.Getenv("HOME"), ConfigDirName, "redis.yaml"),
 	},
 	"http": {
 		"config/http.yaml",
 		"./config/http.yaml",
 		"../config/http.yaml",
-		filepath.Join(os.Getenv("HOME"), ".abc-runner", "http.yaml"),
+		filepath.Join(os.Getenv("HOME"), ConfigDirName, "http.yaml"),
 	},
 	"kafka": {
 		"config/kafka.yaml",
 		"./config/kafka.yaml",
 		"../config/kafka.yaml",
-		filepath.Join(os.Getenv("HOME"), ".abc-runner", "kafka.yaml"),
+		filepath.Join(os.Getenv("HOME"), ConfigDirName, "kafka.yaml"),
 	},
 }
 
@@ -84,7 +87,7 @@ func FindCoreConfigFile() string {
 		"config/core.yaml",
 		"./config/core.yaml",
 		"../config/core.yaml",
-		filepath.Join(os.Getenv("HOME"), ".abc-runner", "core.yaml"),
+		filepath.Join(os.Getenv("HOME"), ConfigDirName, "core.yaml"),
 	}
 
 	log.Println("Searching for core configuration file...")

@@ -18,7 +18,7 @@ type EnhancedRunner struct {
 	keyGenerator      interfaces.KeyGenerator
 	operationRegistry *utils.OperationRegistry
 	progressTracker   *utils.ProgressTracker
-	retryConfig       *utils.RetryConfig
+	// 删除了重复的 retryConfig，由 adapter 内的 errorHandler 处理
 }
 
 // NewEnhancedRunner 创建增强运行引擎
@@ -37,7 +37,7 @@ func NewEnhancedRunner(
 		keyGenerator:      keyGenerator,
 		operationRegistry: operationRegistry,
 		progressTracker:   utils.NewProgressTracker(int64(benchmarkConfig.GetTotal())),
-		retryConfig:       utils.DefaultRetryConfig(),
+		// 重试配置由 adapter 内的 errorHandler 处理
 	}
 }
 
