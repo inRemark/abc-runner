@@ -26,3 +26,4 @@ releases/*
 abc-runner
 test_output_*.json
 
+app/core/di/di.md
