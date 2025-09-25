@@ -5,20 +5,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/segmentio/kafka-go"
-	"abc-runner/app/core/interfaces"
 	"abc-runner/app/adapters/kafka/connection"
 	"abc-runner/app/adapters/kafka/metrics"
+	"abc-runner/app/core/interfaces"
+
+	"github.com/segmentio/kafka-go"
 )
 
 // ProducerOperations 生产者操作实现
 type ProducerOperations struct {
 	pool             *connection.ConnectionPool
-	metricsCollector *metrics.KafkaMetricsCollector
+	metricsCollector *metrics.MetricsCollector
 }
 
 // NewProducerOperations 创建生产者操作实例
-func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector *metrics.KafkaMetricsCollector) *ProducerOperations {
+func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector *metrics.MetricsCollector) *ProducerOperations {
 	return &ProducerOperations{
 		pool:             pool,
 		metricsCollector: metricsCollector,
@@ -28,7 +29,7 @@ func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector *me
 // ExecuteProduceMessage 执行单条消息生产
 func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// 解析参数
 	topic, ok := operation.Params["topic"].(string)
 	if !ok || topic == "" {
@@ -39,12 +40,26 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 			Error:    fmt.Errorf("topic parameter is required"),
 		}, fmt.Errorf("topic parameter is required")
 	}
-	
+
 	// 获取生产者
 	producer, err := p.pool.GetProducer()
 	if err != nil {
 		duration := time.Since(startTime)
-		p.metricsCollector.RecordProduceOperation(topic, -1, 0, 1, duration, false, err)
+		// 使用核心接口记录指标
+		operationResult := &interfaces.OperationResult{
+			Success:  false,
+			IsRead:   false,
+			Duration: duration,
+			Error:    err,
+			Metadata: map[string]interface{}{
+				"operation_type": "produce",
+				"topic":          topic,
+				"partition":      -1,
+				"message_size":   0,
+				"batch_size":     1,
+			},
+		}
+		p.metricsCollector.RecordOperation(operationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -53,14 +68,14 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 		}, err
 	}
 	defer p.pool.ReturnProducer(producer)
-	
+
 	// 构建Kafka消息
 	kafkaMessage := kafka.Message{
 		Topic: topic,
 		Key:   []byte(operation.Key),
 		Value: []byte(fmt.Sprintf("%v", operation.Value)),
 	}
-	
+
 	// 添加Headers
 	if headers, ok := operation.Params["headers"].(map[string]string); ok {
 		kafkaMessage.Headers = make([]kafka.Header, 0, len(headers))
@@ -71,22 +86,36 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 			})
 		}
 	}
-	
+
 	// 设置分区（如果指定）
 	if partition, ok := operation.Params["partition"].(int32); ok {
 		kafkaMessage.Partition = int(partition)
 	}
-	
+
 	// 执行生产操作
 	err = producer.WriteMessages(ctx, kafkaMessage)
 	duration := time.Since(startTime)
-	
+
 	messageSize := len(kafkaMessage.Key) + len(kafkaMessage.Value)
 	success := err == nil
-	
-	// 记录指标
-	p.metricsCollector.RecordProduceOperation(topic, int32(kafkaMessage.Partition), messageSize, 1, duration, success, err)
-	
+
+	// 使用核心接口记录指标
+	operationResult := &interfaces.OperationResult{
+		Success:  success,
+		IsRead:   false,
+		Duration: duration,
+		Error:    err,
+		Metadata: map[string]interface{}{
+			"operation_type": "produce",
+			"topic":          topic,
+			"partition":      int32(kafkaMessage.Partition),
+			"message_size":   int64(messageSize),
+			"batch_size":     1,
+			"client_id":      "producer",
+		},
+	}
+	p.metricsCollector.RecordOperation(operationResult)
+
 	if err != nil {
 		return &interfaces.OperationResult{
 			Success:  false,
@@ -95,7 +124,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 			Error:    fmt.Errorf("failed to produce message: %w", err),
 		}, err
 	}
-	
+
 	// 构建结果
 	result := &ProduceResult{
 		Partition: int32(kafkaMessage.Partition),
@@ -103,7 +132,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 		Timestamp: time.Now(),
 		Duration:  duration,
 	}
-	
+
 	return &interfaces.OperationResult{
 		Success:  true,
 		Duration: duration,
@@ -122,7 +151,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 // ExecuteProduceBatch 执行批量消息生产
 func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// 解析参数
 	topic, ok := operation.Params["topic"].(string)
 	if !ok || topic == "" {
@@ -133,7 +162,7 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			Error:    fmt.Errorf("topic parameter is required"),
 		}, fmt.Errorf("topic parameter is required")
 	}
-	
+
 	messages, ok := operation.Params["messages"].([]*Message)
 	if !ok || len(messages) == 0 {
 		return &interfaces.OperationResult{
@@ -143,12 +172,26 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			Error:    fmt.Errorf("messages parameter is required"),
 		}, fmt.Errorf("messages parameter is required")
 	}
-	
+
 	// 获取生产者
 	producer, err := p.pool.GetProducer()
 	if err != nil {
 		duration := time.Since(startTime)
-		p.metricsCollector.RecordProduceOperation(topic, -1, 0, len(messages), duration, false, err)
+		// 使用核心接口记录指标
+		operationResult := &interfaces.OperationResult{
+			Success:  false,
+			IsRead:   false,
+			Duration: duration,
+			Error:    err,
+			Metadata: map[string]interface{}{
+				"operation_type": "produce",
+				"topic":          topic,
+				"partition":      -1,
+				"message_size":   0,
+				"batch_size":     len(messages),
+			},
+		}
+		p.metricsCollector.RecordOperation(operationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -157,11 +200,11 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 		}, err
 	}
 	defer p.pool.ReturnProducer(producer)
-	
+
 	// 转换为Kafka消息
 	kafkaMessages := make([]kafka.Message, 0, len(messages))
 	totalSize := 0
-	
+
 	for _, msg := range messages {
 		kafkaMessage := kafka.Message{
 			Topic:     topic,
@@ -169,7 +212,7 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			Value:     []byte(msg.Value),
 			Partition: int(msg.Partition),
 		}
-		
+
 		// 添加Headers
 		if len(msg.Headers) > 0 {
 			kafkaMessage.Headers = make([]kafka.Header, 0, len(msg.Headers))
@@ -180,21 +223,35 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 				})
 			}
 		}
-		
+
 		kafkaMessages = append(kafkaMessages, kafkaMessage)
 		totalSize += len(kafkaMessage.Key) + len(kafkaMessage.Value)
 	}
-	
+
 	// 执行批量生产操作
 	err = producer.WriteMessages(ctx, kafkaMessages...)
 	duration := time.Since(startTime)
-	
+
 	success := err == nil
 	batchSize := len(messages)
-	
-	// 记录指标
-	p.metricsCollector.RecordProduceOperation(topic, -1, totalSize, batchSize, duration, success, err)
-	
+
+	// 使用核心接口记录指标
+	batchOperationResult := &interfaces.OperationResult{
+		Success:  success,
+		IsRead:   false,
+		Duration: duration,
+		Error:    err,
+		Metadata: map[string]interface{}{
+			"operation_type": "produce",
+			"topic":          topic,
+			"partition":      -1,
+			"message_size":   int64(totalSize),
+			"batch_size":     batchSize,
+			"client_id":      "producer",
+		},
+	}
+	p.metricsCollector.RecordOperation(batchOperationResult)
+
 	if err != nil {
 		return &interfaces.OperationResult{
 			Success:  false,
@@ -203,7 +260,7 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			Error:    fmt.Errorf("failed to produce batch messages: %w", err),
 		}, err
 	}
-	
+
 	// 构建批量结果
 	results := make([]ProduceResult, len(messages))
 	for i := range results {
@@ -214,14 +271,14 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			Duration:  duration / time.Duration(len(messages)), // 平均时间
 		}
 	}
-	
+
 	batchResult := &BatchResult{
 		Results:       results,
 		SuccessCount:  len(results),
 		FailureCount:  0,
 		TotalDuration: duration,
 	}
-	
+
 	return &interfaces.OperationResult{
 		Success:  true,
 		Duration: duration,

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"abc-runner/app/adapters/redis/operations"
+	"abc-runner/app/core/interfaces"
 )
 
 // MetricsCollector Redis指标收集器
@@ -288,6 +289,102 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 	}
 
 	return result
+}
+
+// RecordOperation 实现核心接口（适配 interfaces.MetricsCollector）
+func (mc *MetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+	// 转换为 Redis 特定的 OperationResult 类型
+	redisResult := operations.OperationResult{
+		Success:   result.Success,
+		IsRead:    result.IsRead,
+		Duration:  result.Duration,
+		Error:     result.Error,
+		Value:     result.Value,
+		ExtraData: result.Metadata,
+	}
+
+	// 调用原有的收集方法
+	mc.CollectOperation(redisResult)
+}
+
+// GetMetricsForCore 为核心接口返回 Metrics 结构
+func (mc *MetricsCollector) GetMetricsForCore() *interfaces.Metrics {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+
+	duration := time.Since(mc.startTime)
+
+	metrics := &interfaces.Metrics{
+		TotalOps:   mc.totalOperations,
+		SuccessOps: mc.successOperations,
+		FailedOps:  mc.failedOperations,
+		ReadOps:    mc.readOperations,
+		WriteOps:   mc.writeOperations,
+		StartTime:  mc.startTime,
+		EndTime:    time.Now(),
+		Duration:   duration,
+	}
+
+	// 计算延迟指标
+	if mc.totalOperations > 0 {
+		metrics.AvgLatency = mc.totalLatency / time.Duration(mc.totalOperations)
+		metrics.MinLatency = mc.minLatency
+		metrics.MaxLatency = mc.maxLatency
+
+		// 计算百分位数
+		if len(mc.latencyHistory) > 0 {
+			sortedLatencies := make([]time.Duration, len(mc.latencyHistory))
+			copy(sortedLatencies, mc.latencyHistory)
+			sort.Slice(sortedLatencies, func(i, j int) bool {
+				return sortedLatencies[i] < sortedLatencies[j]
+			})
+
+			if len(sortedLatencies) > 0 {
+				metrics.P90Latency = sortedLatencies[len(sortedLatencies)*90/100]
+				metrics.P95Latency = sortedLatencies[len(sortedLatencies)*95/100]
+				metrics.P99Latency = sortedLatencies[len(sortedLatencies)*99/100]
+			}
+		}
+	}
+
+	return metrics
+}
+
+// Export 实现核心接口（适配 interfaces.MetricsCollector）
+func (mc *MetricsCollector) Export() map[string]interface{} {
+	metrics := mc.GetMetricsForCore()
+	duration := time.Since(mc.startTime)
+
+	// 计算基本指标
+	errorRate := float64(0)
+	rps := float64(0)
+	successRate := float64(0)
+
+	if mc.totalOperations > 0 {
+		errorRate = float64(mc.failedOperations) / float64(mc.totalOperations) * 100
+		successRate = float64(mc.successOperations) / float64(mc.totalOperations) * 100
+		rps = float64(mc.totalOperations) / duration.Seconds()
+	}
+
+	return map[string]interface{}{
+		"total_ops":    mc.totalOperations,
+		"success_ops":  mc.successOperations,
+		"failed_ops":   mc.failedOperations,
+		"read_ops":     mc.readOperations,
+		"write_ops":    mc.writeOperations,
+		"error_rate":   errorRate,
+		"success_rate": successRate,
+		"rps":          rps,
+		"avg_latency":  metrics.AvgLatency.Nanoseconds(),
+		"min_latency":  metrics.MinLatency.Nanoseconds(),
+		"max_latency":  metrics.MaxLatency.Nanoseconds(),
+		"p90_latency":  metrics.P90Latency.Nanoseconds(),
+		"p95_latency":  metrics.P95Latency.Nanoseconds(),
+		"p99_latency":  metrics.P99Latency.Nanoseconds(),
+		"duration":     duration.Nanoseconds(),
+		"start_time":   mc.startTime.Unix(),
+		"end_time":     time.Now().Unix(),
+	}
 }
 
 // calculateLatencyMetrics 计算延迟指标

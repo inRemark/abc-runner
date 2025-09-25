@@ -10,11 +10,11 @@ import (
 
 // HttpMetricsReporter HTTP指标报告器
 type HttpMetricsReporter struct {
-	collector *HttpMetricsCollector
+	collector *MetricsCollector
 }
 
 // NewHttpMetricsReporter 创建HTTP指标报告器
-func NewHttpMetricsReporter(collector *HttpMetricsCollector) *HttpMetricsReporter {
+func NewHttpMetricsReporter(collector *MetricsCollector) *HttpMetricsReporter {
 	return &HttpMetricsReporter{
 		collector: collector,
 	}

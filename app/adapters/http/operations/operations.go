@@ -15,14 +15,14 @@ import (
 type HttpOperations struct {
 	pool             *connection.ConnectionPool
 	config           *httpConfig.HttpAdapterConfig
-	metricsCollector *metrics.HttpMetricsCollector
+	metricsCollector *metrics.MetricsCollector
 }
 
 // NewHttpOperations 创建HTTP操作执行器
 func NewHttpOperations(
 	pool *connection.ConnectionPool,
 	config *httpConfig.HttpAdapterConfig,
-	metricsCollector *metrics.HttpMetricsCollector,
+	metricsCollector *metrics.MetricsCollector,
 ) *HttpOperations {
 	return &HttpOperations{
 		pool:             pool,
@@ -80,13 +80,19 @@ func (h *HttpOperations) ExecuteOperation(ctx context.Context, operation interfa
 	}
 
 	// 记录HTTP特定指标
-	if response != nil {
-		h.metricsCollector.RecordHttpResponse(
-			response.StatusCode,
-			reqConfig.Method,
-			reqConfig.Path,
-			duration,
-		)
+	if response != nil && h.metricsCollector != nil {
+		// 使用核心接口记录指标，通过metadata传递HTTP特定信息
+		operationResult := &interfaces.OperationResult{
+			Success:  response.StatusCode >= 200 && response.StatusCode < 300,
+			IsRead:   h.isReadOperation(operation.Type),
+			Duration: duration,
+			Metadata: map[string]interface{}{
+				"status_code": response.StatusCode,
+				"method":      reqConfig.Method,
+				"url":         reqConfig.Path,
+			},
+		}
+		h.metricsCollector.RecordOperation(operationResult)
 	}
 
 	return result, err

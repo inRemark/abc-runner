@@ -24,7 +24,7 @@ type HttpAdapter struct {
 	config   *httpConfig.HttpAdapterConfig
 
 	// 指标收集
-	metricsCollector *metrics.HttpMetricsCollector
+	metricsCollector *metrics.MetricsCollector
 	metricsReporter  *metrics.HttpMetricsReporter
 
 	// 操作执行器
@@ -37,11 +37,24 @@ type HttpAdapter struct {
 
 // NewHttpAdapter 创建HTTP适配器
 func NewHttpAdapter(metricsCollector interfaces.MetricsCollector) *HttpAdapter {
-	return &HttpAdapter{
-		BaseAdapter:      base.NewBaseAdapter("http"),
-		metricsCollector: metrics.NewHttpMetricsCollector(),
-		metricsReporter:  metrics.NewHttpMetricsReporter(metrics.NewHttpMetricsCollector()),
+	adapter := &HttpAdapter{
+		BaseAdapter: base.NewBaseAdapter("http"),
 	}
+
+	// 使用传入的增强指标收集器，而不是创建专用收集器
+	if metricsCollector != nil {
+		adapter.SetMetricsCollector(metricsCollector)
+		// 不再使用专用的HTTP指标收集器，直接使用通用接口
+		adapter.metricsCollector = nil
+		adapter.metricsReporter = nil
+	} else {
+		// 如果没有传入收集器，使用默认的HTTP专用收集器作为后备
+		httpCollector := metrics.NewMetricsCollector()
+		adapter.metricsCollector = httpCollector
+		adapter.metricsReporter = metrics.NewHttpMetricsReporter(httpCollector)
+	}
+
+	return adapter
 }
 
 // Connect 初始化连接
@@ -79,7 +92,18 @@ func (h *HttpAdapter) Connect(ctx context.Context, config interfaces.Config) err
 	}
 
 	// 初始化操作执行器和工厂
-	h.httpOps = operations.NewHttpOperations(h.connPool, h.config, h.metricsCollector)
+	// 为操作执行器确保有一个有效的HTTP指标收集器
+	var httpMetricsCollector *metrics.MetricsCollector
+	if h.metricsCollector != nil {
+		httpMetricsCollector = h.metricsCollector
+	} else {
+		// 如果没有专用收集器，创建一个用于操作执行器
+		httpMetricsCollector = metrics.NewMetricsCollector()
+		// 同时设置为适配器的专用收集器
+		h.metricsCollector = httpMetricsCollector
+	}
+
+	h.httpOps = operations.NewHttpOperations(h.connPool, h.config, httpMetricsCollector)
 	h.operationFactory = operations.NewHttpOperationFactory(h.config)
 
 	// 测试连接
@@ -108,8 +132,16 @@ func (h *HttpAdapter) Execute(ctx context.Context, operation interfaces.Operatio
 	if result != nil {
 		result.Duration = time.Since(startTime)
 
-		// 记录指标
-		h.metricsCollector.RecordOperation(result)
+		// 使用BaseAdapter的通用指标收集器，而不是专用的HTTP收集器
+		if baseCollector := h.GetMetricsCollector(); baseCollector != nil {
+			baseCollector.RecordOperation(result)
+		}
+
+		// 如果还有专用收集器，也同时记录（向后兼容）
+		if h.metricsCollector != nil {
+			// 转换为HTTP特定的结果类型
+			h.metricsCollector.RecordOperation(result)
+		}
 	}
 
 	return result, err
@@ -179,15 +211,19 @@ func (h *HttpAdapter) HealthCheck(ctx context.Context) error {
 // GetProtocolMetrics 获取HTTP特定指标
 func (h *HttpAdapter) GetProtocolMetrics() map[string]interface{} {
 	baseMetrics := h.BaseAdapter.GetProtocolMetrics()
-	httpMetrics := h.metricsCollector.GetHttpSpecificMetrics()
 
-	// 合并指标
+	// 使用通用指标收集器的Export方法
 	result := make(map[string]interface{})
 	for k, v := range baseMetrics {
 		result[k] = v
 	}
-	for k, v := range httpMetrics {
-		result[k] = v
+
+	// 如果有专用收集器，也添加其指标（向后兼容）
+	if h.metricsCollector != nil {
+		httpMetrics := h.metricsCollector.GetHttpSpecificMetrics()
+		for k, v := range httpMetrics {
+			result[k] = v
+		}
 	}
 
 	// 添加连接池状态
@@ -291,6 +327,12 @@ func (h *HttpAdapter) GetOperationFactory() interfaces.OperationFactory {
 
 // GetMetricsCollector 获取指标收集器
 func (h *HttpAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+	// 优先返回BaseAdapter的通用指标收集器（包含系统指标）
+	if baseCollector := h.BaseAdapter.GetMetricsCollector(); baseCollector != nil {
+		return baseCollector
+	}
+
+	// 如果没有通用收集器，返回HTTP专用收集器（向后兼容）
 	return h.metricsCollector
 }
 

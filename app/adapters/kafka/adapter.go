@@ -6,61 +6,73 @@ import (
 	"sync"
 	"time"
 
-	"github.com/segmentio/kafka-go"
-	"abc-runner/app/core/base"
-	"abc-runner/app/core/interfaces"
 	kafkaConfig "abc-runner/app/adapters/kafka/config"
 	"abc-runner/app/adapters/kafka/connection"
 	"abc-runner/app/adapters/kafka/metrics"
 	"abc-runner/app/adapters/kafka/operations"
+	"abc-runner/app/core/base"
+	"abc-runner/app/core/interfaces"
+
+	"github.com/segmentio/kafka-go"
 )
 
 // KafkaAdapter Kafka协议适配器实现
 type KafkaAdapter struct {
 	*base.BaseAdapter
-	
+
 	// 连接管理
-	connPool   *connection.ConnectionPool
-	config     *kafkaConfig.KafkaAdapterConfig
-	
+	connPool *connection.ConnectionPool
+	config   *kafkaConfig.KafkaAdapterConfig
+
 	// 指标收集
-	metricsCollector *metrics.KafkaMetricsCollector
-	
+	metricsCollector *metrics.MetricsCollector
+
 	// 操作执行器
-	producerOps *operations.ProducerOperations
-	consumerOps *operations.ConsumerOperations
+	producerOps      *operations.ProducerOperations
+	consumerOps      *operations.ConsumerOperations
 	operationFactory *operations.KafkaOperationFactory
-	
+
 	// 同步控制
 	mutex sync.RWMutex
 }
 
 // NewKafkaAdapter 创建Kafka适配器
 func NewKafkaAdapter(metricsCollector interfaces.MetricsCollector) *KafkaAdapter {
-	return &KafkaAdapter{
-		BaseAdapter:      base.NewBaseAdapter("kafka"),
-		metricsCollector: metrics.NewKafkaMetricsCollector(),
+	adapter := &KafkaAdapter{
+		BaseAdapter: base.NewBaseAdapter("kafka"),
 	}
+
+	// 使用传入的增强指标收集器，而不是创建专用收集器
+	if metricsCollector != nil {
+		adapter.SetMetricsCollector(metricsCollector)
+		// 不再使用专用的Kafka指标收集器，直接使用通用接口
+		adapter.metricsCollector = nil
+	} else {
+		// 如果没有传入收集器，使用默认的Kafka专用收集器作为后备
+		adapter.metricsCollector = metrics.NewMetricsCollector()
+	}
+
+	return adapter
 }
 
 // Connect 初始化连接
 func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
-	
+
 	// 验证并转换配置
 	kafkaConfig, ok := config.(*kafkaConfig.KafkaAdapterConfig)
 	if !ok {
 		return fmt.Errorf("invalid config type for Kafka adapter")
 	}
-	
+
 	if err := k.ValidateConfig(config); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
-	
+
 	k.config = kafkaConfig
 	k.SetConfig(config)
-	
+
 	// 初始化连接池
 	poolConfig := connection.PoolConfig{
 		MaxConnections:    kafkaConfig.Performance.ConnectionPoolSize,
@@ -68,27 +80,38 @@ func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) er
 		ConsumerPoolSize:  kafkaConfig.Performance.ConsumerPoolSize,
 		ConnectionTimeout: kafkaConfig.Benchmark.GetTimeout(),
 	}
-	
+
 	var err error
 	k.connPool, err = connection.NewConnectionPool(kafkaConfig, poolConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create connection pool: %w", err)
 	}
-	
+
 	// 测试连接
 	if err := k.testConnection(ctx); err != nil {
 		return fmt.Errorf("connection test failed: %w", err)
 	}
-	
+
 	k.SetConnected(true)
 	k.UpdateMetric("connected_at", time.Now())
 	k.UpdateMetric("brokers", k.config.Brokers)
-	
+
 	// 初始化操作执行器
-	k.producerOps = operations.NewProducerOperations(k.connPool, k.metricsCollector)
-	k.consumerOps = operations.NewConsumerOperations(k.connPool, k.metricsCollector)
+	// 为操作执行器确保有一个有效的Kafka指标收集器
+	var kafkaMetricsCollector *metrics.MetricsCollector
+	if k.metricsCollector != nil {
+		kafkaMetricsCollector = k.metricsCollector
+	} else {
+		// 如果没有专用收集器，创建一个用于操作执行器
+		kafkaMetricsCollector = metrics.NewMetricsCollector()
+		// 同时设置为适配器的专用收集器
+		k.metricsCollector = kafkaMetricsCollector
+	}
+
+	k.producerOps = operations.NewProducerOperations(k.connPool, kafkaMetricsCollector)
+	k.consumerOps = operations.NewConsumerOperations(k.connPool, kafkaMetricsCollector)
 	k.operationFactory = operations.NewKafkaOperationFactory(k.config)
-	
+
 	return nil
 }
 
@@ -97,18 +120,26 @@ func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operati
 	if !k.IsConnected() {
 		return nil, fmt.Errorf("kafka adapter not connected")
 	}
-	
+
 	startTime := time.Now()
-	
+
 	// 根据操作类型选择执行方法
 	result, err := k.executeOperation(ctx, operation)
 	if result != nil {
 		result.Duration = time.Since(startTime)
-		
-		// 记录指标
-		k.metricsCollector.RecordOperation(result)
+
+		// 使用BaseAdapter的通用指标收集器，而不是专用的Kafka收集器
+		if baseCollector := k.GetMetricsCollector(); baseCollector != nil {
+			baseCollector.RecordOperation(result)
+		}
+
+		// 如果还有专用收集器，也同时记录（向后兼容）
+		if k.metricsCollector != nil {
+			// 转换为Kafka特定的结果类型
+			k.metricsCollector.RecordOperation(result)
+		}
 	}
-	
+
 	return result, err
 }
 
@@ -163,10 +194,10 @@ func (k *KafkaAdapter) executeConsumeBatch(ctx context.Context, operation interf
 // executeCreateTopic 执行创建主题
 func (k *KafkaAdapter) executeCreateTopic(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// TODO: 实现主题创建逻辑
 	// 这需要使用Kafka Admin API
-	
+
 	return &interfaces.OperationResult{
 		Success:  false,
 		Duration: time.Since(startTime),
@@ -178,9 +209,9 @@ func (k *KafkaAdapter) executeCreateTopic(ctx context.Context, operation interfa
 // executeDeleteTopic 执行删除主题
 func (k *KafkaAdapter) executeDeleteTopic(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// TODO: 实现主题删除逻辑
-	
+
 	return &interfaces.OperationResult{
 		Success:  false,
 		Duration: time.Since(startTime),
@@ -192,9 +223,9 @@ func (k *KafkaAdapter) executeDeleteTopic(ctx context.Context, operation interfa
 // executeListTopics 执行列出主题
 func (k *KafkaAdapter) executeListTopics(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// TODO: 实现主题列表查询逻辑
-	
+
 	return &interfaces.OperationResult{
 		Success:  false,
 		Duration: time.Since(startTime),
@@ -206,9 +237,9 @@ func (k *KafkaAdapter) executeListTopics(ctx context.Context, operation interfac
 // executeDescribeConsumerGroups 执行描述消费者组
 func (k *KafkaAdapter) executeDescribeConsumerGroups(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// TODO: 实现消费者组描述逻辑
-	
+
 	return &interfaces.OperationResult{
 		Success:  false,
 		Duration: time.Since(startTime),
@@ -221,16 +252,16 @@ func (k *KafkaAdapter) executeDescribeConsumerGroups(ctx context.Context, operat
 func (k *KafkaAdapter) Close() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
-	
+
 	if k.connPool != nil {
 		if err := k.connPool.Close(); err != nil {
 			return fmt.Errorf("failed to close connection pool: %w", err)
 		}
 	}
-	
+
 	k.SetConnected(false)
 	k.UpdateMetric("disconnected_at", time.Now())
-	
+
 	return nil
 }
 
@@ -239,24 +270,28 @@ func (k *KafkaAdapter) HealthCheck(ctx context.Context) error {
 	if !k.IsConnected() {
 		return fmt.Errorf("adapter not connected")
 	}
-	
+
 	return k.testConnection(ctx)
 }
 
 // GetProtocolMetrics 获取Kafka特定指标
 func (k *KafkaAdapter) GetProtocolMetrics() map[string]interface{} {
 	baseMetrics := k.BaseAdapter.GetProtocolMetrics()
-	kafkaMetrics := k.metricsCollector.GetKafkaSpecificMetrics()
-	
-	// 合并指标
+
+	// 使用通用指标收集器的Export方法
 	result := make(map[string]interface{})
-	for k, v := range baseMetrics {
-		result[k] = v
+	for key, value := range baseMetrics {
+		result[key] = value
 	}
-	for k, v := range kafkaMetrics {
-		result[k] = v
+
+	// 如果有专用收集器，也添加其指标（向后兼容）
+	if k.metricsCollector != nil {
+		kafkaMetrics := k.metricsCollector.GetKafkaSpecificMetrics()
+		for key, value := range kafkaMetrics {
+			result[key] = value
+		}
 	}
-	
+
 	return result
 }
 
@@ -268,18 +303,18 @@ func (k *KafkaAdapter) testConnection(ctx context.Context) error {
 		return fmt.Errorf("failed to get producer for connection test: %w", err)
 	}
 	defer k.connPool.ReturnProducer(producer)
-	
+
 	// 简单的连接测试 - 尝试写入一个测试消息到不存在的topic（这会失败但能验证连接）
 	testMsg := kafka.Message{
 		Topic: "__connection_test__",
 		Key:   []byte("test"),
 		Value: []byte("connection_test"),
 	}
-	
+
 	// 使用短超时进行测试
 	testCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	
+
 	// 这个操作可能会失败，但如果是因为topic不存在等可预期的错误，说明连接是正常的
 	err = producer.WriteMessages(testCtx, testMsg)
 	if err != nil {
@@ -288,7 +323,7 @@ func (k *KafkaAdapter) testConnection(ctx context.Context) error {
 			return fmt.Errorf("connection test failed with unexpected error: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -297,7 +332,7 @@ func (k *KafkaAdapter) isAcceptableConnectionTestError(err error) bool {
 	if err == nil {
 		return true
 	}
-	
+
 	errStr := err.Error()
 	// 这些错误表明连接是正常的，只是操作本身有问题
 	acceptableErrors := []string{
@@ -305,13 +340,13 @@ func (k *KafkaAdapter) isAcceptableConnectionTestError(err error) bool {
 		"topic not found",
 		"InvalidTopicException",
 	}
-	
+
 	for _, acceptableErr := range acceptableErrors {
 		if contains(errStr, acceptableErr) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -336,8 +371,8 @@ func indexOf(s, substr string) int {
 func (k *KafkaAdapter) ProduceMessage(topic string, message *operations.Message) (*operations.ProduceResult, error) {
 	ctx := context.Background()
 	operation := interfaces.Operation{
-		Type: "produce_message",
-		Key:  message.Key,
+		Type:  "produce_message",
+		Key:   message.Key,
 		Value: message.Value,
 		Params: map[string]interface{}{
 			"topic":     topic,
@@ -345,21 +380,21 @@ func (k *KafkaAdapter) ProduceMessage(topic string, message *operations.Message)
 			"partition": message.Partition,
 		},
 	}
-	
+
 	result, err := k.Execute(ctx, operation)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !result.Success {
 		return nil, result.Error
 	}
-	
+
 	// 从结果中提取ProduceResult
 	if produceResult, ok := result.Value.(*operations.ProduceResult); ok {
 		return produceResult, nil
 	}
-	
+
 	return nil, fmt.Errorf("unexpected result type from produce operation")
 }
 
@@ -373,21 +408,21 @@ func (k *KafkaAdapter) ProduceBatch(topic string, messages []*operations.Message
 			"messages": messages,
 		},
 	}
-	
+
 	result, err := k.Execute(ctx, operation)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !result.Success {
 		return nil, result.Error
 	}
-	
+
 	// 从结果中提取BatchResult
 	if batchResult, ok := result.Value.(*operations.BatchResult); ok {
 		return batchResult, nil
 	}
-	
+
 	return nil, fmt.Errorf("unexpected result type from batch produce operation")
 }
 
@@ -407,5 +442,11 @@ func (k *KafkaAdapter) GetOperationFactory() interfaces.OperationFactory {
 
 // GetMetricsCollector 获取指标收集器
 func (k *KafkaAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+	// 优先返回BaseAdapter的通用指标收集器（包含系统指标）
+	if baseCollector := k.BaseAdapter.GetMetricsCollector(); baseCollector != nil {
+		return baseCollector
+	}
+
+	// 如果没有通用收集器，返回Kafka专用收集器（向后兼容）
 	return k.metricsCollector
 }

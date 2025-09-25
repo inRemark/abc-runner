@@ -1,618 +1,557 @@
 package metrics
 
 import (
+	"sort"
 	"sync"
 	"time"
 
 	"abc-runner/app/core/interfaces"
 )
 
-// HttpMetricsCollector HTTP指标收集器
-type HttpMetricsCollector struct {
-	mutex sync.RWMutex
-
+// MetricsCollector HTTP指标收集器 (参考Redis架构)
+type MetricsCollector struct {
 	// 基础指标
-	operations []interfaces.OperationResult
-	totalOps   int64
-	successOps int64
-	failedOps  int64
-	readOps    int64
-	writeOps   int64
-	durations  []time.Duration
-	startTime  time.Time
+	totalOperations   int64
+	successOperations int64
+	failedOperations  int64
+	readOperations    int64
+	writeOperations   int64
+
+	// 延迟指标
+	totalLatency   time.Duration
+	minLatency     time.Duration
+	maxLatency     time.Duration
+	latencyHistory []time.Duration
 
 	// HTTP特定指标
-	responseCodeCount    map[int]int64              // 状态码分布
-	methodCount          map[string]int64           // 请求方法统计
-	urlLatencies         map[string][]time.Duration // URL延迟统计
-	responseSizes        []int64                    // 响应大小分布
-	tlsHandshakeTimes    []time.Duration            // TLS握手时间
-	uploadSpeeds         map[string]float64         // 上传速度统计
-	uploadFileSizes      []int64                    // 上传文件大小
-	uploadSuccessCount   map[string]int64           // 上传成功统计
-	contentTypeCount     map[string]int64           // Content-Type分布
-	serverCount          map[string]int64           // 服务器分布
-	errorTypeCount       map[string]int64           // 错误类型统计
-	redirectCount        int64                      // 重定向次数
-	timeoutCount         int64                      // 超时次数
-	connectionErrorCount int64                      // 连接错误次数
-	dnsResolveTime       []time.Duration            // DNS解析时间
-	connectionTime       []time.Duration            // 连接建立时间
-	firstByteTime        []time.Duration            // 首字节时间
+	statusCodeStats  map[int]*StatusCodeStat
+	methodStats      map[string]*MethodStat
+	urlStats         map[string]*URLStat
+	contentTypeStats map[string]*ContentTypeStat
+	networkStats     *NetworkStat
+	connectionStats  *ConnectionStat
+	windowStats      *WindowStat
+
+	// 错误统计
+	errorStats map[string]int64
+
+	mutex     sync.RWMutex
+	startTime time.Time
 }
 
-// NewHttpMetricsCollector 创建HTTP指标收集器
-func NewHttpMetricsCollector() *HttpMetricsCollector {
-	return &HttpMetricsCollector{
-		operations:         make([]interfaces.OperationResult, 0),
-		durations:          make([]time.Duration, 0),
-		startTime:          time.Now(),
-		responseCodeCount:  make(map[int]int64),
-		methodCount:        make(map[string]int64),
-		urlLatencies:       make(map[string][]time.Duration),
-		responseSizes:      make([]int64, 0),
-		tlsHandshakeTimes:  make([]time.Duration, 0),
-		uploadSpeeds:       make(map[string]float64),
-		uploadFileSizes:    make([]int64, 0),
-		uploadSuccessCount: make(map[string]int64),
-		contentTypeCount:   make(map[string]int64),
-		serverCount:        make(map[string]int64),
-		errorTypeCount:     make(map[string]int64),
-		dnsResolveTime:     make([]time.Duration, 0),
-		connectionTime:     make([]time.Duration, 0),
-		firstByteTime:      make([]time.Duration, 0),
+// StatusCodeStat 状态码统计
+type StatusCodeStat struct {
+	Count        int64         `json:"count"`
+	SuccessCount int64         `json:"success_count"`
+	TotalLatency time.Duration `json:"total_latency"`
+	AvgLatency   time.Duration `json:"avg_latency"`
+}
+
+// MethodStat 请求方法统计
+type MethodStat struct {
+	Count        int64         `json:"count"`
+	SuccessCount int64         `json:"success_count"`
+	FailureCount int64         `json:"failure_count"`
+	TotalLatency time.Duration `json:"total_latency"`
+	AvgLatency   time.Duration `json:"avg_latency"`
+	MinLatency   time.Duration `json:"min_latency"`
+	MaxLatency   time.Duration `json:"max_latency"`
+}
+
+// URLStat URL统计
+type URLStat struct {
+	Count         int64         `json:"count"`
+	SuccessCount  int64         `json:"success_count"`
+	FailureCount  int64         `json:"failure_count"`
+	TotalLatency  time.Duration `json:"total_latency"`
+	AvgLatency    time.Duration `json:"avg_latency"`
+	MinLatency    time.Duration `json:"min_latency"`
+	MaxLatency    time.Duration `json:"max_latency"`
+	ResponseSizes []int64       `json:"response_sizes"`
+}
+
+// ContentTypeStat Content-Type统计
+type ContentTypeStat struct {
+	Count int64 `json:"count"`
+}
+
+// NetworkStat 网络统计
+type NetworkStat struct {
+	DNSResolveTime   []time.Duration `json:"dns_resolve_time"`
+	ConnectionTime   []time.Duration `json:"connection_time"`
+	TLSHandshakeTime []time.Duration `json:"tls_handshake_time"`
+	FirstByteTime    []time.Duration `json:"first_byte_time"`
+}
+
+// ConnectionStat 连接统计
+type ConnectionStat struct {
+	TotalConnections  int64         `json:"total_connections"`
+	ActiveConnections int64         `json:"active_connections"`
+	FailedConnections int64         `json:"failed_connections"`
+	ConnectionLatency time.Duration `json:"connection_latency"`
+	KeepAliveReused   int64         `json:"keep_alive_reused"`
+}
+
+// WindowStat 时间窗口统计
+type WindowStat struct {
+	WindowSize       time.Duration `json:"window_size"`
+	CurrentWindow    int64         `json:"current_window"`
+	WindowOperations []int64       `json:"window_operations"`
+	RPS              float64       `json:"rps"`
+	LastUpdate       time.Time     `json:"last_update"`
+}
+
+// BasicMetrics 基础指标
+type BasicMetrics struct {
+	TotalOperations   int64   `json:"total_operations"`
+	SuccessOperations int64   `json:"success_operations"`
+	FailedOperations  int64   `json:"failed_operations"`
+	ReadOperations    int64   `json:"read_operations"`
+	WriteOperations   int64   `json:"write_operations"`
+	SuccessRate       float64 `json:"success_rate"`
+	ReadWriteRatio    float64 `json:"read_write_ratio"`
+	RPS               float64 `json:"rps"`
+}
+
+// LatencyMetrics 延迟指标
+type LatencyMetrics struct {
+	MinLatency   time.Duration `json:"min_latency"`
+	MaxLatency   time.Duration `json:"max_latency"`
+	AvgLatency   time.Duration `json:"avg_latency"`
+	P50Latency   time.Duration `json:"p50_latency"`
+	P90Latency   time.Duration `json:"p90_latency"`
+	P95Latency   time.Duration `json:"p95_latency"`
+	P99Latency   time.Duration `json:"p99_latency"`
+	TotalLatency time.Duration `json:"total_latency"`
+}
+
+// NewMetricsCollector 创建HTTP指标收集器
+func NewMetricsCollector() *MetricsCollector {
+	return &MetricsCollector{
+		statusCodeStats:  make(map[int]*StatusCodeStat),
+		methodStats:      make(map[string]*MethodStat),
+		urlStats:         make(map[string]*URLStat),
+		contentTypeStats: make(map[string]*ContentTypeStat),
+		networkStats: &NetworkStat{
+			DNSResolveTime:   make([]time.Duration, 0),
+			ConnectionTime:   make([]time.Duration, 0),
+			TLSHandshakeTime: make([]time.Duration, 0),
+			FirstByteTime:    make([]time.Duration, 0),
+		},
+		connectionStats: &ConnectionStat{},
+		windowStats: &WindowStat{
+			WindowSize:       time.Second,
+			WindowOperations: make([]int64, 60),
+			LastUpdate:       time.Now(),
+		},
+		errorStats:     make(map[string]int64),
+		latencyHistory: make([]time.Duration, 0),
+		startTime:      time.Now(),
+		minLatency:     time.Duration(^uint64(0) >> 1),
+		maxLatency:     0,
 	}
 }
 
-// RecordOperation 记录操作结果
-func (c *HttpMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+// RecordOperation 实现核心接口（适配 interfaces.MetricsCollector）
+func (hc *MetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+	hc.mutex.Lock()
+	defer hc.mutex.Unlock()
 
-	c.operations = append(c.operations, *result)
-	c.durations = append(c.durations, result.Duration)
-	c.totalOps++
-
+	// 更新基础指标
+	hc.totalOperations++
 	if result.Success {
-		c.successOps++
+		hc.successOperations++
 	} else {
-		c.failedOps++
+		hc.failedOperations++
+		if result.Error != nil {
+			hc.errorStats[result.Error.Error()]++
+		}
 	}
 
 	if result.IsRead {
-		c.readOps++
+		hc.readOperations++
 	} else {
-		c.writeOps++
+		hc.writeOperations++
 	}
 
-	// 记录错误类型
-	if result.Error != nil {
-		c.recordErrorType(result.Error.Error())
+	// 更新延迟指标
+	hc.totalLatency += result.Duration
+	if result.Duration < hc.minLatency {
+		hc.minLatency = result.Duration
 	}
-}
-
-// RecordHttpResponse 记录HTTP响应
-func (c *HttpMetricsCollector) RecordHttpResponse(statusCode int, method, url string, duration time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	// 记录状态码分布
-	c.responseCodeCount[statusCode]++
-
-	// 记录请求方法统计
-	c.methodCount[method]++
-
-	// 记录URL延迟
-	if c.urlLatencies[url] == nil {
-		c.urlLatencies[url] = make([]time.Duration, 0)
+	if result.Duration > hc.maxLatency {
+		hc.maxLatency = result.Duration
 	}
-	c.urlLatencies[url] = append(c.urlLatencies[url], duration)
 
-	// 分析状态码类型
-	c.analyzeStatusCode(statusCode)
-}
+	// 保存延迟历史（限制大小）
+	hc.latencyHistory = append(hc.latencyHistory, result.Duration)
+	if len(hc.latencyHistory) > 10000 { // 保留最近10000个样本
+		hc.latencyHistory = hc.latencyHistory[1:]
+	}
 
-// RecordResponseSize 记录响应大小
-func (c *HttpMetricsCollector) RecordResponseSize(size int64) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	// 更新时间窗口统计
+	hc.updateWindowStats()
 
-	c.responseSizes = append(c.responseSizes, size)
-}
+	// 处理HTTP特定元数据
+	if result.Metadata != nil {
+		if statusCode, exists := result.Metadata["status_code"]; exists {
+			if sc, ok := statusCode.(int); ok {
+				hc.recordStatusCode(sc, result.Duration, result.Success)
+			}
+		}
 
-// RecordTLSHandshakeTime 记录TLS握手时间
-func (c *HttpMetricsCollector) RecordTLSHandshakeTime(duration time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+		if method, exists := result.Metadata["method"]; exists {
+			if m, ok := method.(string); ok {
+				hc.recordMethod(m, result.Duration, result.Success)
+			}
+		}
 
-	c.tlsHandshakeTimes = append(c.tlsHandshakeTimes, duration)
-}
-
-// RecordUploadSpeed 记录上传速度
-func (c *HttpMetricsCollector) RecordUploadSpeed(url string, speed float64) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.uploadSpeeds[url] = speed
-}
-
-// RecordUploadFileSize 记录上传文件大小
-func (c *HttpMetricsCollector) RecordUploadFileSize(size int64) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.uploadFileSizes = append(c.uploadFileSizes, size)
-}
-
-// RecordUploadSuccess 记录上传成功
-func (c *HttpMetricsCollector) RecordUploadSuccess(url string, success bool) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if success {
-		c.uploadSuccessCount[url+"_success"]++
-	} else {
-		c.uploadSuccessCount[url+"_failed"]++
+		if url, exists := result.Metadata["url"]; exists {
+			if u, ok := url.(string); ok {
+				hc.recordURL(u, result.Duration, result.Success)
+			}
+		}
 	}
 }
 
-// RecordContentType 记录Content-Type
-func (c *HttpMetricsCollector) RecordContentType(contentType string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.contentTypeCount[contentType]++
+// GetMetrics 实现核心接口
+func (hc *MetricsCollector) GetMetrics() *interfaces.Metrics {
+	return hc.GetMetricsForCore()
 }
 
-// RecordServer 记录服务器信息
-func (c *HttpMetricsCollector) RecordServer(server string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+// GetHttpMetrics 获取HTTP特定指标
+func (hc *MetricsCollector) GetHttpMetrics() map[string]interface{} {
+	hc.mutex.RLock()
+	defer hc.mutex.RUnlock()
 
-	c.serverCount[server]++
-}
+	duration := time.Since(hc.startTime)
 
-// RecordDNSResolveTime 记录DNS解析时间
-func (c *HttpMetricsCollector) RecordDNSResolveTime(duration time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.dnsResolveTime = append(c.dnsResolveTime, duration)
-}
-
-// RecordConnectionTime 记录连接建立时间
-func (c *HttpMetricsCollector) RecordConnectionTime(duration time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.connectionTime = append(c.connectionTime, duration)
-}
-
-// RecordFirstByteTime 记录首字节时间
-func (c *HttpMetricsCollector) RecordFirstByteTime(duration time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.firstByteTime = append(c.firstByteTime, duration)
-}
-
-// recordErrorType 记录错误类型
-func (c *HttpMetricsCollector) recordErrorType(errorMsg string) {
-	errorType := c.categorizeError(errorMsg)
-	c.errorTypeCount[errorType]++
-}
-
-// categorizeError 分类错误类型
-func (c *HttpMetricsCollector) categorizeError(errorMsg string) string {
-	if contains(errorMsg, "timeout") {
-		c.timeoutCount++
-		return "timeout"
-	} else if contains(errorMsg, "connection refused") || contains(errorMsg, "connection reset") {
-		c.connectionErrorCount++
-		return "connection"
-	} else if contains(errorMsg, "redirect") {
-		c.redirectCount++
-		return "redirect"
-	} else if contains(errorMsg, "dns") || contains(errorMsg, "resolve") {
-		return "dns"
-	} else if contains(errorMsg, "tls") || contains(errorMsg, "certificate") {
-		return "tls"
-	} else {
-		return "other"
+	// 基础指标
+	basicMetrics := &BasicMetrics{
+		TotalOperations:   hc.totalOperations,
+		SuccessOperations: hc.successOperations,
+		FailedOperations:  hc.failedOperations,
+		ReadOperations:    hc.readOperations,
+		WriteOperations:   hc.writeOperations,
 	}
-}
 
-// analyzeStatusCode 分析状态码
-func (c *HttpMetricsCollector) analyzeStatusCode(statusCode int) {
-	if statusCode >= 300 && statusCode < 400 {
-		c.redirectCount++
+	if hc.totalOperations > 0 {
+		basicMetrics.SuccessRate = float64(hc.successOperations) / float64(hc.totalOperations) * 100
+		basicMetrics.RPS = float64(hc.totalOperations) / duration.Seconds()
 	}
+
+	if hc.writeOperations > 0 {
+		basicMetrics.ReadWriteRatio = float64(hc.readOperations) / float64(hc.writeOperations)
+	}
+
+	// 延迟指标
+	latencyMetrics := hc.calculateLatencyMetrics()
+
+	// 组装结果
+	result := map[string]interface{}{
+		"basic_metrics":      basicMetrics,
+		"latency_metrics":    latencyMetrics,
+		"status_code_stats":  hc.statusCodeStats,
+		"method_stats":       hc.methodStats,
+		"url_stats":          hc.urlStats,
+		"content_type_stats": hc.contentTypeStats,
+		"network_stats":      hc.networkStats,
+		"connection_stats":   hc.connectionStats,
+		"window_stats":       hc.windowStats,
+		"error_stats":        hc.errorStats,
+		"duration":           duration,
+		"timestamp":          time.Now(),
+	}
+
+	return result
 }
+func (hc *MetricsCollector) GetMetricsForCore() *interfaces.Metrics {
+	hc.mutex.RLock()
+	defer hc.mutex.RUnlock()
 
-// GetMetrics 获取基础指标
-func (c *HttpMetricsCollector) GetMetrics() *interfaces.Metrics {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	duration := time.Since(hc.startTime)
 
-	if len(c.durations) == 0 {
-		return &interfaces.Metrics{
-			StartTime: c.startTime,
-			EndTime:   time.Now(),
+	metrics := &interfaces.Metrics{
+		TotalOps:   hc.totalOperations,
+		SuccessOps: hc.successOperations,
+		FailedOps:  hc.failedOperations,
+		ReadOps:    hc.readOperations,
+		WriteOps:   hc.writeOperations,
+		StartTime:  hc.startTime,
+		EndTime:    time.Now(),
+		Duration:   duration,
+	}
+
+	// 计算延迟指标
+	if hc.totalOperations > 0 {
+		metrics.AvgLatency = hc.totalLatency / time.Duration(hc.totalOperations)
+		metrics.MinLatency = hc.minLatency
+		metrics.MaxLatency = hc.maxLatency
+
+		// 计算百分位数
+		if len(hc.latencyHistory) > 0 {
+			sortedLatencies := make([]time.Duration, len(hc.latencyHistory))
+			copy(sortedLatencies, hc.latencyHistory)
+			sort.Slice(sortedLatencies, func(i, j int) bool {
+				return sortedLatencies[i] < sortedLatencies[j]
+			})
+
+			if len(sortedLatencies) > 0 {
+				metrics.P90Latency = sortedLatencies[len(sortedLatencies)*90/100]
+				metrics.P95Latency = sortedLatencies[len(sortedLatencies)*95/100]
+				metrics.P99Latency = sortedLatencies[len(sortedLatencies)*99/100]
+			}
 		}
 	}
 
-	// 复制并排序延迟数据
-	durations := make([]time.Duration, len(c.durations))
-	copy(durations, c.durations)
-	c.sortDurations(durations)
-
-	return c.calculateMetrics(durations)
+	return metrics
 }
 
-// GetHttpSpecificMetrics 获取HTTP特定指标
-func (c *HttpMetricsCollector) GetHttpSpecificMetrics() map[string]interface{} {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+// Export 实现核心接口（适配 interfaces.MetricsCollector）
+func (hc *MetricsCollector) Export() map[string]interface{} {
+	metrics := hc.GetMetricsForCore()
+	duration := time.Since(hc.startTime)
 
-	metrics := make(map[string]interface{})
+	// 计算基本指标
+	errorRate := float64(0)
+	rps := float64(0)
+	successRate := float64(0)
 
-	// 状态码分布
-	metrics["status_codes"] = c.copyStatusCodes()
+	if hc.totalOperations > 0 {
+		errorRate = float64(hc.failedOperations) / float64(hc.totalOperations) * 100
+		successRate = float64(hc.successOperations) / float64(hc.totalOperations) * 100
+		rps = float64(hc.totalOperations) / duration.Seconds()
+	}
 
-	// 请求方法统计
-	metrics["methods"] = c.copyMethodCount()
-
-	// URL延迟统计
-	metrics["url_latencies"] = c.calculateURLLatencies()
-
-	// 响应大小统计
-	metrics["response_sizes"] = c.calculateResponseSizeStats()
-
-	// TLS握手时间统计
-	metrics["tls_handshake_times"] = c.calculateTLSStats()
-
-	// 上传统计
-	metrics["upload_stats"] = c.calculateUploadStats()
-
-	// Content-Type分布
-	metrics["content_types"] = c.copyContentTypeCount()
-
-	// 服务器分布
-	metrics["servers"] = c.copyServerCount()
-
-	// 错误类型统计
-	metrics["error_types"] = c.copyErrorTypeCount()
-
-	// 网络时间统计
-	metrics["network_times"] = c.calculateNetworkTimeStats()
-
-	// 计数器
-	metrics["redirect_count"] = c.redirectCount
-	metrics["timeout_count"] = c.timeoutCount
-	metrics["connection_error_count"] = c.connectionErrorCount
-
-	return metrics
+	return map[string]interface{}{
+		"total_ops":    hc.totalOperations,
+		"success_ops":  hc.successOperations,
+		"failed_ops":   hc.failedOperations,
+		"read_ops":     hc.readOperations,
+		"write_ops":    hc.writeOperations,
+		"error_rate":   errorRate,
+		"success_rate": successRate,
+		"rps":          rps,
+		"avg_latency":  metrics.AvgLatency.Nanoseconds(),
+		"min_latency":  metrics.MinLatency.Nanoseconds(),
+		"max_latency":  metrics.MaxLatency.Nanoseconds(),
+		"p90_latency":  metrics.P90Latency.Nanoseconds(),
+		"p95_latency":  metrics.P95Latency.Nanoseconds(),
+		"p99_latency":  metrics.P99Latency.Nanoseconds(),
+		"duration":     duration.Nanoseconds(),
+		"start_time":   hc.startTime.Unix(),
+		"end_time":     time.Now().Unix(),
+	}
 }
 
 // Reset 重置指标
-func (c *HttpMetricsCollector) Reset() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+func (hc *MetricsCollector) Reset() {
+	hc.mutex.Lock()
+	defer hc.mutex.Unlock()
 
-	c.operations = make([]interfaces.OperationResult, 0)
-	c.durations = make([]time.Duration, 0)
-	c.startTime = time.Now()
-	c.totalOps = 0
-	c.successOps = 0
-	c.failedOps = 0
-	c.readOps = 0
-	c.writeOps = 0
+	hc.totalOperations = 0
+	hc.successOperations = 0
+	hc.failedOperations = 0
+	hc.readOperations = 0
+	hc.writeOperations = 0
+	hc.totalLatency = 0
+	hc.minLatency = time.Duration(^uint64(0) >> 1)
+	hc.maxLatency = 0
+	hc.latencyHistory = hc.latencyHistory[:0]
 
 	// 重置HTTP特定指标
-	c.responseCodeCount = make(map[int]int64)
-	c.methodCount = make(map[string]int64)
-	c.urlLatencies = make(map[string][]time.Duration)
-	c.responseSizes = make([]int64, 0)
-	c.tlsHandshakeTimes = make([]time.Duration, 0)
-	c.uploadSpeeds = make(map[string]float64)
-	c.uploadFileSizes = make([]int64, 0)
-	c.uploadSuccessCount = make(map[string]int64)
-	c.contentTypeCount = make(map[string]int64)
-	c.serverCount = make(map[string]int64)
-	c.errorTypeCount = make(map[string]int64)
-	c.redirectCount = 0
-	c.timeoutCount = 0
-	c.connectionErrorCount = 0
-	c.dnsResolveTime = make([]time.Duration, 0)
-	c.connectionTime = make([]time.Duration, 0)
-	c.firstByteTime = make([]time.Duration, 0)
+	for statusCode := range hc.statusCodeStats {
+		delete(hc.statusCodeStats, statusCode)
+	}
+	for method := range hc.methodStats {
+		delete(hc.methodStats, method)
+	}
+	for url := range hc.urlStats {
+		delete(hc.urlStats, url)
+	}
+	for contentType := range hc.contentTypeStats {
+		delete(hc.contentTypeStats, contentType)
+	}
+
+	// 重置错误统计
+	for errorMsg := range hc.errorStats {
+		delete(hc.errorStats, errorMsg)
+	}
+
+	// 重置网络统计
+	hc.networkStats = &NetworkStat{
+		DNSResolveTime:   make([]time.Duration, 0),
+		ConnectionTime:   make([]time.Duration, 0),
+		TLSHandshakeTime: make([]time.Duration, 0),
+		FirstByteTime:    make([]time.Duration, 0),
+	}
+
+	// 重置连接统计
+	hc.connectionStats = &ConnectionStat{}
+
+	// 重置时间窗口
+	hc.windowStats = &WindowStat{
+		WindowSize:       time.Second,
+		WindowOperations: make([]int64, 60),
+		LastUpdate:       time.Now(),
+	}
+
+	hc.startTime = time.Now()
 }
 
-// Export 导出指标
-func (c *HttpMetricsCollector) Export() map[string]interface{} {
-	baseMetrics := c.getBaseMetricsMap()
-	httpMetrics := c.GetHttpSpecificMetrics()
-
-	// 合并指标
-	result := make(map[string]interface{})
-	for k, v := range baseMetrics {
-		result[k] = v
+// recordStatusCode 记录状态码统计
+func (hc *MetricsCollector) recordStatusCode(statusCode int, duration time.Duration, success bool) {
+	if _, exists := hc.statusCodeStats[statusCode]; !exists {
+		hc.statusCodeStats[statusCode] = &StatusCodeStat{}
 	}
-	for k, v := range httpMetrics {
-		result[k] = v
+	stat := hc.statusCodeStats[statusCode]
+	stat.Count++
+	stat.TotalLatency += duration
+	if success {
+		stat.SuccessCount++
 	}
-
-	return result
-}
-
-// 辅助方法
-
-func (c *HttpMetricsCollector) calculateMetrics(durations []time.Duration) *interfaces.Metrics {
-	endTime := time.Now()
-	totalDuration := endTime.Sub(c.startTime)
-
-	metrics := &interfaces.Metrics{
-		TotalOps:   c.totalOps,
-		SuccessOps: c.successOps,
-		FailedOps:  c.failedOps,
-		ReadOps:    c.readOps,
-		WriteOps:   c.writeOps,
-		MinLatency: durations[0],
-		MaxLatency: durations[len(durations)-1],
-		StartTime:  c.startTime,
-		EndTime:    endTime,
-		Duration:   totalDuration,
-	}
-
-	// 计算平均延迟
-	var totalLatency time.Duration
-	for _, d := range durations {
-		totalLatency += d
-	}
-	metrics.AvgLatency = totalLatency / time.Duration(len(durations))
-
-	// 计算分位数
-	metrics.P90Latency = durations[int(float64(len(durations))*0.9)]
-	metrics.P95Latency = durations[int(float64(len(durations))*0.95)]
-	metrics.P99Latency = durations[int(float64(len(durations))*0.99)]
-
-	// 计算RPS
-	if totalDuration.Seconds() > 0 {
-		metrics.RPS = int32(float64(c.totalOps) / totalDuration.Seconds())
-	}
-
-	// 计算错误率
-	if c.totalOps > 0 {
-		metrics.ErrorRate = float64(c.failedOps) / float64(c.totalOps) * 100
-	}
-
-	return metrics
-}
-
-func (c *HttpMetricsCollector) getBaseMetricsMap() map[string]interface{} {
-	metrics := c.GetMetrics()
-	return map[string]interface{}{
-		"rps":         metrics.RPS,
-		"total_ops":   metrics.TotalOps,
-		"success_ops": metrics.SuccessOps,
-		"failed_ops":  metrics.FailedOps,
-		"read_ops":    metrics.ReadOps,
-		"write_ops":   metrics.WriteOps,
-		"avg_latency": metrics.AvgLatency.Nanoseconds(),
-		"min_latency": metrics.MinLatency.Nanoseconds(),
-		"max_latency": metrics.MaxLatency.Nanoseconds(),
-		"p90_latency": metrics.P90Latency.Nanoseconds(),
-		"p95_latency": metrics.P95Latency.Nanoseconds(),
-		"p99_latency": metrics.P99Latency.Nanoseconds(),
-		"error_rate":  metrics.ErrorRate,
-		"duration":    metrics.Duration.Nanoseconds(),
+	if stat.Count > 0 {
+		stat.AvgLatency = stat.TotalLatency / time.Duration(stat.Count)
 	}
 }
 
-func (c *HttpMetricsCollector) copyStatusCodes() map[int]int64 {
-	result := make(map[int]int64)
-	for k, v := range c.responseCodeCount {
-		result[k] = v
-	}
-	return result
-}
-
-func (c *HttpMetricsCollector) copyMethodCount() map[string]int64 {
-	result := make(map[string]int64)
-	for k, v := range c.methodCount {
-		result[k] = v
-	}
-	return result
-}
-
-func (c *HttpMetricsCollector) copyContentTypeCount() map[string]int64 {
-	result := make(map[string]int64)
-	for k, v := range c.contentTypeCount {
-		result[k] = v
-	}
-	return result
-}
-
-func (c *HttpMetricsCollector) copyServerCount() map[string]int64 {
-	result := make(map[string]int64)
-	for k, v := range c.serverCount {
-		result[k] = v
-	}
-	return result
-}
-
-func (c *HttpMetricsCollector) copyErrorTypeCount() map[string]int64 {
-	result := make(map[string]int64)
-	for k, v := range c.errorTypeCount {
-		result[k] = v
-	}
-	return result
-}
-
-func (c *HttpMetricsCollector) calculateURLLatencies() map[string]interface{} {
-	result := make(map[string]interface{})
-	for url, latencies := range c.urlLatencies {
-		if len(latencies) > 0 {
-			result[url] = c.calculateLatencyStats(latencies)
+// recordMethod 记录方法统计
+func (hc *MetricsCollector) recordMethod(method string, duration time.Duration, success bool) {
+	if _, exists := hc.methodStats[method]; !exists {
+		hc.methodStats[method] = &MethodStat{
+			MinLatency: time.Duration(^uint64(0) >> 1),
 		}
 	}
-	return result
-}
-
-func (c *HttpMetricsCollector) calculateResponseSizeStats() map[string]interface{} {
-	if len(c.responseSizes) == 0 {
-		return nil
+	methodStat := hc.methodStats[method]
+	methodStat.Count++
+	methodStat.TotalLatency += duration
+	if success {
+		methodStat.SuccessCount++
+	} else {
+		methodStat.FailureCount++
 	}
-
-	sizes := make([]int64, len(c.responseSizes))
-	copy(sizes, c.responseSizes)
-	c.sortInt64Slice(sizes)
-
-	var total int64
-	for _, size := range sizes {
-		total += size
+	if duration < methodStat.MinLatency {
+		methodStat.MinLatency = duration
 	}
-
-	return map[string]interface{}{
-		"min":     sizes[0],
-		"max":     sizes[len(sizes)-1],
-		"avg":     total / int64(len(sizes)),
-		"p90":     sizes[int(float64(len(sizes))*0.9)],
-		"p95":     sizes[int(float64(len(sizes))*0.95)],
-		"p99":     sizes[int(float64(len(sizes))*0.99)],
-		"total":   total,
-		"samples": len(sizes),
+	if duration > methodStat.MaxLatency {
+		methodStat.MaxLatency = duration
+	}
+	if methodStat.Count > 0 {
+		methodStat.AvgLatency = methodStat.TotalLatency / time.Duration(methodStat.Count)
 	}
 }
 
-func (c *HttpMetricsCollector) calculateTLSStats() map[string]interface{} {
-	if len(c.tlsHandshakeTimes) == 0 {
-		return nil
-	}
-
-	times := make([]time.Duration, len(c.tlsHandshakeTimes))
-	copy(times, c.tlsHandshakeTimes)
-	c.sortDurations(times)
-
-	return c.calculateLatencyStats(times)
-}
-
-func (c *HttpMetricsCollector) calculateUploadStats() map[string]interface{} {
-	if len(c.uploadSpeeds) == 0 && len(c.uploadFileSizes) == 0 {
-		return nil
-	}
-
-	stats := make(map[string]interface{})
-
-	// 上传速度统计
-	if len(c.uploadSpeeds) > 0 {
-		var totalSpeed float64
-		for _, speed := range c.uploadSpeeds {
-			totalSpeed += speed
-		}
-		stats["avg_upload_speed"] = totalSpeed / float64(len(c.uploadSpeeds))
-	}
-
-	// 上传文件大小统计
-	if len(c.uploadFileSizes) > 0 {
-		sizes := make([]int64, len(c.uploadFileSizes))
-		copy(sizes, c.uploadFileSizes)
-		c.sortInt64Slice(sizes)
-
-		var total int64
-		for _, size := range sizes {
-			total += size
-		}
-
-		stats["file_sizes"] = map[string]interface{}{
-			"min":     sizes[0],
-			"max":     sizes[len(sizes)-1],
-			"avg":     total / int64(len(sizes)),
-			"total":   total,
-			"samples": len(sizes),
+// recordURL 记录URL统计
+func (hc *MetricsCollector) recordURL(url string, duration time.Duration, success bool) {
+	if _, exists := hc.urlStats[url]; !exists {
+		hc.urlStats[url] = &URLStat{
+			MinLatency:    time.Duration(^uint64(0) >> 1),
+			ResponseSizes: make([]int64, 0),
 		}
 	}
-
-	// 上传成功率
-	stats["success_rates"] = c.uploadSuccessCount
-
-	return stats
+	urlStat := hc.urlStats[url]
+	urlStat.Count++
+	urlStat.TotalLatency += duration
+	if success {
+		urlStat.SuccessCount++
+	} else {
+		urlStat.FailureCount++
+	}
+	if duration < urlStat.MinLatency {
+		urlStat.MinLatency = duration
+	}
+	if duration > urlStat.MaxLatency {
+		urlStat.MaxLatency = duration
+	}
+	if urlStat.Count > 0 {
+		urlStat.AvgLatency = urlStat.TotalLatency / time.Duration(urlStat.Count)
+	}
 }
 
-func (c *HttpMetricsCollector) calculateNetworkTimeStats() map[string]interface{} {
-	stats := make(map[string]interface{})
-
-	if len(c.dnsResolveTime) > 0 {
-		stats["dns_resolve"] = c.calculateLatencyStats(c.dnsResolveTime)
+// calculateLatencyMetrics 计算延迟指标
+func (hc *MetricsCollector) calculateLatencyMetrics() *LatencyMetrics {
+	latencyMetrics := &LatencyMetrics{
+		MinLatency:   hc.minLatency,
+		MaxLatency:   hc.maxLatency,
+		TotalLatency: hc.totalLatency,
 	}
 
-	if len(c.connectionTime) > 0 {
-		stats["connection"] = c.calculateLatencyStats(c.connectionTime)
+	if hc.totalOperations > 0 {
+		latencyMetrics.AvgLatency = hc.totalLatency / time.Duration(hc.totalOperations)
 	}
 
-	if len(c.firstByteTime) > 0 {
-		stats["first_byte"] = c.calculateLatencyStats(c.firstByteTime)
+	// 计算百分位数
+	if len(hc.latencyHistory) > 0 {
+		sortedLatencies := make([]time.Duration, len(hc.latencyHistory))
+		copy(sortedLatencies, hc.latencyHistory)
+		sort.Slice(sortedLatencies, func(i, j int) bool {
+			return sortedLatencies[i] < sortedLatencies[j]
+		})
+
+		latencyMetrics.P50Latency = hc.getPercentile(sortedLatencies, 50)
+		latencyMetrics.P90Latency = hc.getPercentile(sortedLatencies, 90)
+		latencyMetrics.P95Latency = hc.getPercentile(sortedLatencies, 95)
+		latencyMetrics.P99Latency = hc.getPercentile(sortedLatencies, 99)
 	}
 
-	return stats
+	return latencyMetrics
 }
 
-func (c *HttpMetricsCollector) calculateLatencyStats(latencies []time.Duration) map[string]interface{} {
-	if len(latencies) == 0 {
-		return nil
+// getPercentile 获取百分位数
+func (hc *MetricsCollector) getPercentile(sortedLatencies []time.Duration, percentile int) time.Duration {
+	if len(sortedLatencies) == 0 {
+		return 0
 	}
 
-	times := make([]time.Duration, len(latencies))
-	copy(times, latencies)
-	c.sortDurations(times)
-
-	var total time.Duration
-	for _, t := range times {
-		total += t
+	index := int(float64(len(sortedLatencies)) * float64(percentile) / 100.0)
+	if index >= len(sortedLatencies) {
+		index = len(sortedLatencies) - 1
 	}
+	if index < 0 {
+		index = 0
+	}
+
+	return sortedLatencies[index]
+}
+
+// updateWindowStats 更新时间窗口统计
+func (hc *MetricsCollector) updateWindowStats() {
+	now := time.Now()
+	timeSinceLastUpdate := now.Sub(hc.windowStats.LastUpdate)
+
+	if timeSinceLastUpdate >= hc.windowStats.WindowSize {
+		windowsToMove := int(timeSinceLastUpdate / hc.windowStats.WindowSize)
+		for i := 0; i < windowsToMove && i < len(hc.windowStats.WindowOperations); i++ {
+			copy(hc.windowStats.WindowOperations, hc.windowStats.WindowOperations[1:])
+			hc.windowStats.WindowOperations[len(hc.windowStats.WindowOperations)-1] = 0
+		}
+		hc.windowStats.LastUpdate = now
+	}
+
+	currentIndex := len(hc.windowStats.WindowOperations) - 1
+	hc.windowStats.WindowOperations[currentIndex]++
+
+	totalOpsInWindow := int64(0)
+	for _, ops := range hc.windowStats.WindowOperations {
+		totalOpsInWindow += ops
+	}
+	windowDuration := time.Duration(len(hc.windowStats.WindowOperations)) * hc.windowStats.WindowSize
+	hc.windowStats.RPS = float64(totalOpsInWindow) / windowDuration.Seconds()
+}
+
+// GetHttpSpecificMetrics 获取HTTP特定指标
+func (hc *MetricsCollector) GetHttpSpecificMetrics() map[string]interface{} {
+	hc.mutex.RLock()
+	defer hc.mutex.RUnlock()
 
 	return map[string]interface{}{
-		"min":     times[0].Nanoseconds(),
-		"max":     times[len(times)-1].Nanoseconds(),
-		"avg":     (total / time.Duration(len(times))).Nanoseconds(),
-		"p90":     times[int(float64(len(times))*0.9)].Nanoseconds(),
-		"p95":     times[int(float64(len(times))*0.95)].Nanoseconds(),
-		"p99":     times[int(float64(len(times))*0.99)].Nanoseconds(),
-		"samples": len(times),
+		"status_codes":     hc.statusCodeStats,
+		"methods":          hc.methodStats,
+		"urls":             hc.urlStats,
+		"content_types":    hc.contentTypeStats,
+		"network_stats":    hc.networkStats,
+		"connection_stats": hc.connectionStats,
+		"window_stats":     hc.windowStats,
+		"error_stats":      hc.errorStats,
 	}
-}
-
-func (c *HttpMetricsCollector) sortDurations(durations []time.Duration) {
-	n := len(durations)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			if durations[j] > durations[j+1] {
-				durations[j], durations[j+1] = durations[j+1], durations[j]
-			}
-		}
-	}
-}
-
-func (c *HttpMetricsCollector) sortInt64Slice(slice []int64) {
-	n := len(slice)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			if slice[j] > slice[j+1] {
-				slice[j], slice[j+1] = slice[j+1], slice[j]
-			}
-		}
-	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && indexOf(s, substr) >= 0
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

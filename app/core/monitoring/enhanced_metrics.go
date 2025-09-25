@@ -11,15 +11,15 @@ import (
 // EnhancedMetricsCollector 增强的指标收集器（直接实现所有功能）
 type EnhancedMetricsCollector struct {
 	// 基础指标收集功能（原 DefaultMetricsCollector 功能）
-	operations     []interfaces.OperationResult
-	startTime      time.Time
-	totalOps       int64
-	successOps     int64
-	failedOps      int64
-	readOps        int64
-	writeOps       int64
-	durations      []time.Duration
-	
+	operations []interfaces.OperationResult
+	startTime  time.Time
+	totalOps   int64
+	successOps int64
+	failedOps  int64
+	readOps    int64
+	writeOps   int64
+	durations  []time.Duration
+
 	// 增强功能
 	systemMonitor      *SystemMonitor
 	performanceMonitor *PerformanceMonitor
@@ -44,10 +44,10 @@ type OperationTypeMetrics struct {
 func NewEnhancedMetricsCollector() *EnhancedMetricsCollector {
 	return &EnhancedMetricsCollector{
 		// 初始化基础指标收集功能
-		operations:         make([]interfaces.OperationResult, 0),
-		durations:         make([]time.Duration, 0),
-		startTime:         time.Now(),
-		
+		operations: make([]interfaces.OperationResult, 0),
+		durations:  make([]time.Duration, 0),
+		startTime:  time.Now(),
+
 		// 初始化增强功能
 		systemMonitor:      NewSystemMonitor(),
 		performanceMonitor: NewPerformanceMonitor(200),
@@ -72,7 +72,7 @@ func (c *EnhancedMetricsCollector) Stop() {
 func (c *EnhancedMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
+
 	// 基础指标记录（原 DefaultMetricsCollector 功能）
 	c.operations = append(c.operations, *result)
 	c.durations = append(c.durations, result.Duration)

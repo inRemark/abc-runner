@@ -26,9 +26,16 @@ type RedisAdapter struct {
 
 // NewRedisAdapter 创建Redis适配器
 func NewRedisAdapter(metricsCollector interfaces.MetricsCollector) *RedisAdapter {
-	return &RedisAdapter{
+	adapter := &RedisAdapter{
 		BaseAdapter: base.NewBaseAdapter("redis"),
 	}
+
+	// 设置指标收集器
+	if metricsCollector != nil {
+		adapter.SetMetricsCollector(metricsCollector)
+	}
+
+	return adapter
 }
 
 // Connect 初始化连接
