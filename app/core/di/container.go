@@ -8,6 +8,7 @@ import (
 	"abc-runner/app/adapters/redis"
 	"abc-runner/app/core/config"
 	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/monitoring"
 	"abc-runner/app/core/utils"
 )
 
@@ -53,8 +54,8 @@ func NewConfigSourceFactory() interfaces.ConfigSourceFactory {
 
 // NewMetricsCollector 创建指标收集器
 func NewMetricsCollector() interfaces.MetricsCollector {
-	// 返回默认的指标收集器实现
-	return nil // TODO: 实现具体的指标收集器
+	// 返回增强的指标收集器实现
+	return monitoring.NewEnhancedMetricsCollector()
 }
 
 // Provide 注册依赖

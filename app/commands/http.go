@@ -32,6 +32,10 @@ type HttpSimpleHandler struct {
 
 // NewHttpCommandHandler 创建HTTP命令处理器（统一接口）
 func NewHttpCommandHandler(adapterFactory interfaces.AdapterFactory) *HttpSimpleHandler {
+	if adapterFactory == nil {
+		panic("adapterFactory cannot be nil - dependency injection required")
+	}
+
 	handler := &HttpSimpleHandler{
 		adapterFactory:    adapterFactory,
 		configManager:     config.NewConfigManager(nil),
@@ -82,23 +86,32 @@ func (h *HttpSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// 4. 初始化指标收集器
+	// 4. 初始化适配器（使用DI工厂）
+	h.adapter = h.adapterFactory.CreateHttpAdapter()
+
+	// 5. 连接适配器
+	if err := h.adapter.Connect(ctx, h.configManager.GetConfig()); err != nil {
+		return fmt.Errorf("failed to connect to HTTP server: %w", err)
+	}
+	defer h.adapter.Close()
+
+	// 6. 初始化指标收集器
 	h.metricsCollector = h.adapter.GetMetricsCollector()
 
-	// 5. 初始化报告管理器
+	// 7. 初始化报告管理器
 	h.initializeReportManager()
 
-	// 6. 初始化运行器
+	// 8. 初始化运行器
 	h.runner = runner.NewEnhancedRunner(h.adapter, h.configManager.GetConfig(), h.metricsCollector, h.keyGenerator, h.operationRegistry)
 
-	// 7. 运行测试
+	// 9. 运行测试
 	log.Println("Running HTTP load test...")
 	_, err = h.runner.RunBenchmark(ctx)
 	if err != nil {
 		return fmt.Errorf("load test execution failed: %w", err)
 	}
 
-	// 8. 生成报告
+	// 10. 生成报告
 	log.Println("Generating reports...")
 	if err := h.reportManager.GenerateReports(); err != nil {
 		return fmt.Errorf("report generation failed: %w", err)

@@ -32,6 +32,10 @@ type KafkaSimpleHandler struct {
 
 // NewKafkaCommandHandler 创建Kafka命令处理器（统一接口）
 func NewKafkaCommandHandler(adapterFactory interfaces.AdapterFactory) *KafkaSimpleHandler {
+	if adapterFactory == nil {
+		panic("adapterFactory cannot be nil - dependency injection required")
+	}
+
 	handler := &KafkaSimpleHandler{
 		adapterFactory:    adapterFactory,
 		configManager:     config.NewConfigManager(nil),
@@ -74,23 +78,32 @@ func (k *KafkaSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// 4. 初始化指标收集器
+	// 4. 初始化适配器（使用DI工厂）
+	k.adapter = k.adapterFactory.CreateKafkaAdapter()
+
+	// 5. 连接适配器
+	if err := k.adapter.Connect(ctx, k.configManager.GetConfig()); err != nil {
+		return fmt.Errorf("failed to connect to Kafka: %w", err)
+	}
+	defer k.adapter.Close()
+
+	// 6. 初始化指标收集器
 	k.metricsCollector = k.adapter.GetMetricsCollector()
 
-	// 5. 初始化报告管理器
+	// 7. 初始化报告管理器
 	k.initializeReportManager()
 
-	// 6. 初始化运行器
+	// 8. 初始化运行器
 	k.runner = runner.NewEnhancedRunner(k.adapter, k.configManager.GetConfig(), k.metricsCollector, k.keyGenerator, k.operationRegistry)
 
-	// 7. 运行测试
+	// 9. 运行测试
 	log.Println("Running Kafka performance test...")
 	_, err = k.runner.RunBenchmark(ctx)
 	if err != nil {
 		return fmt.Errorf("performance test execution failed: %w", err)
 	}
 
-	// 8. 生成报告
+	// 10. 生成报告
 	log.Println("Generating reports...")
 	if err := k.reportManager.GenerateReports(); err != nil {
 		return fmt.Errorf("report generation failed: %w", err)

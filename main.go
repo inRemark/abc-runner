@@ -3,6 +3,7 @@ package main
 import (
 	"abc-runner/app/commands"
 	"abc-runner/app/core/di"
+	"abc-runner/app/core/interfaces"
 	"context"
 	"flag"
 	"fmt"
@@ -90,18 +91,27 @@ func initializeCommandSystem() error {
 
 // registerCommandHandlers 注册命令处理器
 func registerCommandHandlers() error {
-	// 注册Redis命令
-	redisHandler := commands.NewRedisCommandHandler(nil) // TODO: 注入适配器工厂
+	// 使用依赖注入容器获取适配器工厂
+	var adapterFactory interfaces.AdapterFactory
+	err := container.Invoke(func(factory interfaces.AdapterFactory) {
+		adapterFactory = factory
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get adapter factory from DI container: %w", err)
+	}
+
+	// 注册Redis命令（使用DI注入的工厂）
+	redisHandler := commands.NewRedisCommandHandler(adapterFactory)
 	commandRouter.RegisterCommand("redis", redisHandler)
 	commandRouter.RegisterAlias("r", "redis")
 
-	// 注册HTTP命令
-	httpHandler := commands.NewHttpCommandHandler(nil) // TODO: 注入适配器工厂
+	// 注册HTTP命令（使用DI注入的工厂）
+	httpHandler := commands.NewHttpCommandHandler(adapterFactory)
 	commandRouter.RegisterCommand("http", httpHandler)
 	commandRouter.RegisterAlias("h", "http")
 
-	// 注册Kafka命令
-	kafkaHandler := commands.NewKafkaCommandHandler(nil) // TODO: 注入适配器工厂
+	// 注册Kafka命令（使用DI注入的工厂）
+	kafkaHandler := commands.NewKafkaCommandHandler(adapterFactory)
 	commandRouter.RegisterCommand("kafka", kafkaHandler)
 	commandRouter.RegisterAlias("k", "kafka")
 

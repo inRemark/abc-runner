@@ -31,6 +31,10 @@ type RedisSimpleHandler struct {
 
 // NewRedisCommandHandler 创建Redis命令处理器（统一接口）
 func NewRedisCommandHandler(adapterFactory interfaces.AdapterFactory) *RedisSimpleHandler {
+	if adapterFactory == nil {
+		panic("adapterFactory cannot be nil - dependency injection required")
+	}
+
 	handler := &RedisSimpleHandler{
 		adapterFactory:    adapterFactory,
 		configManager:     config.NewConfigManager(nil),
@@ -73,13 +77,8 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// 4. 初始化适配器
-	if h.adapterFactory != nil {
-		h.adapter = h.adapterFactory.CreateRedisAdapter()
-	} else {
-		// 向后兼容：如果未提供工厂，则直接创建适配器
-		h.adapter = redis.NewRedisAdapter(nil)
-	}
+	// 4. 初始化适配器（移除向后兼容，强制使用工厂）
+	h.adapter = h.adapterFactory.CreateRedisAdapter()
 
 	// 5. 连接适配器
 	if err := h.adapter.Connect(ctx, h.configManager.GetConfig()); err != nil {
