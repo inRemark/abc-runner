@@ -9,12 +9,14 @@
 主程序是abc-runner的入口点，负责初始化系统并启动命令处理流程。
 
 **主要功能**:
+
 - 初始化日志系统
 - 设置命令路由器
 - 解析命令行参数
 - 执行相应命令
 
 **关键代码结构**:
+
 ```go
 func main() {
     initLogging()
@@ -28,11 +30,13 @@ func main() {
 命令路由器负责将用户输入的命令路由到相应的处理器。
 
 **主要功能**:
+
 - 命令注册和管理
 - 别名解析
 - 命令执行
 
 **接口定义**:
+
 ```go
 type CommandHandler interface {
     Execute(ctx context.Context, args []string) error
@@ -45,12 +49,15 @@ type CommandHandler interface {
 每种协议都有对应的命令处理器，负责处理特定协议的命令。
 
 #### Redis命令处理器
+
 位于`app/commands/redis.go`，处理Redis相关的命令和参数。
 
 #### HTTP命令处理器
+
 位于`app/commands/http.go`，处理HTTP相关的命令和参数。
 
 #### Kafka命令处理器
+
 位于`app/commands/kafka.go`，处理Kafka相关的命令和参数。
 
 ## 协议适配器层
@@ -60,12 +67,14 @@ type CommandHandler interface {
 Redis适配器为Redis协议提供统一接口。
 
 **主要组件**:
+
 - **连接管理**: 管理Redis连接池
 - **操作执行**: 执行各种Redis操作
 - **指标收集**: 收集性能指标
 - **配置处理**: 处理Redis特定配置
 
 **关键接口**:
+
 ```go
 type RedisAdapter struct {
     client redis.UniversalClient
@@ -79,6 +88,7 @@ type RedisAdapter struct {
 HTTP适配器为HTTP协议提供统一接口。
 
 **主要组件**:
+
 - **客户端管理**: 管理HTTP客户端
 - **请求构建**: 构建HTTP请求
 - **响应处理**: 处理HTTP响应
@@ -89,6 +99,7 @@ HTTP适配器为HTTP协议提供统一接口。
 Kafka适配器为Kafka协议提供统一接口。
 
 **主要组件**:
+
 - **生产者管理**: 管理Kafka生产者
 - **消费者管理**: 管理Kafka消费者
 - **消息处理**: 处理Kafka消息
@@ -101,12 +112,14 @@ Kafka适配器为Kafka协议提供统一接口。
 配置管理器提供统一的配置加载和管理功能。
 
 **主要功能**:
+
 - 多源配置加载（命令行、YAML、环境变量）
 - 配置优先级处理
 - 配置验证
 - 配置热重载（计划中）
 
 **核心结构**:
+
 ```go
 type ConfigManager struct {
     config interfaces.Config
@@ -119,6 +132,7 @@ type ConfigManager struct {
 多源配置加载器支持从不同来源加载配置。
 
 **支持的配置源**:
+
 - 命令行参数
 - YAML配置文件
 - 环境变量
@@ -129,6 +143,7 @@ type ConfigManager struct {
 每种协议都有对应的配置结构和加载逻辑。
 
 #### Redis配置 (app/adapters/redis/config)
+
 ```go
 type RedisConfig struct {
     Mode      string         `yaml:"mode"`
@@ -139,6 +154,7 @@ type RedisConfig struct {
 ```
 
 #### HTTP配置 (app/adapters/http/config)
+
 ```go
 type HTTPConfig struct {
     Connection ConnectionConfig `yaml:"connection"`
@@ -148,6 +164,7 @@ type HTTPConfig struct {
 ```
 
 #### Kafka配置 (app/adapters/kafka/config)
+
 ```go
 type KafkaConfig struct {
     Brokers  []string        `yaml:"brokers"`
@@ -164,11 +181,13 @@ type KafkaConfig struct {
 操作注册表管理所有可用的操作类型。
 
 **主要功能**:
+
 - 操作工厂注册
 - 操作实例创建
 - 操作类型管理
 
 **接口定义**:
+
 ```go
 type OperationFactory interface {
     CreateOperation(params map[string]interface{}) (interfaces.Operation, error)
@@ -182,6 +201,7 @@ type OperationFactory interface {
 每种操作类型都有对应的工厂类，负责创建操作实例。
 
 #### Redis操作工厂 (app/adapters/redis/operations.go)
+
 - StringGetOperationFactory
 - StringSetOperationFactory
 - SetGetRandomOperationFactory
@@ -189,9 +209,11 @@ type OperationFactory interface {
 - 等等...
 
 #### HTTP操作工厂 (app/adapters/http/operations.go)
+
 - HTTPOperationFactory
 
 #### Kafka操作工厂 (app/adapters/kafka/operations.go)
+
 - KafkaOperationFactory
 
 ## 运行引擎层
@@ -201,12 +223,14 @@ type OperationFactory interface {
 运行引擎是执行基准测试的核心组件。
 
 **主要功能**:
+
 - 并发任务调度
 - 负载生成
 - 结果收集
 - 性能监控
 
 **核心算法**:
+
 ```go
 func (r *EnhancedRunner) RunBenchmark(ctx context.Context) (*interfaces.Metrics, error) {
     // 1. 初始化工作池
@@ -222,6 +246,7 @@ func (r *EnhancedRunner) RunBenchmark(ctx context.Context) (*interfaces.Metrics,
 使用Go协程和通道实现高效的并发控制。
 
 **工作池实现**:
+
 ```go
 type WorkerPool struct {
     workers    int
@@ -238,6 +263,7 @@ type WorkerPool struct {
 定义统一的指标收集接口。
 
 **核心指标**:
+
 - RPS (Requests Per Second)
 - 延迟分布 (Latency Distribution)
 - 错误率 (Error Rate)
@@ -248,16 +274,19 @@ type WorkerPool struct {
 每种协议都有对应的指标收集实现。
 
 #### Redis指标收集 (app/adapters/redis/metrics)
+
 - 连接池状态
 - 命令执行统计
 - 内存使用情况
 
 #### HTTP指标收集 (app/adapters/http/metrics)
+
 - 响应状态码分布
 - 连接复用统计
 - 网络延迟
 
 #### Kafka指标收集 (app/adapters/kafka/metrics)
+
 - 生产者指标
 - 消费者指标
 - 分区分布
@@ -269,6 +298,7 @@ type WorkerPool struct {
 报告管理器负责生成和输出各种格式的测试报告。
 
 **支持的报告格式**:
+
 - 控制台输出
 - JSON格式
 - CSV格式
@@ -279,12 +309,15 @@ type WorkerPool struct {
 每种报告格式都有对应的生成器。
 
 #### 控制台报告生成器
+
 提供详细的控制台输出，包括性能指标和统计信息。
 
 #### JSON报告生成器
+
 生成结构化的JSON报告，便于程序解析和处理。
 
 #### CSV报告生成器
+
 生成CSV格式的报告，便于导入电子表格软件进行分析。
 
 ## 工具层
@@ -294,6 +327,7 @@ type WorkerPool struct {
 提供统一的上下文管理功能。
 
 **主要功能**:
+
 - 超时控制
 - 取消信号
 - 上下文传递
@@ -303,6 +337,7 @@ type WorkerPool struct {
 提供通用的参数解析功能。
 
 **支持的解析类型**:
+
 - 时间 duration
 - 大小 size
 - 布尔值 boolean
@@ -312,6 +347,7 @@ type WorkerPool struct {
 提供统计计算功能。
 
 **支持的统计计算**:
+
 - 平均值
 - 百分位数
 - 标准差
@@ -324,6 +360,7 @@ type WorkerPool struct {
 提供统一的错误处理机制。
 
 **错误分类**:
+
 - 配置错误
 - 连接错误
 - 执行错误
@@ -344,7 +381,8 @@ return fmt.Errorf("failed to execute operation: %w", err)
 每个组件都有对应的单元测试。
 
 **测试目录结构**:
-```
+
+```bash
 app/
 ├── adapters/
 │   ├── redis/

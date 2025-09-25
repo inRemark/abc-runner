@@ -43,7 +43,7 @@
 
 ### 从源码构建
 
-```
+```bash
 # 克隆仓库
 git clone https://github.com/your-org/abc-runner.git
 cd abc-runner
@@ -67,7 +67,7 @@ VERSION=1.0.0 make release
 
 ### 安装
 
-```
+```bash
 # 从源码构建
 go build -o abc-runner .
 
@@ -76,7 +76,7 @@ go build -o abc-runner .
 
 ### 基本用法
 
-```
+```bash
 # 显示帮助
 ./abc-runner --help
 
@@ -92,7 +92,7 @@ go build -o abc-runner .
 
 ### 使用别名
 
-```
+```bash
 # 快速测试的短别名
 ./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
 ./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
@@ -103,14 +103,14 @@ go build -o abc-runner .
 
 ### 全局选项
 
-```
+```bash
 ./abc-runner --help                 # 显示帮助
 ./abc-runner --version              # 显示版本
 ```
 
 ### Redis命令
 
-```
+```bash
 # 基本Redis测试
 ./abc-runner redis -h <host> -p <port> -n <requests> -c <connections>
 
@@ -159,7 +159,7 @@ go build -o abc-runner .
 
 ### HTTP命令
 
-```
+```bash
 # 基本HTTP GET测试
 ./abc-runner http --url http://localhost:8080 -n 10000 -c 50
 
@@ -178,7 +178,7 @@ go build -o abc-runner .
 
 ### Kafka命令
 
-```
+```bash
 # 基本生产者测试
 ./abc-runner kafka --broker localhost:9092 --topic test-topic -n 10000 -c 5
 
@@ -377,7 +377,7 @@ kafka:
 
 ### Redis性能测试
 
-```
+```bash
 # 基本性能测试
 ./abc-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
 
@@ -391,7 +391,7 @@ kafka:
 
 ### HTTP负载测试
 
-```
+```bash
 # API端点测试
 ./abc-runner http --url http://api.example.com/health -n 10000 -c 100
 
@@ -404,7 +404,7 @@ kafka:
 
 ### Kafka性能测试
 
-```
+```bash
 # 生产者吞吐量测试
 ./abc-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
 
@@ -431,6 +431,6 @@ kafka:
 - 查看命令帮助: `./abc-runner <command> --help`
 - 提交issue报告bug或功能请求
 
-## 文档
+## 文档维护
 
 本项目维护英文和中文两种语言的文档。有关维护多语言文档的指南，请参阅[文档翻译指南](docs/maintenance/document-translation-guide.md)。

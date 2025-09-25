@@ -32,7 +32,7 @@ func (cv *ConfigVersion) String() string {
 // GetVersionInfo 获取配置版本信息
 func GetVersionInfo() *ConfigVersion {
 	return &ConfigVersion{
-		Version:     "1.0.0",
+		Version:     "0.2.0",
 		CreatedAt:   time.Now(),
 		Description: "Initial configuration version",
 		Author:      "abc-runner",
