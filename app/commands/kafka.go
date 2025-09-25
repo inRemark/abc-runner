@@ -34,7 +34,7 @@ type KafkaSimpleHandler struct {
 func NewKafkaCommandHandler(adapterFactory interfaces.AdapterFactory) *KafkaSimpleHandler {
 	handler := &KafkaSimpleHandler{
 		adapterFactory:    adapterFactory,
-		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
+		configManager:     config.NewConfigManager(nil),
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}

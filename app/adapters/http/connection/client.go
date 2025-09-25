@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	
+
 	httpConfig "abc-runner/app/adapters/http/config"
 )
 
@@ -40,32 +40,32 @@ func (c *HttpClient) ExecuteRequest(ctx context.Context, reqConfig httpConfig.Ht
 	if err != nil {
 		return nil, fmt.Errorf("failed to build URL: %w", err)
 	}
-	
+
 	// 准备请求体
 	body, contentType, err := c.prepareRequestBody(reqConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare request body: %w", err)
 	}
-	
+
 	// 创建HTTP请求
 	req, err := http.NewRequestWithContext(ctx, reqConfig.Method, fullURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// 设置请求头
 	c.setRequestHeaders(req, reqConfig, contentType)
-	
+
 	// 设置认证
 	if err := c.setAuthentication(req); err != nil {
 		return nil, fmt.Errorf("failed to set authentication: %w", err)
 	}
-	
+
 	// 执行请求
 	startTime := time.Now()
 	resp, err := c.client.Do(req)
 	duration := time.Since(startTime)
-	
+
 	if err != nil {
 		return &HttpResponse{
 			StatusCode: 0,
@@ -73,7 +73,7 @@ func (c *HttpClient) ExecuteRequest(ctx context.Context, reqConfig httpConfig.Ht
 			Error:      err,
 		}, err
 	}
-	
+
 	// 读取响应体
 	respBody, err := c.readResponseBody(resp)
 	if err != nil {
@@ -84,10 +84,10 @@ func (c *HttpClient) ExecuteRequest(ctx context.Context, reqConfig httpConfig.Ht
 			Error:      err,
 		}, err
 	}
-	
+
 	// 确保响应体被关闭
 	resp.Body.Close()
-	
+
 	return &HttpResponse{
 		StatusCode:    resp.StatusCode,
 		Headers:       resp.Header,
@@ -101,19 +101,19 @@ func (c *HttpClient) ExecuteRequest(ctx context.Context, reqConfig httpConfig.Ht
 // buildURL 构建完整URL
 func (c *HttpClient) buildURL(path string) (string, error) {
 	baseURL := c.config.Connection.BaseURL
-	
+
 	// 解析基础URL
 	base, err := url.Parse(baseURL)
 	if err != nil {
 		return "", fmt.Errorf("invalid base URL: %w", err)
 	}
-	
+
 	// 解析路径
 	pathURL, err := url.Parse(path)
 	if err != nil {
 		return "", fmt.Errorf("invalid path: %w", err)
 	}
-	
+
 	// 合并URL
 	fullURL := base.ResolveReference(pathURL)
 	return fullURL.String(), nil
@@ -125,12 +125,12 @@ func (c *HttpClient) prepareRequestBody(reqConfig httpConfig.HttpRequestConfig) 
 	if reqConfig.Upload != nil {
 		return c.prepareMultipartBody(reqConfig)
 	}
-	
+
 	// 如果没有body，返回空
 	if reqConfig.Body == nil {
 		return nil, reqConfig.ContentType, nil
 	}
-	
+
 	// 根据Content-Type处理body
 	switch reqConfig.ContentType {
 	case "application/json":
@@ -151,24 +151,24 @@ func (c *HttpClient) prepareJSONBody(body interface{}) (io.Reader, string, error
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to marshal JSON body: %w", err)
 	}
-	
+
 	return bytes.NewBuffer(jsonData), "application/json", nil
 }
 
 // prepareFormBody 准备表单请求体
 func (c *HttpClient) prepareFormBody(body interface{}) (io.Reader, string, error) {
 	values := url.Values{}
-	
+
 	// 将body转换为map
 	bodyMap, ok := body.(map[string]interface{})
 	if !ok {
 		return nil, "", fmt.Errorf("form body must be a map[string]interface{}")
 	}
-	
+
 	for key, value := range bodyMap {
 		values.Set(key, fmt.Sprintf("%v", value))
 	}
-	
+
 	return strings.NewReader(values.Encode()), "application/x-www-form-urlencoded", nil
 }
 
@@ -182,7 +182,7 @@ func (c *HttpClient) prepareTextBody(body interface{}) (io.Reader, string, error
 func (c *HttpClient) prepareMultipartBody(reqConfig httpConfig.HttpRequestConfig) (io.Reader, string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	
+
 	// 添加表单数据
 	if reqConfig.Upload.FormData != nil {
 		for key, value := range reqConfig.Upload.FormData {
@@ -191,18 +191,18 @@ func (c *HttpClient) prepareMultipartBody(reqConfig httpConfig.HttpRequestConfig
 			}
 		}
 	}
-	
+
 	// 添加文件
 	for _, fileConfig := range reqConfig.Upload.Files {
 		if err := c.addFileToMultipart(writer, fileConfig); err != nil {
 			return nil, "", fmt.Errorf("failed to add file %s: %w", fileConfig.Path, err)
 		}
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, "", fmt.Errorf("failed to close multipart writer: %w", err)
 	}
-	
+
 	return &buf, writer.FormDataContentType(), nil
 }
 
@@ -214,15 +214,15 @@ func (c *HttpClient) addFileToMultipart(writer *multipart.Writer, fileConfig htt
 		if err != nil {
 			return fmt.Errorf("failed to glob pattern %s: %w", fileConfig.Pattern, err)
 		}
-		
+
 		if len(matches) == 0 {
 			return fmt.Errorf("no files found matching pattern %s", fileConfig.Pattern)
 		}
-		
+
 		// 上传第一个匹配的文件
 		return c.addSingleFileToMultipart(writer, fileConfig.Field, matches[0])
 	}
-	
+
 	// 直接上传指定文件
 	return c.addSingleFileToMultipart(writer, fileConfig.Field, fileConfig.Path)
 }
@@ -234,18 +234,18 @@ func (c *HttpClient) addSingleFileToMultipart(writer *multipart.Writer, fieldNam
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
 	defer file.Close()
-	
+
 	// 创建文件字段
 	part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
 	if err != nil {
 		return fmt.Errorf("failed to create form file: %w", err)
 	}
-	
+
 	// 复制文件内容
 	if _, err := io.Copy(part, file); err != nil {
 		return fmt.Errorf("failed to copy file content: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -255,12 +255,12 @@ func (c *HttpClient) setRequestHeaders(req *http.Request, reqConfig httpConfig.H
 	if c.config.Benchmark.UserAgent != "" {
 		req.Header.Set("User-Agent", c.config.Benchmark.UserAgent)
 	}
-	
+
 	// 设置Content-Type
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	
+
 	// 设置自定义头部
 	for key, value := range reqConfig.Headers {
 		req.Header.Set(key, value)
@@ -294,13 +294,13 @@ func (c *HttpClient) setAuthentication(req *http.Request) error {
 func (c *HttpClient) readResponseBody(resp *http.Response) ([]byte, error) {
 	// 限制读取大小以防止内存耗尽
 	const maxBodySize = 10 * 1024 * 1024 // 10MB
-	
+
 	limitedReader := io.LimitReader(resp.Body, maxBodySize)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	
+
 	return body, nil
 }
 
@@ -325,8 +325,8 @@ func (r *HttpResponse) String() string {
 	if r.Error != nil {
 		return fmt.Sprintf("Error: %v, Duration: %v", r.Error, r.Duration)
 	}
-	
-	return fmt.Sprintf("Status: %d, Length: %d bytes, Duration: %v", 
+
+	return fmt.Sprintf("Status: %d, Length: %d bytes, Duration: %v",
 		r.StatusCode, len(r.Body), r.Duration)
 }
 

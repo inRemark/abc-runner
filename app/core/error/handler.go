@@ -14,19 +14,19 @@ import (
 
 // ErrorHandler 错误处理器
 type ErrorHandler struct {
-	retryConfig      *RetryConfig
-	circuitBreaker   *CircuitBreaker
-	errorClassifier  *ErrorClassifier
-	recoveryManager  *RecoveryManager
+	retryConfig     *RetryConfig
+	circuitBreaker  *CircuitBreaker
+	errorClassifier *ErrorClassifier
+	recoveryManager *RecoveryManager
 }
 
 // RetryConfig 重试配置
 type RetryConfig struct {
-	MaxRetries     int
-	InitialDelay   time.Duration
-	MaxDelay       time.Duration
-	BackoffFactor  float64
-	Jitter         bool
+	MaxRetries      int
+	InitialDelay    time.Duration
+	MaxDelay        time.Duration
+	BackoffFactor   float64
+	Jitter          bool
 	RetryableErrors []ErrorType
 }
 
@@ -66,14 +66,14 @@ const (
 
 // CircuitBreaker 熔断器
 type CircuitBreaker struct {
-	state           CircuitState
-	failureCount    int
-	successCount    int
+	state            CircuitState
+	failureCount     int
+	successCount     int
 	failureThreshold int
 	successThreshold int
-	timeout         time.Duration
-	lastFailTime    time.Time
-	mutex           sync.RWMutex
+	timeout          time.Duration
+	lastFailTime     time.Time
+	mutex            sync.RWMutex
 }
 
 // CircuitState 熔断器状态
@@ -144,14 +144,14 @@ func NewErrorClassifier() *ErrorClassifier {
 	classifier := &ErrorClassifier{
 		rules: make([]ClassificationRule, 0),
 	}
-	
+
 	// 添加默认分类规则
 	classifier.AddRule(classifyTimeoutError)
 	classifier.AddRule(classifyConnectionError)
 	classifier.AddRule(classifyNetworkError)
 	classifier.AddRule(classifyAuthenticationError)
 	classifier.AddRule(classifyRateLimitError)
-	
+
 	return classifier
 }
 
@@ -160,12 +160,12 @@ func NewRecoveryManager() *RecoveryManager {
 	manager := &RecoveryManager{
 		strategies: make(map[ErrorType]RecoveryStrategy),
 	}
-	
+
 	// 注册默认恢复策略
 	manager.RegisterStrategy(ErrorTypeConnection, reconnectionStrategy)
 	manager.RegisterStrategy(ErrorTypeAuthentication, reauthenticationStrategy)
 	manager.RegisterStrategy(ErrorTypeRateLimit, backoffStrategy)
-	
+
 	return manager
 }
 
@@ -174,10 +174,10 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, adapter inter
 	if err == nil {
 		return &interfaces.OperationResult{Success: true}
 	}
-	
+
 	// 分类错误
 	errorInfo := h.errorClassifier.Classify(err)
-	
+
 	// 检查熔断器状态
 	if !h.circuitBreaker.CanExecute() {
 		return &interfaces.OperationResult{
@@ -185,7 +185,7 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, adapter inter
 			Error:   fmt.Errorf("circuit breaker is open: %w", err),
 		}
 	}
-	
+
 	// 尝试恢复
 	if errorInfo.Recoverable {
 		if recoveryErr := h.recoveryManager.Recover(ctx, err, adapter, errorInfo.Type); recoveryErr == nil {
@@ -193,19 +193,19 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, adapter inter
 			return &interfaces.OperationResult{Success: true}
 		}
 	}
-	
+
 	// 记录失败
 	h.circuitBreaker.RecordFailure()
-	
+
 	return &interfaces.OperationResult{
 		Success: false,
 		Error:   err,
 		Metadata: map[string]interface{}{
-			"error_type":        string(errorInfo.Type),
-			"error_severity":    errorInfo.Severity,
-			"retryable":         errorInfo.Retryable,
-			"recoverable":       errorInfo.Recoverable,
-			"circuit_state":     h.circuitBreaker.GetState(),
+			"error_type":     string(errorInfo.Type),
+			"error_severity": errorInfo.Severity,
+			"retryable":      errorInfo.Retryable,
+			"recoverable":    errorInfo.Recoverable,
+			"circuit_state":  h.circuitBreaker.GetState(),
 		},
 	}
 }
@@ -213,7 +213,7 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, adapter inter
 // ExecuteWithRetry 带重试的执行
 func (h *ErrorHandler) ExecuteWithRetry(ctx context.Context, operation interfaces.Operation, executor func(context.Context, interfaces.Operation) (*interfaces.OperationResult, error)) (*interfaces.OperationResult, error) {
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= h.retryConfig.MaxRetries; attempt++ {
 		// 检查熔断器
 		if !h.circuitBreaker.CanExecute() {
@@ -222,31 +222,31 @@ func (h *ErrorHandler) ExecuteWithRetry(ctx context.Context, operation interface
 				Error:   fmt.Errorf("circuit breaker is open"),
 			}, fmt.Errorf("circuit breaker is open")
 		}
-		
+
 		// 执行操作
 		result, err := executor(ctx, operation)
-		
+
 		if err == nil && result != nil && result.Success {
 			h.circuitBreaker.RecordSuccess()
 			return result, nil
 		}
-		
+
 		lastErr = err
 		if err == nil && result != nil {
 			lastErr = result.Error
 		}
-		
+
 		// 分类错误
 		errorInfo := h.errorClassifier.Classify(lastErr)
-		
+
 		// 记录失败
 		h.circuitBreaker.RecordFailure()
-		
+
 		// 检查是否可重试
 		if !h.isRetryable(errorInfo) || attempt == h.retryConfig.MaxRetries {
 			break
 		}
-		
+
 		// 等待重试
 		delay := h.calculateRetryDelay(attempt)
 		select {
@@ -259,7 +259,7 @@ func (h *ErrorHandler) ExecuteWithRetry(ctx context.Context, operation interface
 			continue
 		}
 	}
-	
+
 	return &interfaces.OperationResult{
 		Success: false,
 		Error:   fmt.Errorf("operation failed after %d attempts: %w", h.retryConfig.MaxRetries, lastErr),
@@ -279,17 +279,17 @@ func (h *ErrorHandler) isRetryable(errorInfo *ErrorInfo) bool {
 // calculateRetryDelay 计算重试延迟
 func (h *ErrorHandler) calculateRetryDelay(attempt int) time.Duration {
 	delay := float64(h.retryConfig.InitialDelay) * math.Pow(h.retryConfig.BackoffFactor, float64(attempt))
-	
+
 	if delay > float64(h.retryConfig.MaxDelay) {
 		delay = float64(h.retryConfig.MaxDelay)
 	}
-	
+
 	// 添加抖动
 	if h.retryConfig.Jitter {
 		jitter := rand.Float64() * delay * 0.1 // 10%的抖动
 		delay += jitter
 	}
-	
+
 	return time.Duration(delay)
 }
 
@@ -299,7 +299,7 @@ func (h *ErrorHandler) calculateRetryDelay(attempt int) time.Duration {
 func (cb *CircuitBreaker) CanExecute() bool {
 	cb.mutex.RLock()
 	defer cb.mutex.RUnlock()
-	
+
 	switch cb.state {
 	case StateClosed:
 		return true
@@ -316,10 +316,10 @@ func (cb *CircuitBreaker) CanExecute() bool {
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
-	
+
 	cb.successCount++
 	cb.failureCount = 0
-	
+
 	if cb.state == StateHalfOpen && cb.successCount >= cb.successThreshold {
 		cb.state = StateClosed
 		cb.successCount = 0
@@ -330,11 +330,11 @@ func (cb *CircuitBreaker) RecordSuccess() {
 func (cb *CircuitBreaker) RecordFailure() {
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
-	
+
 	cb.failureCount++
 	cb.successCount = 0
 	cb.lastFailTime = time.Now()
-	
+
 	if cb.state == StateClosed && cb.failureCount >= cb.failureThreshold {
 		cb.state = StateOpen
 	} else if cb.state == StateHalfOpen {
@@ -363,7 +363,7 @@ func (ec *ErrorClassifier) Classify(err error) *ErrorInfo {
 			return info
 		}
 	}
-	
+
 	// 默认分类
 	return &ErrorInfo{
 		Type:        ErrorTypeUnknown,
@@ -458,7 +458,7 @@ func (rm *RecoveryManager) Recover(ctx context.Context, err error, adapter inter
 	if !exists {
 		return fmt.Errorf("no recovery strategy for error type: %s", errorType)
 	}
-	
+
 	return strategy(ctx, err, adapter)
 }
 

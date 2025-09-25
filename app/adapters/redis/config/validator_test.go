@@ -23,12 +23,12 @@ func TestConfigValidator(t *testing.T) {
 			}
 			return nil
 		}
-		
+
 		validator.AddRule(customRule)
-		
+
 		config := NewDefaultRedisConfig()
 		config.BenchMark.Total = 2000000
-		
+
 		err := validator.Validate(config)
 		if err == nil {
 			t.Error("Validation should fail for high total requests")
@@ -40,7 +40,7 @@ func TestValidateProtocol(t *testing.T) {
 	t.Run("Valid Protocol", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Protocol = "redis"
-		
+
 		err := validateProtocol(config)
 		if err != nil {
 			t.Errorf("Protocol validation should pass: %v", err)
@@ -50,7 +50,7 @@ func TestValidateProtocol(t *testing.T) {
 	t.Run("Empty Protocol", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Protocol = ""
-		
+
 		err := validateProtocol(config)
 		if err == nil {
 			t.Error("Empty protocol should fail validation")
@@ -60,7 +60,7 @@ func TestValidateProtocol(t *testing.T) {
 	t.Run("Invalid Protocol", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Protocol = "invalid"
-		
+
 		err := validateProtocol(config)
 		if err == nil {
 			t.Error("Invalid protocol should fail validation")
@@ -70,12 +70,12 @@ func TestValidateProtocol(t *testing.T) {
 
 func TestValidateMode(t *testing.T) {
 	validModes := []string{"standalone", "sentinel", "cluster"}
-	
+
 	for _, mode := range validModes {
 		t.Run("Valid Mode: "+mode, func(t *testing.T) {
 			config := NewDefaultRedisConfig()
 			config.Mode = mode
-			
+
 			err := validateMode(config)
 			if err != nil {
 				t.Errorf("Mode '%s' should be valid: %v", mode, err)
@@ -86,7 +86,7 @@ func TestValidateMode(t *testing.T) {
 	t.Run("Invalid Mode", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "invalid"
-		
+
 		err := validateMode(config)
 		if err == nil {
 			t.Error("Invalid mode should fail validation")
@@ -96,7 +96,7 @@ func TestValidateMode(t *testing.T) {
 	t.Run("Empty Mode", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = ""
-		
+
 		// 空模式应该通过验证，因为GetMode()会返回默认值
 		err := validateMode(config)
 		if err != nil {
@@ -110,7 +110,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "standalone"
 		config.Standalone.Addr = "localhost:6379"
-		
+
 		err := validateConnection(config)
 		if err != nil {
 			t.Errorf("Valid standalone config should pass: %v", err)
@@ -121,7 +121,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "standalone"
 		config.Standalone.Addr = ""
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Empty standalone addr should fail validation")
@@ -132,7 +132,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "standalone"
 		config.Standalone.Addr = "invalid-address"
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Invalid address format should fail validation")
@@ -143,7 +143,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "cluster"
 		config.Cluster.Addrs = []string{"node1:6379", "node2:6379", "node3:6379"}
-		
+
 		err := validateConnection(config)
 		if err != nil {
 			t.Errorf("Valid cluster config should pass: %v", err)
@@ -154,7 +154,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "cluster"
 		config.Cluster.Addrs = []string{}
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Empty cluster addrs should fail validation")
@@ -165,7 +165,7 @@ func TestValidateConnection(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.Mode = "cluster"
 		config.Cluster.Addrs = []string{"node1:6379", "invalid-node"}
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Invalid cluster address format should fail validation")
@@ -177,7 +177,7 @@ func TestValidateConnection(t *testing.T) {
 		config.Mode = "sentinel"
 		config.Sentinel.Addrs = []string{"sentinel1:26379", "sentinel2:26379"}
 		config.Sentinel.MasterName = "mymaster"
-		
+
 		err := validateConnection(config)
 		if err != nil {
 			t.Errorf("Valid sentinel config should pass: %v", err)
@@ -189,7 +189,7 @@ func TestValidateConnection(t *testing.T) {
 		config.Mode = "sentinel"
 		config.Sentinel.Addrs = []string{}
 		config.Sentinel.MasterName = "mymaster"
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Empty sentinel addrs should fail validation")
@@ -201,7 +201,7 @@ func TestValidateConnection(t *testing.T) {
 		config.Mode = "sentinel"
 		config.Sentinel.Addrs = []string{"sentinel1:26379"}
 		config.Sentinel.MasterName = ""
-		
+
 		err := validateConnection(config)
 		if err == nil {
 			t.Error("Empty sentinel master name should fail validation")
@@ -212,7 +212,7 @@ func TestValidateConnection(t *testing.T) {
 func TestValidateBenchmark(t *testing.T) {
 	t.Run("Valid Benchmark", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
-		
+
 		err := validateBenchmark(config)
 		if err != nil {
 			t.Errorf("Default benchmark config should be valid: %v", err)
@@ -222,7 +222,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid Total", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.Total = 0
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Zero total should fail validation")
@@ -232,7 +232,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid Parallels", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.Parallels = -1
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Negative parallels should fail validation")
@@ -242,7 +242,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid DataSize", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.DataSize = 0
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Zero data size should fail validation")
@@ -252,7 +252,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid ReadPercent - Too High", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.ReadPercent = 150
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Read percent > 100 should fail validation")
@@ -262,7 +262,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid ReadPercent - Negative", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.ReadPercent = -10
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Negative read percent should fail validation")
@@ -272,7 +272,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid RandomKeys", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.RandomKeys = -1
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Negative random keys should fail validation")
@@ -282,7 +282,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid TTL", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.TTL = -1
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Negative TTL should fail validation")
@@ -291,11 +291,11 @@ func TestValidateBenchmark(t *testing.T) {
 
 	t.Run("Valid Test Cases", func(t *testing.T) {
 		validCases := []string{"get", "set", "set_get", "set_get_random", "pub", "sub"}
-		
+
 		for _, testCase := range validCases {
 			config := NewDefaultRedisConfig()
 			config.BenchMark.Case = testCase
-			
+
 			err := validateBenchmark(config)
 			if err != nil {
 				t.Errorf("Test case '%s' should be valid: %v", testCase, err)
@@ -306,7 +306,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Invalid Test Case", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.Case = "invalid_case"
-		
+
 		err := validateBenchmark(config)
 		if err == nil {
 			t.Error("Invalid test case should fail validation")
@@ -316,7 +316,7 @@ func TestValidateBenchmark(t *testing.T) {
 	t.Run("Empty Test Case", func(t *testing.T) {
 		config := NewDefaultRedisConfig()
 		config.BenchMark.Case = ""
-		
+
 		err := validateBenchmark(config)
 		if err != nil {
 			t.Errorf("Empty test case should be valid: %v", err)

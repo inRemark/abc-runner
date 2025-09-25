@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
-	
+
 	httpConfig "abc-runner/app/adapters/http/config"
 )
 
@@ -41,7 +41,7 @@ func NewConnectionPool(config *httpConfig.HttpAdapterConfig, poolConfig PoolConf
 		idleClients: make(chan *http.Client, poolConfig.MaxConnections),
 		mutex:       sync.RWMutex{},
 	}
-	
+
 	// 创建HTTP客户端
 	for i := 0; i < poolConfig.MaxConnections; i++ {
 		client, err := pool.createHTTPClient(poolConfig)
@@ -50,11 +50,11 @@ func NewConnectionPool(config *httpConfig.HttpAdapterConfig, poolConfig PoolConf
 			pool.Close()
 			return nil, fmt.Errorf("failed to create HTTP client %d: %w", i, err)
 		}
-		
+
 		pool.clients = append(pool.clients, client)
 		pool.idleClients <- client
 	}
-	
+
 	return pool, nil
 }
 
@@ -68,7 +68,7 @@ func (p *ConnectionPool) createHTTPClient(poolConfig PoolConfig) (*http.Client, 
 		DisableKeepAlives:   poolConfig.DisableKeepAlives,
 		DisableCompression:  p.config.Connection.DisableCompression,
 	}
-	
+
 	// 配置TLS
 	if p.needsTLS() {
 		tlsConfig, err := p.createTLSConfig()
@@ -77,13 +77,13 @@ func (p *ConnectionPool) createHTTPClient(poolConfig PoolConfig) (*http.Client, 
 		}
 		transport.TLSClientConfig = tlsConfig
 	}
-	
+
 	// 创建客户端
 	client := &http.Client{
 		Transport: transport,
 		Timeout:   p.config.Connection.Timeout,
 	}
-	
+
 	// 配置重定向策略
 	if p.config.Benchmark.FollowRedirects {
 		client.CheckRedirect = p.createRedirectPolicy()
@@ -92,7 +92,7 @@ func (p *ConnectionPool) createHTTPClient(poolConfig PoolConfig) (*http.Client, 
 			return http.ErrUseLastResponse
 		}
 	}
-	
+
 	return client, nil
 }
 
@@ -103,7 +103,7 @@ func (p *ConnectionPool) needsTLS() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return parsedURL.Scheme == "https" || p.config.Connection.TLS.ClientAuth
 }
 
@@ -114,41 +114,41 @@ func (p *ConnectionPool) createTLSConfig() (*tls.Config, error) {
 		PreferServerCipherSuites: p.config.Connection.TLS.PreferServerCipherSuites,
 		SessionTicketsDisabled:   p.config.Connection.TLS.SessionTicketsDisabled,
 	}
-	
+
 	// 设置服务器名称
 	if p.config.Connection.TLS.ServerName != "" {
 		tlsConfig.ServerName = p.config.Connection.TLS.ServerName
 	}
-	
+
 	// 设置TLS版本
 	if err := p.setTLSVersions(tlsConfig); err != nil {
 		return nil, err
 	}
-	
+
 	// 设置密码套件
 	if err := p.setCipherSuites(tlsConfig); err != nil {
 		return nil, err
 	}
-	
+
 	// 设置重新协商策略
 	if err := p.setRenegotiation(tlsConfig); err != nil {
 		return nil, err
 	}
-	
+
 	// 加载客户端证书
 	if p.config.Connection.TLS.ClientAuth {
 		if err := p.loadClientCertificates(tlsConfig); err != nil {
 			return nil, err
 		}
 	}
-	
+
 	// 加载CA证书
 	if p.config.Connection.TLS.CAFile != "" {
 		if err := p.loadCACertificates(tlsConfig); err != nil {
 			return nil, err
 		}
 	}
-	
+
 	return tlsConfig, nil
 }
 
@@ -162,7 +162,7 @@ func (p *ConnectionPool) setTLSVersions(tlsConfig *tls.Config) error {
 		}
 		tlsConfig.MinVersion = minVersion
 	}
-	
+
 	// 设置最大版本
 	if p.config.Connection.TLS.MaxVersion != "" {
 		maxVersion, err := p.parseTLSVersion(p.config.Connection.TLS.MaxVersion)
@@ -171,7 +171,7 @@ func (p *ConnectionPool) setTLSVersions(tlsConfig *tls.Config) error {
 		}
 		tlsConfig.MaxVersion = maxVersion
 	}
-	
+
 	return nil
 }
 
@@ -196,14 +196,14 @@ func (p *ConnectionPool) setCipherSuites(tlsConfig *tls.Config) error {
 	if len(p.config.Connection.TLS.CipherSuites) == 0 {
 		return nil
 	}
-	
+
 	var cipherSuites []uint16
 	cipherSuiteMap := map[string]uint16{
 		"TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
 		"TLS_AES_256_GCM_SHA384":       tls.TLS_AES_256_GCM_SHA384,
 		"TLS_CHACHA20_POLY1305_SHA256": tls.TLS_CHACHA20_POLY1305_SHA256,
 	}
-	
+
 	for _, suite := range p.config.Connection.TLS.CipherSuites {
 		if cipherID, exists := cipherSuiteMap[suite]; exists {
 			cipherSuites = append(cipherSuites, cipherID)
@@ -211,7 +211,7 @@ func (p *ConnectionPool) setCipherSuites(tlsConfig *tls.Config) error {
 			return fmt.Errorf("unsupported cipher suite: %s", suite)
 		}
 	}
-	
+
 	tlsConfig.CipherSuites = cipherSuites
 	return nil
 }
@@ -238,12 +238,12 @@ func (p *ConnectionPool) loadClientCertificates(tlsConfig *tls.Config) error {
 	if p.config.Connection.TLS.CertFile == "" || p.config.Connection.TLS.KeyFile == "" {
 		return fmt.Errorf("cert_file and key_file are required for client authentication")
 	}
-	
+
 	cert, err := tls.LoadX509KeyPair(p.config.Connection.TLS.CertFile, p.config.Connection.TLS.KeyFile)
 	if err != nil {
 		return fmt.Errorf("failed to load client certificate: %w", err)
 	}
-	
+
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	return nil
 }
@@ -269,11 +269,11 @@ func (p *ConnectionPool) createRedirectPolicy() func(*http.Request, []*http.Requ
 func (p *ConnectionPool) GetClient() *http.Client {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	select {
 	case client := <-p.idleClients:
 		return client
@@ -290,7 +290,7 @@ func (p *ConnectionPool) ReturnClient(client *http.Client) {
 	if p.closed || client == nil {
 		return
 	}
-	
+
 	select {
 	case p.idleClients <- client:
 		// 成功归还到池中
@@ -318,26 +318,26 @@ func (p *ConnectionPool) GetActiveCount() int {
 func (p *ConnectionPool) Close() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	p.closed = true
-	
+
 	// 关闭空闲客户端通道
 	close(p.idleClients)
-	
+
 	// 清理所有客户端
 	for _, client := range p.clients {
 		if transport, ok := client.Transport.(*http.Transport); ok {
 			transport.CloseIdleConnections()
 		}
 	}
-	
+
 	// 清空客户端列表
 	p.clients = nil
-	
+
 	return nil
 }
 
@@ -346,11 +346,11 @@ func (p *ConnectionPool) HealthCheck() error {
 	if p.closed {
 		return fmt.Errorf("connection pool is closed")
 	}
-	
+
 	if len(p.clients) == 0 {
 		return fmt.Errorf("no clients available in pool")
 	}
-	
+
 	return nil
 }
 
@@ -358,7 +358,7 @@ func (p *ConnectionPool) HealthCheck() error {
 func (p *ConnectionPool) GetStats() map[string]interface{} {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	
+
 	return map[string]interface{}{
 		"pool_size":    p.poolSize,
 		"idle_count":   len(p.idleClients),

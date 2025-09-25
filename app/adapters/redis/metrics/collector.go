@@ -13,32 +13,32 @@ import (
 // MetricsCollector Redis指标收集器
 type MetricsCollector struct {
 	// 基础指标
-	totalOperations    int64
-	successOperations  int64
-	failedOperations   int64
-	readOperations     int64
-	writeOperations    int64
-	
+	totalOperations   int64
+	successOperations int64
+	failedOperations  int64
+	readOperations    int64
+	writeOperations   int64
+
 	// 延迟指标
-	totalLatency       time.Duration
-	minLatency         time.Duration
-	maxLatency         time.Duration
-	latencyHistory     []time.Duration
-	
+	totalLatency   time.Duration
+	minLatency     time.Duration
+	maxLatency     time.Duration
+	latencyHistory []time.Duration
+
 	// 操作类型统计
-	operationStats     map[operations.OperationType]*OperationStat
-	
+	operationStats map[operations.OperationType]*OperationStat
+
 	// 连接指标
-	connectionStats    *ConnectionStat
-	
+	connectionStats *ConnectionStat
+
 	// 时间窗口指标
-	windowStats        *WindowStat
-	
+	windowStats *WindowStat
+
 	// 错误统计
-	errorStats         map[string]int64
-	
-	mutex              sync.RWMutex
-	startTime          time.Time
+	errorStats map[string]int64
+
+	mutex     sync.RWMutex
+	startTime time.Time
 }
 
 // OperationStat 操作统计
@@ -54,32 +54,32 @@ type OperationStat struct {
 
 // ConnectionStat 连接统计
 type ConnectionStat struct {
-	TotalConnections    int64         `json:"total_connections"`
-	ActiveConnections   int64         `json:"active_connections"`
-	FailedConnections   int64         `json:"failed_connections"`
-	ConnectionLatency   time.Duration `json:"connection_latency"`
-	ReconnectCount      int64         `json:"reconnect_count"`
+	TotalConnections  int64         `json:"total_connections"`
+	ActiveConnections int64         `json:"active_connections"`
+	FailedConnections int64         `json:"failed_connections"`
+	ConnectionLatency time.Duration `json:"connection_latency"`
+	ReconnectCount    int64         `json:"reconnect_count"`
 }
 
 // WindowStat 时间窗口统计
 type WindowStat struct {
-	WindowSize      time.Duration `json:"window_size"`
-	CurrentWindow   int64         `json:"current_window"`
+	WindowSize       time.Duration `json:"window_size"`
+	CurrentWindow    int64         `json:"current_window"`
 	WindowOperations []int64       `json:"window_operations"`
-	RPS             float64       `json:"rps"`
-	LastUpdate      time.Time     `json:"last_update"`
+	RPS              float64       `json:"rps"`
+	LastUpdate       time.Time     `json:"last_update"`
 }
 
 // MetricsSummary 指标摘要
 type MetricsSummary struct {
-	BasicMetrics      *BasicMetrics                             `json:"basic_metrics"`
-	LatencyMetrics    *LatencyMetrics                           `json:"latency_metrics"`
+	BasicMetrics      *BasicMetrics                               `json:"basic_metrics"`
+	LatencyMetrics    *LatencyMetrics                             `json:"latency_metrics"`
 	OperationMetrics  map[operations.OperationType]*OperationStat `json:"operation_metrics"`
-	ConnectionMetrics *ConnectionStat                           `json:"connection_metrics"`
-	WindowMetrics     *WindowStat                               `json:"window_metrics"`
-	ErrorMetrics      map[string]int64                          `json:"error_metrics"`
-	Duration          time.Duration                             `json:"duration"`
-	Timestamp         time.Time                                 `json:"timestamp"`
+	ConnectionMetrics *ConnectionStat                             `json:"connection_metrics"`
+	WindowMetrics     *WindowStat                                 `json:"window_metrics"`
+	ErrorMetrics      map[string]int64                            `json:"error_metrics"`
+	Duration          time.Duration                               `json:"duration"`
+	Timestamp         time.Time                                   `json:"timestamp"`
 }
 
 // BasicMetrics 基础指标
@@ -96,14 +96,14 @@ type BasicMetrics struct {
 
 // LatencyMetrics 延迟指标
 type LatencyMetrics struct {
-	MinLatency     time.Duration `json:"min_latency"`
-	MaxLatency     time.Duration `json:"max_latency"`
-	AvgLatency     time.Duration `json:"avg_latency"`
-	P50Latency     time.Duration `json:"p50_latency"`
-	P90Latency     time.Duration `json:"p90_latency"`
-	P95Latency     time.Duration `json:"p95_latency"`
-	P99Latency     time.Duration `json:"p99_latency"`
-	TotalLatency   time.Duration `json:"total_latency"`
+	MinLatency   time.Duration `json:"min_latency"`
+	MaxLatency   time.Duration `json:"max_latency"`
+	AvgLatency   time.Duration `json:"avg_latency"`
+	P50Latency   time.Duration `json:"p50_latency"`
+	P90Latency   time.Duration `json:"p90_latency"`
+	P95Latency   time.Duration `json:"p95_latency"`
+	P99Latency   time.Duration `json:"p99_latency"`
+	TotalLatency time.Duration `json:"total_latency"`
 }
 
 // NewMetricsCollector 创建指标收集器
@@ -116,11 +116,11 @@ func NewMetricsCollector() *MetricsCollector {
 			WindowOperations: make([]int64, 60), // 60秒窗口
 			LastUpdate:       time.Now(),
 		},
-		errorStats:      make(map[string]int64),
-		latencyHistory:  make([]time.Duration, 0),
-		startTime:       time.Now(),
-		minLatency:      time.Duration(^uint64(0) >> 1), // 最大值
-		maxLatency:      0,
+		errorStats:     make(map[string]int64),
+		latencyHistory: make([]time.Duration, 0),
+		startTime:      time.Now(),
+		minLatency:     time.Duration(^uint64(0) >> 1), // 最大值
+		maxLatency:     0,
 	}
 }
 
@@ -222,7 +222,7 @@ func (mc *MetricsCollector) CollectConnection(connectionType string, success boo
 func (mc *MetricsCollector) updateWindowStats() {
 	now := time.Now()
 	timeSinceLastUpdate := now.Sub(mc.windowStats.LastUpdate)
-	
+
 	if timeSinceLastUpdate >= mc.windowStats.WindowSize {
 		// 移动窗口
 		windowsToMove := int(timeSinceLastUpdate / mc.windowStats.WindowSize)
@@ -253,7 +253,7 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 	defer mc.mutex.RUnlock()
 
 	duration := time.Since(mc.startTime)
-	
+
 	// 基础指标
 	basicMetrics := &BasicMetrics{
 		TotalOperations:   mc.totalOperations,
@@ -283,8 +283,8 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 		"connection_metrics": mc.connectionStats,
 		"window_metrics":     mc.windowStats,
 		"error_metrics":      mc.errorStats,
-		"duration":          duration,
-		"timestamp":         time.Now(),
+		"duration":           duration,
+		"timestamp":          time.Now(),
 	}
 
 	return result
@@ -350,27 +350,27 @@ func (mc *MetricsCollector) Reset() {
 	mc.minLatency = time.Duration(^uint64(0) >> 1)
 	mc.maxLatency = 0
 	mc.latencyHistory = mc.latencyHistory[:0]
-	
+
 	// 重置操作统计
 	for opType := range mc.operationStats {
 		delete(mc.operationStats, opType)
 	}
-	
+
 	// 重置错误统计
 	for errorMsg := range mc.errorStats {
 		delete(mc.errorStats, errorMsg)
 	}
-	
+
 	// 重置连接统计
 	mc.connectionStats = &ConnectionStat{}
-	
+
 	// 重置时间窗口
 	mc.windowStats = &WindowStat{
 		WindowSize:       time.Second,
 		WindowOperations: make([]int64, 60),
 		LastUpdate:       time.Now(),
 	}
-	
+
 	mc.startTime = time.Now()
 }
 
@@ -380,7 +380,7 @@ func (mc *MetricsCollector) GetSummary() *MetricsSummary {
 	defer mc.mutex.RUnlock()
 
 	duration := time.Since(mc.startTime)
-	
+
 	// 基础指标
 	basicMetrics := &BasicMetrics{
 		TotalOperations:   mc.totalOperations,
@@ -423,11 +423,11 @@ func (mc *MetricsCollector) ToJSON() ([]byte, error) {
 // PrintSummary 打印摘要
 func (mc *MetricsCollector) PrintSummary() {
 	summary := mc.GetSummary()
-	
+
 	fmt.Printf("\n=== Redis Performance Metrics Summary ===\n")
 	fmt.Printf("Duration: %v\n", summary.Duration)
 	fmt.Printf("Timestamp: %v\n\n", summary.Timestamp.Format("2006-01-02 15:04:05"))
-	
+
 	// 基础指标
 	fmt.Printf("Basic Metrics:\n")
 	fmt.Printf("  Total Operations: %d\n", summary.BasicMetrics.TotalOperations)
@@ -438,7 +438,7 @@ func (mc *MetricsCollector) PrintSummary() {
 	fmt.Printf("  Success Rate: %.2f%%\n", summary.BasicMetrics.SuccessRate)
 	fmt.Printf("  RPS: %.2f\n", summary.BasicMetrics.RPS)
 	fmt.Printf("  Read/Write Ratio: %.2f\n\n", summary.BasicMetrics.ReadWriteRatio)
-	
+
 	// 延迟指标
 	fmt.Printf("Latency Metrics:\n")
 	fmt.Printf("  Min Latency: %v\n", summary.LatencyMetrics.MinLatency)
@@ -448,7 +448,7 @@ func (mc *MetricsCollector) PrintSummary() {
 	fmt.Printf("  P90 Latency: %v\n", summary.LatencyMetrics.P90Latency)
 	fmt.Printf("  P95 Latency: %v\n", summary.LatencyMetrics.P95Latency)
 	fmt.Printf("  P99 Latency: %v\n\n", summary.LatencyMetrics.P99Latency)
-	
+
 	// 操作类型统计
 	if len(summary.OperationMetrics) > 0 {
 		fmt.Printf("Operation Metrics:\n")
@@ -461,7 +461,7 @@ func (mc *MetricsCollector) PrintSummary() {
 		}
 		fmt.Printf("\n")
 	}
-	
+
 	// 错误统计
 	if len(summary.ErrorMetrics) > 0 {
 		fmt.Printf("Error Metrics:\n")
@@ -470,6 +470,6 @@ func (mc *MetricsCollector) PrintSummary() {
 		}
 		fmt.Printf("\n")
 	}
-	
+
 	fmt.Printf("==========================================\n")
 }

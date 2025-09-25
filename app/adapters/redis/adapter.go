@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"abc-runner/app/core/base"
 	redisconfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/base"
 	"abc-runner/app/core/interfaces"
 
 	"github.com/go-redis/redis/v8"
@@ -321,7 +321,7 @@ func (r *RedisAdapter) executeSetGetRandom(ctx context.Context, operation interf
 // createStandaloneClient 创建单机客户端
 func (r *RedisAdapter) createStandaloneClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
 	standalone := config.GetStandaloneConfig()
-	
+
 	client := redis.NewClient(&redis.Options{
 		Addr:         standalone.Addr,
 		Password:     standalone.Password,
@@ -340,7 +340,7 @@ func (r *RedisAdapter) createStandaloneClient(config *redisconfig.RedisConfig) (
 // createSentinelClient 创建哨兵客户端
 func (r *RedisAdapter) createSentinelClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
 	sentinel := config.GetSentinelConfig()
-	
+
 	client := redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:    sentinel.MasterName,
 		SentinelAddrs: sentinel.Addrs,
@@ -360,7 +360,7 @@ func (r *RedisAdapter) createSentinelClient(config *redisconfig.RedisConfig) (re
 // createClusterClient 创建集群客户端
 func (r *RedisAdapter) createClusterClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
 	cluster := config.GetClusterConfig()
-	
+
 	client := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:        cluster.Addrs,
 		Password:     cluster.Password,
@@ -534,12 +534,12 @@ func (r *RedisAdapter) executeSIsMember(ctx context.Context, operation interface
 func (r *RedisAdapter) executeZAdd(ctx context.Context, operation interfaces.Operation) (int64, error) {
 	value := fmt.Sprintf("%v", operation.Value)
 	score, _ := operation.Params["score"].(float64)
-	
+
 	// 如果没有提供分数，使用当前时间戳
 	if score == 0 {
 		score = float64(time.Now().UnixNano() % 1000)
 	}
-	
+
 	return r.client.ZAdd(ctx, operation.Key, &redis.Z{Score: score, Member: value}).Result()
 }
 
@@ -572,14 +572,14 @@ func (r *RedisAdapter) executeHMSet(ctx context.Context, operation interfaces.Op
 		value := fmt.Sprintf("%v", operation.Value)
 		return r.client.HMSet(ctx, operation.Key, map[string]interface{}{field: value}).Err()
 	}
-	
+
 	// 处理多个字段
 	fieldValues := make(map[string]interface{})
 	value := fmt.Sprintf("%v", operation.Value)
 	for _, field := range fields {
 		fieldValues[field] = value
 	}
-	
+
 	return r.client.HMSet(ctx, operation.Key, fieldValues).Err()
 }
 
@@ -594,7 +594,7 @@ func (r *RedisAdapter) executeHMGet(ctx context.Context, operation interfaces.Op
 		}
 		return r.client.HMGet(ctx, operation.Key, field).Result()
 	}
-	
+
 	// 处理多个字段
 	return r.client.HMGet(ctx, operation.Key, fields...).Result()
 }

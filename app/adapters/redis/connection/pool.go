@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"abc-runner/app/adapters/redis/config"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // ConnectionPool 连接池接口
@@ -33,16 +34,16 @@ type PoolStats struct {
 
 // RedisConnectionPool Redis连接池实现
 type RedisConnectionPool struct {
-	config       *config.RedisConfig
-	poolConfig   *config.PoolConfigImpl
-	clientType   string
-	factory      *ClientFactory
-	connections  chan redis.Cmdable
-	activeConns  map[redis.Cmdable]bool
-	stats        PoolStats
-	mutex        sync.RWMutex
-	ctx          context.Context
-	closed       bool
+	config      *config.RedisConfig
+	poolConfig  *config.PoolConfigImpl
+	clientType  string
+	factory     *ClientFactory
+	connections chan redis.Cmdable
+	activeConns map[redis.Cmdable]bool
+	stats       PoolStats
+	mutex       sync.RWMutex
+	ctx         context.Context
+	closed      bool
 }
 
 // PoolManager 连接池管理器
@@ -76,7 +77,7 @@ func NewRedisConnectionPool(cfg *config.RedisConfig) (*RedisConnectionPool, erro
 // initialize 初始化连接池
 func (p *RedisConnectionPool) initialize() error {
 	minIdle := p.poolConfig.GetMinIdle()
-	
+
 	// 创建最小空闲连接数
 	for i := 0; i < minIdle; i++ {
 		conn, err := p.createConnection()

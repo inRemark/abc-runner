@@ -6,7 +6,7 @@
 
 abc-runner使用YAML格式的配置文件，支持三种协议的配置：
 
-```
+```bash
 config/
 ├── templates/           # 配置模板文件
 ├── examples/            # 配置示例文件

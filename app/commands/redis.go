@@ -33,7 +33,7 @@ type RedisSimpleHandler struct {
 func NewRedisCommandHandler(adapterFactory interfaces.AdapterFactory) *RedisSimpleHandler {
 	handler := &RedisSimpleHandler{
 		adapterFactory:    adapterFactory,
-		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
+		configManager:     config.NewConfigManager(nil),
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}
@@ -78,7 +78,7 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 		h.adapter = h.adapterFactory.CreateRedisAdapter()
 	} else {
 		// 向后兼容：如果未提供工厂，则直接创建适配器
-		h.adapter = redis.NewRedisAdapter(nil) // TODO: 注入指标收集器
+		h.adapter = redis.NewRedisAdapter(nil)
 	}
 
 	// 5. 连接适配器

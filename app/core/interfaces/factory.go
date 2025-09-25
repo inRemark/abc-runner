@@ -1,8 +1,6 @@
 package interfaces
 
-import (
-	"context"
-)
+import "context"
 
 // AdapterFactory 适配器工厂接口
 type AdapterFactory interface {
@@ -47,19 +45,4 @@ func NewSimpleAdapterFactory(metricsCollector MetricsCollector) *SimpleAdapterFa
 	return &SimpleAdapterFactory{
 		metricsCollector: metricsCollector,
 	}
-}
-
-// CreateRedisAdapter 创建Redis适配器
-func (f *SimpleAdapterFactory) CreateRedisAdapter() ProtocolAdapter {
-	return nil // TODO: 实现
-}
-
-// CreateHttpAdapter 创建HTTP适配器
-func (f *SimpleAdapterFactory) CreateHttpAdapter() ProtocolAdapter {
-	return nil // TODO: 实现
-}
-
-// CreateKafkaAdapter 创建Kafka适配器
-func (f *SimpleAdapterFactory) CreateKafkaAdapter() ProtocolAdapter {
-	return nil // TODO: 实现
 }

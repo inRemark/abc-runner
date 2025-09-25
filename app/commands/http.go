@@ -34,7 +34,7 @@ type HttpSimpleHandler struct {
 func NewHttpCommandHandler(adapterFactory interfaces.AdapterFactory) *HttpSimpleHandler {
 	handler := &HttpSimpleHandler{
 		adapterFactory:    adapterFactory,
-		configManager:     config.NewConfigManager(nil), // TODO: 注入配置源工厂
+		configManager:     config.NewConfigManager(nil),
 		operationRegistry: utils.NewOperationRegistry(),
 		keyGenerator:      utils.NewDefaultKeyGenerator(),
 	}
