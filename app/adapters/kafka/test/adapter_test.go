@@ -10,9 +10,59 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
+// 测试用的简单指标收集器
+type testMetricsCollector struct {
+	records []*interfaces.OperationResult
+}
+
+func (t *testMetricsCollector) Record(result *interfaces.OperationResult) {
+	t.records = append(t.records, result)
+}
+
+func (t *testMetricsCollector) Snapshot() *interfaces.MetricsSnapshot[map[string]interface{}] {
+	// 计算基本指标
+	var total, success, failed, read, write int64
+	for _, record := range t.records {
+		total++
+		if record.Success {
+			success++
+		} else {
+			failed++
+		}
+		if record.IsRead {
+			read++
+		} else {
+			write++
+		}
+	}
+	
+	return &interfaces.MetricsSnapshot[map[string]interface{}]{
+		Core: interfaces.CoreMetrics{
+			Operations: interfaces.OperationMetrics{
+				Total:   total,
+				Success: success,
+				Failed:  failed,
+				Read:    read,
+				Write:   write,
+				Rate:    func() float64 { if total > 0 { return float64(success) / float64(total) * 100 } else { return 0 } }(),
+			},
+		},
+		Protocol:  map[string]interface{}{"test_data": "kafka"},
+		Timestamp: time.Now(),
+	}
+}
+
+func (t *testMetricsCollector) Reset() {
+	t.records = nil
+}
+
+func (t *testMetricsCollector) Stop() {
+	// 测试实现不需要特殊处理
+}
+
 // TestKafkaAdapter 测试Kafka适配器基本功能
 func TestKafkaAdapter(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 测试适配器基本属性
 	if adapter.GetProtocolName() != "kafka" {
@@ -27,7 +77,7 @@ func TestKafkaAdapter(t *testing.T) {
 
 // TestKafkaAdapterConnect 测试Kafka适配器连接
 func TestKafkaAdapterConnect(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -52,7 +102,7 @@ func TestKafkaAdapterConnect(t *testing.T) {
 
 // TestKafkaAdapterMetrics 测试Kafka指标收集
 func TestKafkaAdapterMetrics(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -76,18 +126,18 @@ func TestKafkaAdapterMetrics(t *testing.T) {
 		IsRead:   false,
 	}
 
-	metricsCollector.RecordOperation(result)
+	metricsCollector.Record(result)
 
 	// 检查指标更新
-	metrics := metricsCollector.GetMetrics()
-	if metrics.TotalOps != 1 {
-		t.Errorf("Expected total ops 1, got %d", metrics.TotalOps)
+	snapshot := metricsCollector.Snapshot()
+	if snapshot.Core.Operations.Total != 1 {
+		t.Errorf("Expected total ops 1, got %d", snapshot.Core.Operations.Total)
 	}
 }
 
 // TestKafkaOperationFactory 测试Kafka操作工厂
 func TestKafkaOperationFactory(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()

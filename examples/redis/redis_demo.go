@@ -7,7 +7,6 @@ import (
 
 	"abc-runner/app/adapters/redis/config"
 	"abc-runner/app/adapters/redis/connection"
-	"abc-runner/app/adapters/redis/metrics"
 	"abc-runner/app/adapters/redis/operations"
 
 	"github.com/go-redis/redis/v8"
@@ -69,56 +68,9 @@ func main() {
 		fmt.Printf("自定义Publish操作类型: %s\n", pubOp.GetType())
 	}
 
-	// 4. 指标收集和报告
-	fmt.Println("\n4. 指标收集和报告")
-	collector := metrics.NewMetricsCollector()
-
-	// 模拟一些操作结果
-	results := []operations.OperationResult{
-		{
-			Success:  true,
-			IsRead:   true,
-			Duration: time.Millisecond * 5,
-			ExtraData: map[string]interface{}{
-				"operation_type": string(operations.OperationGet),
-			},
-		},
-		{
-			Success:  true,
-			IsRead:   false,
-			Duration: time.Millisecond * 3,
-			ExtraData: map[string]interface{}{
-				"operation_type": string(operations.OperationSet),
-			},
-		},
-		{
-			Success:  false,
-			IsRead:   true,
-			Duration: time.Millisecond * 10,
-			Error:    fmt.Errorf("模拟错误"),
-			ExtraData: map[string]interface{}{
-				"operation_type": string(operations.OperationGet),
-			},
-		},
-	}
-
-	// 收集指标
-	for _, result := range results {
-		collector.CollectOperation(result)
-	}
-
-	// 打印指标摘要
-	collector.PrintSummary()
-
-	// 5. 生成多格式报告
-	fmt.Println("\n5. 生成报告")
-	reportBuilder := metrics.NewReportBuilder(collector)
-	reportBuilder.WithConsole()
-
-	err = reportBuilder.Generate()
-	if err != nil {
-		log.Printf("生成报告失败: %v", err)
-	}
+	// 4. 指标收集和报告功能已与主系统集成在适配器中
+	fmt.Println("\n4. 指标收集功能已集成在主系统中")
+	fmt.Println("新架构下，指标收集由MetricsCollectorAdapter统一管理")
 
 	// 6. 连接池管理（示例）
 	fmt.Println("\n6. 连接池管理")

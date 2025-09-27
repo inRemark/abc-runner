@@ -78,7 +78,7 @@ func main() {
 	// 获取指标收集器
 	metricsCollector := adapter.GetMetricsCollector()
 	if metricsCollector != nil {
-		metricsData := metricsCollector.GetMetrics()
-		fmt.Printf("Metrics data: %+v\n", metricsData)
+		metricsSnapshot := metricsCollector.Snapshot()
+		fmt.Printf("Metrics snapshot: %+v\n", metricsSnapshot)
 	}
 }

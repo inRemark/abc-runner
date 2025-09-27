@@ -2,9 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,7 +89,7 @@ func (g *DefaultKeyGenerator) Reset() {
 type TestContextImpl struct {
 	adapter          interfaces.ProtocolAdapter
 	config           interfaces.Config
-	metricsCollector interfaces.MetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 	keyGenerator     interfaces.KeyGenerator
 	cancelled        bool
 	cancelMutex      sync.RWMutex
@@ -101,7 +99,7 @@ type TestContextImpl struct {
 func NewTestContext(
 	adapter interfaces.ProtocolAdapter,
 	config interfaces.Config,
-	metricsCollector interfaces.MetricsCollector,
+	metricsCollector interfaces.DefaultMetricsCollector,
 	keyGenerator interfaces.KeyGenerator,
 ) *TestContextImpl {
 	return &TestContextImpl{
@@ -123,7 +121,7 @@ func (t *TestContextImpl) GetConfig() interfaces.Config {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (t *TestContextImpl) GetMetricsCollector() interfaces.MetricsCollector {
+func (t *TestContextImpl) GetMetricsCollector() interfaces.DefaultMetricsCollector {
 	return t.metricsCollector
 }
 
@@ -206,60 +204,10 @@ func (r *OperationRegistry) ValidateOperation(operationType string, params map[s
 	return factory.ValidateParams(params)
 }
 
-// RetryConfig 重试配置
-type RetryConfig struct {
-	MaxRetries      int
-	InitialDelay    time.Duration
-	MaxDelay        time.Duration
-	BackoffFactor   float64
-	RetryableErrors []string
-}
-
-// DefaultRetryConfig 默认重试配置
-func DefaultRetryConfig() *RetryConfig {
-	return &RetryConfig{
-		MaxRetries:    3,
-		InitialDelay:  100 * time.Millisecond,
-		MaxDelay:      5 * time.Second,
-		BackoffFactor: 2.0,
-		RetryableErrors: []string{
-			"timeout",
-			"connection refused",
-			"network",
-			"broken pipe",
-			"connection reset",
-		},
-	}
-}
-
-// IsRetryableError 检查错误是否可重试
-func (r *RetryConfig) IsRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errStr := err.Error()
-	for _, retryableErr := range r.RetryableErrors {
-		if contains(errStr, retryableErr) {
-			return true
-		}
-	}
-	return false
-}
-
-// GetDelay 获取重试延迟
-func (r *RetryConfig) GetDelay(attempt int) time.Duration {
-	delay := float64(r.InitialDelay) * math.Pow(r.BackoffFactor, float64(attempt))
-	if delay > float64(r.MaxDelay) {
-		delay = float64(r.MaxDelay)
-	}
-	return time.Duration(delay)
-}
-
 // contains 检查字符串是否包含子串
-func contains(str, substr string) bool {
-	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
-}
+// func contains(str, substr string) bool {
+// 	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
+// }
 
 // ProgressTracker 进度跟踪器
 type ProgressTracker struct {

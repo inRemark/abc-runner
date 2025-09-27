@@ -26,3 +26,13 @@ releases/*
 abc-runner
 test_output_*.json
 
+app/core/di/di.md
+.backup
+test-binary
+abc-runner-v3
+benchmark
+http
+kafka
+redis
+test_reporting
+test-reports

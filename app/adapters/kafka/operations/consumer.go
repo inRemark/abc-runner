@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/segmentio/kafka-go"
-	"abc-runner/app/core/interfaces"
 	"abc-runner/app/adapters/kafka/connection"
-	"abc-runner/app/adapters/kafka/metrics"
+	"abc-runner/app/core/interfaces"
+
+	"github.com/segmentio/kafka-go"
 )
 
 // ConsumerOperations 消费者操作实现
 type ConsumerOperations struct {
 	pool             *connection.ConnectionPool
-	metricsCollector *metrics.KafkaMetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewConsumerOperations 创建消费者操作实例
-func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector *metrics.KafkaMetricsCollector) *ConsumerOperations {
+func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ConsumerOperations {
 	return &ConsumerOperations{
 		pool:             pool,
 		metricsCollector: metricsCollector,
@@ -28,7 +28,7 @@ func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector *me
 // ExecuteConsumeMessage 执行单条消息消费
 func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// 解析参数
 	topic, ok := operation.Params["topic"].(string)
 	if !ok || topic == "" {
@@ -39,12 +39,26 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 			Error:    fmt.Errorf("topic parameter is required"),
 		}, fmt.Errorf("topic parameter is required")
 	}
-	
+
 	// 获取消费者
 	consumer, err := c.pool.GetConsumer()
 	if err != nil {
 		duration := time.Since(startTime)
-		c.metricsCollector.RecordConsumeOperation(topic, -1, 0, -1, duration, false, err)
+		// 使用核心接口记录指标
+		defaultOperationResult := &interfaces.OperationResult{
+			Success:  false,
+			IsRead:   true,
+			Duration: duration,
+			Error:    err,
+			Metadata: map[string]interface{}{
+				"operation_type": "consume",
+				"topic":          topic,
+				"partition":      -1,
+				"message_size":   0,
+				"offset":         -1,
+			},
+		}
+		c.metricsCollector.Record(defaultOperationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -53,7 +67,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 		}, err
 	}
 	defer c.pool.ReturnConsumer(consumer)
-	
+
 	// 设置读取超时
 	timeoutCtx := ctx
 	if timeout, ok := operation.Params["timeout"].(time.Duration); ok && timeout > 0 {
@@ -61,25 +75,39 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 		timeoutCtx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
-	
+
 	// 执行消费操作
 	msg, err := consumer.ReadMessage(timeoutCtx)
 	duration := time.Since(startTime)
-	
+
 	success := err == nil
 	var messageSize int
 	var offset int64 = -1
 	var partition int32 = -1
-	
+
 	if success {
 		messageSize = len(msg.Key) + len(msg.Value)
 		offset = msg.Offset
 		partition = int32(msg.Partition)
 	}
-	
-	// 记录指标
-	c.metricsCollector.RecordConsumeOperation(topic, partition, messageSize, offset, duration, success, err)
-	
+
+	// 使用核心接口记录指标
+	consumeResult := &interfaces.OperationResult{
+		Success:  success,
+		IsRead:   true,
+		Duration: duration,
+		Error:    err,
+		Metadata: map[string]interface{}{
+			"operation_type": "consume",
+			"topic":          topic,
+			"partition":      partition,
+			"message_size":   int64(messageSize),
+			"offset":         offset,
+			"client_id":      "consumer",
+		},
+	}
+	c.metricsCollector.Record(consumeResult)
+
 	if err != nil {
 		return &interfaces.OperationResult{
 			Success:  false,
@@ -88,7 +116,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 			Error:    fmt.Errorf("failed to consume message: %w", err),
 		}, err
 	}
-	
+
 	// 构建消息结果
 	message := &Message{
 		Key:       string(msg.Key),
@@ -99,7 +127,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 		Offset:    msg.Offset,
 		Topic:     msg.Topic,
 	}
-	
+
 	return &interfaces.OperationResult{
 		Success:  true,
 		Duration: duration,
@@ -120,13 +148,13 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 // ExecuteConsumeBatch 执行批量消息消费
 func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	// 解析参数
 	maxMessages, ok := operation.Params["max_messages"].(int)
 	if !ok || maxMessages <= 0 {
 		maxMessages = 100 // 默认批量大小
 	}
-	
+
 	topic, ok := operation.Params["topic"].(string)
 	if !ok || topic == "" {
 		return &interfaces.OperationResult{
@@ -136,12 +164,26 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 			Error:    fmt.Errorf("topic parameter is required"),
 		}, fmt.Errorf("topic parameter is required")
 	}
-	
+
 	// 获取消费者
 	consumer, err := c.pool.GetConsumer()
 	if err != nil {
 		duration := time.Since(startTime)
-		c.metricsCollector.RecordConsumeOperation(topic, -1, 0, -1, duration, false, err)
+		// 使用核心接口记录指标
+		defaultOperationResult := &interfaces.OperationResult{
+			Success:  false,
+			IsRead:   true,
+			Duration: duration,
+			Error:    err,
+			Metadata: map[string]interface{}{
+				"operation_type": "consume",
+				"topic":          topic,
+				"partition":      -1,
+				"message_size":   0,
+				"offset":         -1,
+			},
+		}
+		c.metricsCollector.Record(defaultOperationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -150,7 +192,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 		}, err
 	}
 	defer c.pool.ReturnConsumer(consumer)
-	
+
 	// 设置读取超时
 	timeoutCtx := ctx
 	if timeout, ok := operation.Params["timeout"].(time.Duration); ok && timeout > 0 {
@@ -158,13 +200,13 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 		timeoutCtx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
-	
+
 	// 批量消费消息
 	messages := make([]*Message, 0, maxMessages)
 	totalSize := 0
 	successCount := 0
 	var lastErr error
-	
+
 	for i := 0; i < maxMessages; i++ {
 		msg, err := consumer.ReadMessage(timeoutCtx)
 		if err != nil {
@@ -176,7 +218,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 			// 其他错误也退出循环
 			break
 		}
-		
+
 		message := &Message{
 			Key:       string(msg.Key),
 			Value:     string(msg.Value),
@@ -186,20 +228,48 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 			Offset:    msg.Offset,
 			Topic:     msg.Topic,
 		}
-		
+
 		messages = append(messages, message)
 		totalSize += len(msg.Key) + len(msg.Value)
 		successCount++
-		
-		// 记录每条消息的指标
-		c.metricsCollector.RecordConsumeOperation(topic, int32(msg.Partition), len(msg.Key)+len(msg.Value), msg.Offset, 0, true, nil)
+
+		// 使用核心接口记录每条消息的指标
+		msgResult := &interfaces.OperationResult{
+			Success:  true,
+			IsRead:   true,
+			Duration: 0, // 单条消息不单独计时
+			Error:    nil,
+			Metadata: map[string]interface{}{
+				"operation_type": "consume",
+				"topic":          topic,
+				"partition":      int32(msg.Partition),
+				"message_size":   int64(len(msg.Key) + len(msg.Value)),
+				"offset":         msg.Offset,
+				"client_id":      "consumer",
+			},
+		}
+		c.metricsCollector.Record(msgResult)
 	}
-	
+
 	duration := time.Since(startTime)
-	
+
 	// 如果没有消费到任何消息且有错误，返回错误
 	if len(messages) == 0 && lastErr != nil {
-		c.metricsCollector.RecordConsumeOperation(topic, -1, 0, -1, duration, false, lastErr)
+		// 使用核心接口记录指标
+		batchFailResult := &interfaces.OperationResult{
+			Success:  false,
+			IsRead:   true,
+			Duration: duration,
+			Error:    lastErr,
+			Metadata: map[string]interface{}{
+				"operation_type": "consume",
+				"topic":          topic,
+				"partition":      -1,
+				"message_size":   0,
+				"offset":         -1,
+			},
+		}
+		c.metricsCollector.Record(batchFailResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -207,7 +277,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 			Error:    fmt.Errorf("failed to consume batch messages: %w", lastErr),
 		}, lastErr
 	}
-	
+
 	// 构建批量结果
 	batchResult := &ConsumeBatchResult{
 		Messages:      messages,
@@ -216,7 +286,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 		TotalDuration: duration,
 		TotalSize:     totalSize,
 	}
-	
+
 	return &interfaces.OperationResult{
 		Success:  true,
 		Duration: duration,
@@ -224,12 +294,17 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 		Error:    nil,
 		Value:    batchResult,
 		Metadata: map[string]interface{}{
-			"topic":             topic,
-			"requested_count":   maxMessages,
-			"actual_count":      len(messages),
-			"success_count":     successCount,
-			"total_size":        totalSize,
-			"avg_message_size":  func() int { if len(messages) > 0 { return totalSize / len(messages) }; return 0 }(),
+			"topic":           topic,
+			"requested_count": maxMessages,
+			"actual_count":    len(messages),
+			"success_count":   successCount,
+			"total_size":      totalSize,
+			"avg_message_size": func() int {
+				if len(messages) > 0 {
+					return totalSize / len(messages)
+				}
+				return 0
+			}(),
 		},
 	}, nil
 }
@@ -248,11 +323,11 @@ func isTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
-	return contains(errStr, "timeout") || 
-		   contains(errStr, "context deadline exceeded") ||
-		   contains(errStr, "i/o timeout")
+	return contains(errStr, "timeout") ||
+		contains(errStr, "context deadline exceeded") ||
+		contains(errStr, "i/o timeout")
 }
 
 // contains 检查字符串是否包含子字符串

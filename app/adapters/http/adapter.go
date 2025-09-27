@@ -9,7 +9,6 @@ import (
 
 	httpConfig "abc-runner/app/adapters/http/config"
 	"abc-runner/app/adapters/http/connection"
-	"abc-runner/app/adapters/http/metrics"
 	"abc-runner/app/adapters/http/operations"
 	"abc-runner/app/core/base"
 	"abc-runner/app/core/interfaces"
@@ -23,9 +22,7 @@ type HttpAdapter struct {
 	connPool *connection.ConnectionPool
 	config   *httpConfig.HttpAdapterConfig
 
-	// 指标收集
-	metricsCollector *metrics.HttpMetricsCollector
-	metricsReporter  *metrics.HttpMetricsReporter
+	// 不再需要协议特定的指标收集器，完全使用通用接口
 
 	// 操作执行器
 	httpOps          *operations.HttpOperations
@@ -36,12 +33,18 @@ type HttpAdapter struct {
 }
 
 // NewHttpAdapter 创建HTTP适配器
-func NewHttpAdapter(metricsCollector interfaces.MetricsCollector) *HttpAdapter {
-	return &HttpAdapter{
-		BaseAdapter:      base.NewBaseAdapter("http"),
-		metricsCollector: metrics.NewHttpMetricsCollector(),
-		metricsReporter:  metrics.NewHttpMetricsReporter(metrics.NewHttpMetricsCollector()),
+func NewHttpAdapter(metricsCollector interfaces.DefaultMetricsCollector) *HttpAdapter {
+	adapter := &HttpAdapter{
+		BaseAdapter: base.NewBaseAdapter("http"),
 	}
+
+	// 使用新架构：只接受通用接口，不再有专用收集器后备
+	if metricsCollector == nil {
+		return nil // 新架构要求必须传入MetricsCollector
+	}
+	adapter.SetMetricsCollector(metricsCollector)
+
+	return adapter
 }
 
 // Connect 初始化连接
@@ -79,7 +82,8 @@ func (h *HttpAdapter) Connect(ctx context.Context, config interfaces.Config) err
 	}
 
 	// 初始化操作执行器和工厂
-	h.httpOps = operations.NewHttpOperations(h.connPool, h.config, h.metricsCollector)
+	// 使用新架构：直接传入通用指标收集器接口
+	h.httpOps = operations.NewHttpOperations(h.connPool, h.config, h.GetMetricsCollector())
 	h.operationFactory = operations.NewHttpOperationFactory(h.config)
 
 	// 测试连接
@@ -108,8 +112,10 @@ func (h *HttpAdapter) Execute(ctx context.Context, operation interfaces.Operatio
 	if result != nil {
 		result.Duration = time.Since(startTime)
 
-		// 记录指标
-		h.metricsCollector.RecordOperation(result)
+		// 记录操作到指标收集器
+		if metricsCollector := h.GetMetricsCollector(); metricsCollector != nil {
+			metricsCollector.Record(result)
+		}
 	}
 
 	return result, err
@@ -179,14 +185,10 @@ func (h *HttpAdapter) HealthCheck(ctx context.Context) error {
 // GetProtocolMetrics 获取HTTP特定指标
 func (h *HttpAdapter) GetProtocolMetrics() map[string]interface{} {
 	baseMetrics := h.BaseAdapter.GetProtocolMetrics()
-	httpMetrics := h.metricsCollector.GetHttpSpecificMetrics()
 
-	// 合并指标
+	// 新架构：只使用通用指标收集器的Export方法
 	result := make(map[string]interface{})
 	for k, v := range baseMetrics {
-		result[k] = v
-	}
-	for k, v := range httpMetrics {
 		result[k] = v
 	}
 
@@ -290,33 +292,9 @@ func (h *HttpAdapter) GetOperationFactory() interfaces.OperationFactory {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (h *HttpAdapter) GetMetricsCollector() interfaces.MetricsCollector {
-	return h.metricsCollector
-}
-
-// GetMetricsReporter 获取指标报告器
-func (h *HttpAdapter) GetMetricsReporter() *metrics.HttpMetricsReporter {
-	return h.metricsReporter
-}
-
-// GenerateReport 生成报告
-func (h *HttpAdapter) GenerateReport() string {
-	return h.metricsReporter.GenerateReport()
-}
-
-// GenerateSimpleReport 生成简单报告
-func (h *HttpAdapter) GenerateSimpleReport() string {
-	return h.metricsReporter.GenerateSimpleReport()
-}
-
-// ExportMetrics 导出指标
-func (h *HttpAdapter) ExportMetrics() map[string]interface{} {
-	return h.metricsCollector.Export()
-}
-
-// ResetMetrics 重置指标
-func (h *HttpAdapter) ResetMetrics() {
-	h.metricsCollector.Reset()
+func (h *HttpAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
+	// 新架构：只返回BaseAdapter的通用指标收集器
+	return h.BaseAdapter.GetMetricsCollector()
 }
 
 // HTTP特定操作接口
