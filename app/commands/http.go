@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -62,8 +61,11 @@ func (h *HttpCommandHandler) Execute(ctx context.Context, args []string) error {
 
 	// 连接并执行测试
 	if err := adapter.Connect(ctx, config); err != nil {
-		log.Printf("Warning: failed to connect to %s: %v", config.Connection.BaseURL, err)
+		fmt.Printf("⚠️  Connection failed to %s: %v\n", config.Connection.BaseURL, err)
+		fmt.Printf("🔍 Possible causes: DNS resolution failure, network issues, server unreachable, or SSL/TLS errors\n")
 		// 继续执行，但使用模拟模式
+	} else {
+		fmt.Printf("✅ Successfully connected to %s\n", config.Connection.BaseURL)
 	}
 	defer adapter.Close()
 
@@ -121,6 +123,19 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 	config.Benchmark.Path = "/"
 	config.Benchmark.Timeout = 30 * time.Second
 
+	// 根据用户记忆，设置默认的Request配置
+	config.Requests = []httpConfig.HttpRequestConfig{
+		{
+			Method: "GET",
+			Path:   "/",
+			Headers: map[string]string{
+				"User-Agent": "abc-runner-http-client/1.0",
+				"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			},
+			Weight: 100,
+		},
+	}
+
 	// 解析参数
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -158,7 +173,8 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 func (h *HttpCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *httpConfig.HttpAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
-		log.Printf("Health check failed, running in simulation mode: %v", err)
+		fmt.Printf("⚠️  Health check failed: %v\n", err)
+		fmt.Printf("🔄 Switching to simulation mode - this will generate mock test data instead of real HTTP requests\n")
 		// 在模拟模式下生成测试数据
 		return h.runSimulationTest(config, collector)
 	}

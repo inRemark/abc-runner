@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -71,8 +70,11 @@ func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error 
 
 	// 连接并执行测试
 	if err := adapter.Connect(ctx, config); err != nil {
-		log.Printf("Warning: failed to connect to %s (DB: %d): %v", config.Standalone.Addr, config.Standalone.Db, err)
+		fmt.Printf("⚠️  Connection failed to %s (DB: %d): %v\n", config.Standalone.Addr, config.Standalone.Db, err)
+		fmt.Printf("🔍 Possible causes: Redis server not running, wrong host/port, authentication failure, or network issues\n")
 		// 继续执行，但使用模拟模式
+	} else {
+		fmt.Printf("✅ Successfully connected to Redis at %s (DB: %d)\n", config.Standalone.Addr, config.Standalone.Db)
 	}
 	defer adapter.Close()
 
@@ -125,6 +127,7 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 	// 创建默认配置
 	config := redisConfig.NewDefaultRedisConfig()
 	config.Standalone.Addr = "localhost:6379"
+	config.Standalone.Password = "" // 默认不使用密码
 	config.Standalone.Db = 0
 	config.BenchMark.Total = 1000
 	config.BenchMark.Parallels = 10
@@ -189,7 +192,8 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
-		log.Printf("Health check failed, running in simulation mode: %v", err)
+		fmt.Printf("⚠️  Health check failed: %v\n", err)
+		fmt.Printf("🔄 Switching to simulation mode - this will generate mock test data instead of real Redis operations\n")
 		// 在模拟模式下生成测试数据
 		return r.runSimulationTest(config, collector)
 	}
@@ -200,6 +204,7 @@ func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 
 // runSimulationTest 运行模拟测试 (保持不变，用于连接失败时的后备方案)
 func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
+	fmt.Printf("\n⚠️  SIMULATION MODE: Redis connection failed, using mock data\n")
 	fmt.Printf("📊 Running Redis simulation test...\n")
 
 	// Redis操作类型
@@ -235,10 +240,10 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 	}
 
 	fmt.Printf("✅ Redis simulation test completed\n")
-	
+
 	// 等待稍许时间让延迟指标计算完成
 	time.Sleep(100 * time.Millisecond)
-	
+
 	return nil
 }
 
