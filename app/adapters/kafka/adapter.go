@@ -8,7 +8,6 @@ import (
 
 	kafkaConfig "abc-runner/app/adapters/kafka/config"
 	"abc-runner/app/adapters/kafka/connection"
-	"abc-runner/app/adapters/kafka/metrics"
 	"abc-runner/app/adapters/kafka/operations"
 	"abc-runner/app/core/base"
 	"abc-runner/app/core/interfaces"
@@ -24,8 +23,7 @@ type KafkaAdapter struct {
 	connPool *connection.ConnectionPool
 	config   *kafkaConfig.KafkaAdapterConfig
 
-	// 指标收集
-	metricsCollector *metrics.MetricsCollector
+	// 不再需要协议特定的指标收集器，完全使用通用接口
 
 	// 操作执行器
 	producerOps      *operations.ProducerOperations
@@ -42,15 +40,11 @@ func NewKafkaAdapter(metricsCollector interfaces.MetricsCollector) *KafkaAdapter
 		BaseAdapter: base.NewBaseAdapter("kafka"),
 	}
 
-	// 使用传入的增强指标收集器，而不是创建专用收集器
-	if metricsCollector != nil {
-		adapter.SetMetricsCollector(metricsCollector)
-		// 不再使用专用的Kafka指标收集器，直接使用通用接口
-		adapter.metricsCollector = nil
-	} else {
-		// 如果没有传入收集器，使用默认的Kafka专用收集器作为后备
-		adapter.metricsCollector = metrics.NewMetricsCollector()
+	// 使用新架构：只接受通用接口，不再有专用收集器后备
+	if metricsCollector == nil {
+		return nil // 新架构要求必须传入MetricsCollector
 	}
+	adapter.SetMetricsCollector(metricsCollector)
 
 	return adapter
 }
@@ -97,19 +91,9 @@ func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) er
 	k.UpdateMetric("brokers", k.config.Brokers)
 
 	// 初始化操作执行器
-	// 为操作执行器确保有一个有效的Kafka指标收集器
-	var kafkaMetricsCollector *metrics.MetricsCollector
-	if k.metricsCollector != nil {
-		kafkaMetricsCollector = k.metricsCollector
-	} else {
-		// 如果没有专用收集器，创建一个用于操作执行器
-		kafkaMetricsCollector = metrics.NewMetricsCollector()
-		// 同时设置为适配器的专用收集器
-		k.metricsCollector = kafkaMetricsCollector
-	}
-
-	k.producerOps = operations.NewProducerOperations(k.connPool, kafkaMetricsCollector)
-	k.consumerOps = operations.NewConsumerOperations(k.connPool, kafkaMetricsCollector)
+	// 使用新架构：直接传入通用指标收集器接口
+	k.producerOps = operations.NewProducerOperations(k.connPool, k.GetMetricsCollector())
+	k.consumerOps = operations.NewConsumerOperations(k.connPool, k.GetMetricsCollector())
 	k.operationFactory = operations.NewKafkaOperationFactory(k.config)
 
 	return nil
@@ -128,15 +112,9 @@ func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operati
 	if result != nil {
 		result.Duration = time.Since(startTime)
 
-		// 使用BaseAdapter的通用指标收集器，而不是专用的Kafka收集器
+		// 新架构：只使用通用指标收集器
 		if baseCollector := k.GetMetricsCollector(); baseCollector != nil {
 			baseCollector.RecordOperation(result)
-		}
-
-		// 如果还有专用收集器，也同时记录（向后兼容）
-		if k.metricsCollector != nil {
-			// 转换为Kafka特定的结果类型
-			k.metricsCollector.RecordOperation(result)
 		}
 	}
 
@@ -278,18 +256,10 @@ func (k *KafkaAdapter) HealthCheck(ctx context.Context) error {
 func (k *KafkaAdapter) GetProtocolMetrics() map[string]interface{} {
 	baseMetrics := k.BaseAdapter.GetProtocolMetrics()
 
-	// 使用通用指标收集器的Export方法
+	// 新架构：只使用通用指标收集器
 	result := make(map[string]interface{})
 	for key, value := range baseMetrics {
 		result[key] = value
-	}
-
-	// 如果有专用收集器，也添加其指标（向后兼容）
-	if k.metricsCollector != nil {
-		kafkaMetrics := k.metricsCollector.GetKafkaSpecificMetrics()
-		for key, value := range kafkaMetrics {
-			result[key] = value
-		}
 	}
 
 	return result
@@ -442,11 +412,6 @@ func (k *KafkaAdapter) GetOperationFactory() interfaces.OperationFactory {
 
 // GetMetricsCollector 获取指标收集器
 func (k *KafkaAdapter) GetMetricsCollector() interfaces.MetricsCollector {
-	// 优先返回BaseAdapter的通用指标收集器（包含系统指标）
-	if baseCollector := k.BaseAdapter.GetMetricsCollector(); baseCollector != nil {
-		return baseCollector
-	}
-
-	// 如果没有通用收集器，返回Kafka专用收集器（向后兼容）
-	return k.metricsCollector
+	// 新架构：只返回BaseAdapter的通用指标收集器
+	return k.BaseAdapter.GetMetricsCollector()
 }

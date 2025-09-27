@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"abc-runner/app/adapters/kafka/connection"
-	"abc-runner/app/adapters/kafka/metrics"
 	"abc-runner/app/core/interfaces"
 
 	"github.com/segmentio/kafka-go"
@@ -15,11 +14,11 @@ import (
 // ProducerOperations 生产者操作实现
 type ProducerOperations struct {
 	pool             *connection.ConnectionPool
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector interfaces.MetricsCollector
 }
 
 // NewProducerOperations 创建生产者操作实例
-func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector *metrics.MetricsCollector) *ProducerOperations {
+func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.MetricsCollector) *ProducerOperations {
 	return &ProducerOperations{
 		pool:             pool,
 		metricsCollector: metricsCollector,

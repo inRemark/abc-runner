@@ -7,7 +7,6 @@ import (
 
 	httpConfig "abc-runner/app/adapters/http/config"
 	"abc-runner/app/adapters/http/connection"
-	"abc-runner/app/adapters/http/metrics"
 	"abc-runner/app/core/interfaces"
 )
 
@@ -15,14 +14,14 @@ import (
 type HttpOperations struct {
 	pool             *connection.ConnectionPool
 	config           *httpConfig.HttpAdapterConfig
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector interfaces.MetricsCollector
 }
 
 // NewHttpOperations 创建HTTP操作执行器
 func NewHttpOperations(
 	pool *connection.ConnectionPool,
 	config *httpConfig.HttpAdapterConfig,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector interfaces.MetricsCollector,
 ) *HttpOperations {
 	return &HttpOperations{
 		pool:             pool,

@@ -43,12 +43,12 @@ type RedisOperationStat struct {
 
 // RedisConnectionStat Redis连接统计
 type RedisConnectionStat struct {
-	ActiveConnections  int32   `json:"active_connections"`
-	TotalConnections   int64   `json:"total_connections"`
-	FailedConnections  int64   `json:"failed_connections"`
-	ConnectionTimeouts int64   `json:"connection_timeouts"`
+	ActiveConnections  int32         `json:"active_connections"`
+	TotalConnections   int64         `json:"total_connections"`
+	FailedConnections  int64         `json:"failed_connections"`
+	ConnectionTimeouts int64         `json:"connection_timeouts"`
 	AvgConnectionTime  time.Duration `json:"avg_connection_time"`
-	PoolUtilization    float64 `json:"pool_utilization"`
+	PoolUtilization    float64       `json:"pool_utilization"`
 }
 
 // RedisPerformanceStat Redis性能统计
@@ -82,23 +82,23 @@ type RedisTimingStat struct {
 // RedisCollector Redis指标收集器
 type RedisCollector struct {
 	*metrics.BaseCollector[RedisMetrics]
-	
+
 	// Redis特定指标
-	redisMetrics    *RedisMetrics
-	mutex           sync.RWMutex
-	
+	redisMetrics *RedisMetrics
+	mutex        sync.RWMutex
+
 	// 操作追踪
 	operationTracker *RedisOperationTracker
-	
+
 	// 连接追踪
 	connectionTracker *RedisConnectionTracker
-	
+
 	// 性能追踪
 	performanceTracker *RedisPerformanceTracker
-	
+
 	// 错误追踪
 	errorTracker *RedisErrorTracker
-	
+
 	// 配置
 	config *metrics.MetricsConfig
 }
@@ -111,10 +111,10 @@ func NewRedisCollector(config *metrics.MetricsConfig) *RedisCollector {
 
 	// 初始化Redis指标
 	redisMetrics := &RedisMetrics{
-		Operations: make(map[string]*RedisOperationStat),
-		Connection: &RedisConnectionStat{},
+		Operations:  make(map[string]*RedisOperationStat),
+		Connection:  &RedisConnectionStat{},
 		Performance: &RedisPerformanceStat{},
-		Errors: make(map[string]*RedisErrorStat),
+		Errors:      make(map[string]*RedisErrorStat),
 		Timing: &RedisTimingStat{
 			FirstOperation: time.Now(),
 		},
@@ -130,7 +130,7 @@ func NewRedisCollector(config *metrics.MetricsConfig) *RedisCollector {
 		connectionTracker:  NewRedisConnectionTracker(),
 		performanceTracker: NewRedisPerformanceTracker(),
 		errorTracker:       NewRedisErrorTracker(),
-		config:            config,
+		config:             config,
 	}
 
 	return collector
@@ -181,7 +181,7 @@ func (rc *RedisCollector) getOperationType(result *interfaces.OperationResult) s
 			}
 		}
 	}
-	
+
 	// 根据操作基础信息推断类型
 	if result.IsRead {
 		return "read"
@@ -308,14 +308,14 @@ func (rc *RedisCollector) GetSummary() map[string]interface{} {
 	redisMetrics := rc.GetRedisMetrics()
 
 	return map[string]interface{}{
-		"protocol":       "redis",
-		"total_ops":      snapshot.Core.Operations.Total,
-		"success_rate":   snapshot.Core.Operations.Rate,
-		"avg_latency":    snapshot.Core.Latency.Average,
-		"qps":           redisMetrics.Performance.QPS,
-		"hit_rate":      redisMetrics.Performance.HitRate,
-		"error_count":   len(redisMetrics.Errors),
-		"duration":      snapshot.Core.Duration,
+		"protocol":     "redis",
+		"total_ops":    snapshot.Core.Operations.Total,
+		"success_rate": snapshot.Core.Operations.Rate,
+		"avg_latency":  snapshot.Core.Latency.Average,
+		"qps":          redisMetrics.Performance.QPS,
+		"hit_rate":     redisMetrics.Performance.HitRate,
+		"error_count":  len(redisMetrics.Errors),
+		"duration":     snapshot.Core.Duration,
 	}
 }
 
@@ -328,10 +328,10 @@ func (rc *RedisCollector) Reset() {
 
 	// 重置Redis特定指标
 	rc.redisMetrics = &RedisMetrics{
-		Operations: make(map[string]*RedisOperationStat),
-		Connection: &RedisConnectionStat{},
+		Operations:  make(map[string]*RedisOperationStat),
+		Connection:  &RedisConnectionStat{},
 		Performance: &RedisPerformanceStat{},
-		Errors: make(map[string]*RedisErrorStat),
+		Errors:      make(map[string]*RedisErrorStat),
 		Timing: &RedisTimingStat{
 			FirstOperation: time.Now(),
 		},
