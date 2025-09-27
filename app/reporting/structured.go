@@ -255,13 +255,19 @@ func generateDashboard(snapshot *metrics.MetricsSnapshot[map[string]interface{}]
 
 // generateMetricsBreakdown 生成指标分解
 func generateMetricsBreakdown(snapshot *metrics.MetricsSnapshot[map[string]interface{}]) MetricsBreakdown {
+	// 安全计算错误率，避免NaN
+	var errorRate float64
+	if snapshot.Core.Operations.Total > 0 {
+		errorRate = float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100
+	}
+	
 	return MetricsBreakdown{
 		CoreOperations: OperationAnalysis{
 			TotalOperations:     snapshot.Core.Operations.Total,
 			SuccessfulOps:       snapshot.Core.Operations.Success,
 			FailedOps:           snapshot.Core.Operations.Failed,
 			SuccessRate:         snapshot.Core.Operations.Rate,
-			ErrorRate:           float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100,
+			ErrorRate:           errorRate,
 			OperationsPerSecond: snapshot.Core.Throughput.RPS,
 			OperationTypes: map[string]int64{
 				"read":  snapshot.Core.Operations.Read,
@@ -363,7 +369,11 @@ func calculatePerformanceScore(snapshot *metrics.MetricsSnapshot[map[string]inte
 }
 
 func determineStatusLevel(snapshot *metrics.MetricsSnapshot[map[string]interface{}]) StatusLevel {
-	errorRate := float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100
+	// 安全计算错误率，避免NaN
+	var errorRate float64
+	if snapshot.Core.Operations.Total > 0 {
+		errorRate = float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100
+	}
 	
 	if errorRate > 10 || snapshot.Core.Latency.Average.Milliseconds() > 1000 {
 		return StatusCritical
@@ -403,7 +413,11 @@ func generateInsights(snapshot *metrics.MetricsSnapshot[map[string]interface{}])
 func generateRecommendations(snapshot *metrics.MetricsSnapshot[map[string]interface{}]) []Recommendation {
 	var recommendations []Recommendation
 	
-	errorRate := float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100
+	// 安全计算错误率，避免NaN
+	var errorRate float64
+	if snapshot.Core.Operations.Total > 0 {
+		errorRate = float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100
+	}
 	
 	if errorRate > 5 {
 		recommendations = append(recommendations, Recommendation{

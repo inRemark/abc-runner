@@ -14,66 +14,6 @@ import (
 	"abc-runner/app/reporting"
 )
 
-// SimpleMetricsAdapter 简单的指标适配器
-type SimpleMetricsAdapter struct {
-	baseCollector *metrics.BaseCollector[map[string]interface{}]
-}
-
-func (m *SimpleMetricsAdapter) RecordOperation(result *interfaces.OperationResult) {
-	if m.baseCollector != nil {
-		m.baseCollector.Record(result)
-	}
-}
-
-func (m *SimpleMetricsAdapter) GetMetrics() *interfaces.Metrics {
-	if m.baseCollector == nil {
-		return &interfaces.Metrics{}
-	}
-	snapshot := m.baseCollector.Snapshot()
-	return &interfaces.Metrics{
-		TotalOps:   snapshot.Core.Operations.Total,
-		SuccessOps: snapshot.Core.Operations.Success,
-		FailedOps:  snapshot.Core.Operations.Failed,
-		ReadOps:    snapshot.Core.Operations.Read,
-		WriteOps:   snapshot.Core.Operations.Write,
-		AvgLatency: snapshot.Core.Latency.Average,
-		MinLatency: snapshot.Core.Latency.Min,
-		MaxLatency: snapshot.Core.Latency.Max,
-		P90Latency: snapshot.Core.Latency.P90,
-		P95Latency: snapshot.Core.Latency.P95,
-		P99Latency: snapshot.Core.Latency.P99,
-		ErrorRate:  float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100,
-		RPS:        int32(snapshot.Core.Throughput.RPS),
-		StartTime:  time.Now().Add(-snapshot.Core.Duration),
-		EndTime:    time.Now(),
-		Duration:   snapshot.Core.Duration,
-	}
-}
-
-func (m *SimpleMetricsAdapter) Reset() {
-	if m.baseCollector != nil {
-		m.baseCollector.Reset()
-	}
-}
-
-func (m *SimpleMetricsAdapter) Export() map[string]interface{} {
-	if m.baseCollector == nil {
-		return make(map[string]interface{})
-	}
-	snapshot := m.baseCollector.Snapshot()
-	return map[string]interface{}{
-		"total_ops":    snapshot.Core.Operations.Total,
-		"success_ops":  snapshot.Core.Operations.Success,
-		"failed_ops":   snapshot.Core.Operations.Failed,
-		"success_rate": snapshot.Core.Operations.Rate,
-		"rps":          snapshot.Core.Throughput.RPS,
-		"avg_latency":  int64(snapshot.Core.Latency.Average),
-		"p95_latency":  int64(snapshot.Core.Latency.P95),
-		"p99_latency":  int64(snapshot.Core.Latency.P99),
-		"protocol_data": snapshot.Protocol,
-	}
-}
-
 // HttpCommandHandler HTTP命令处理器
 type HttpCommandHandler struct {
 	protocolName string
@@ -111,15 +51,13 @@ func (h *HttpCommandHandler) Execute(ctx context.Context, args []string) error {
 	// 创建HTTP适配器
 	metricsConfig := metrics.DefaultMetricsConfig()
 	metricsCollector := metrics.NewBaseCollector(metricsConfig, map[string]interface{}{
-		"protocol": "http",
+		"protocol":  "http",
 		"test_type": "performance",
 	})
 	defer metricsCollector.Stop()
 
-	// 使用适配器包装指标收集器
-	metricsAdapter := &SimpleMetricsAdapter{
-		baseCollector: metricsCollector,
-	}
+	// 使用共享的指标适配器
+	metricsAdapter := NewSharedMetricsAdapter(metricsCollector)
 	adapter := http.NewHttpAdapter(metricsAdapter)
 
 	// 连接并执行测试
@@ -174,7 +112,7 @@ NOTE:
 func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterConfig, error) {
 	// 创建默认配置
 	config := httpConfig.LoadDefaultHttpConfig()
-	
+
 	// 使用用户记忆中的默认URL
 	config.Connection.BaseURL = "http://cn.bing.com"
 	config.Benchmark.Total = 1000
@@ -182,7 +120,7 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 	config.Benchmark.Method = "GET"
 	config.Benchmark.Path = "/"
 	config.Benchmark.Timeout = 30 * time.Second
-	
+
 	// 解析参数
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -212,7 +150,7 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 			}
 		}
 	}
-	
+
 	return config, nil
 }
 
@@ -224,7 +162,7 @@ func (h *HttpCommandHandler) runPerformanceTest(ctx context.Context, adapter int
 		// 在模拟模式下生成测试数据
 		return h.runSimulationTest(config, collector)
 	}
-	
+
 	// 执行真实的HTTP测试
 	return h.runRealTest(ctx, adapter, config)
 }
@@ -232,14 +170,14 @@ func (h *HttpCommandHandler) runPerformanceTest(ctx context.Context, adapter int
 // runSimulationTest 运行模拟测试
 func (h *HttpCommandHandler) runSimulationTest(config *httpConfig.HttpAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running HTTP simulation test...\n")
-	
+
 	// 生成模拟数据
 	for i := 0; i < config.Benchmark.Total; i++ {
 		// 模拟90%成功率
 		success := i%10 != 0
 		// 模拟延迟：50-200ms
 		latency := time.Duration(50+i%150) * time.Millisecond
-		
+
 		result := &interfaces.OperationResult{
 			Success:  success,
 			Duration: latency,
@@ -249,15 +187,15 @@ func (h *HttpCommandHandler) runSimulationTest(config *httpConfig.HttpAdapterCon
 				"method":      config.Benchmark.Method,
 			},
 		}
-		
+
 		collector.Record(result)
-		
+
 		// 模拟并发延迟
 		if i%config.Benchmark.Parallels == 0 {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	
+
 	fmt.Printf("✅ HTTP simulation test completed\n")
 	return nil
 }
@@ -265,30 +203,30 @@ func (h *HttpCommandHandler) runSimulationTest(config *httpConfig.HttpAdapterCon
 // runRealTest 运行真实测试
 func (h *HttpCommandHandler) runRealTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *httpConfig.HttpAdapterConfig) error {
 	fmt.Printf("📊 Running real HTTP performance test...\n")
-	
+
 	// 创建操作
 	operation := interfaces.Operation{
-		Type:   "http_request",
-		Key:    "performance_test",
+		Type: "http_request",
+		Key:  "performance_test",
 		Params: map[string]interface{}{
 			"method": config.Benchmark.Method,
 			"path":   config.Benchmark.Path,
 		},
 	}
-	
+
 	// 执行请求
 	for i := 0; i < config.Benchmark.Total; i++ {
 		_, err := adapter.Execute(ctx, operation)
 		if err != nil {
 			log.Printf("Request %d failed: %v", i+1, err)
 		}
-		
+
 		// 控制并发
 		if i%config.Benchmark.Parallels == 0 {
 			time.Sleep(time.Millisecond)
 		}
 	}
-	
+
 	fmt.Printf("✅ Real HTTP test completed\n")
 	return nil
 }
@@ -297,20 +235,20 @@ func (h *HttpCommandHandler) runRealTest(ctx context.Context, adapter interfaces
 func (h *HttpCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 获取指标快照
 	snapshot := collector.Snapshot()
-	
+
 	// 转换为结构化报告
 	report := reporting.ConvertFromMetricsSnapshot(snapshot)
-	
-	// 配置报告生成器
+
+	// 配置报告生成器 - 同时生成控制台和文件报告
 	reportConfig := &reporting.RenderConfig{
-		OutputFormats: []string{"console"},
+		OutputFormats: []string{"console", "json", "csv", "html"},
 		OutputDir:     "./reports",
 		FilePrefix:    "http_performance",
 		Timestamp:     true,
 	}
-	
+
 	generator := reporting.NewReportGenerator(reportConfig)
-	
+
 	// 生成并显示报告
 	return generator.Generate(report)
 }

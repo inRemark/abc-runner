@@ -60,15 +60,13 @@ func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error 
 	// 创建Redis适配器
 	metricsConfig := metrics.DefaultMetricsConfig()
 	metricsCollector := metrics.NewBaseCollector(metricsConfig, map[string]interface{}{
-		"protocol": "redis",
+		"protocol":  "redis",
 		"test_type": "performance",
 	})
 	defer metricsCollector.Stop()
 
-	// 使用适配器包装指标收集器
-	metricsAdapter := &SimpleMetricsAdapter{
-		baseCollector: metricsCollector,
-	}
+	// 使用共享的指标适配器
+	metricsAdapter := NewSharedMetricsAdapter(metricsCollector)
 	adapter := redis.NewRedisAdapter(metricsAdapter)
 
 	// 连接并执行测试
@@ -131,7 +129,7 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 	config.BenchMark.Total = 1000
 	config.BenchMark.Parallels = 10
 	config.Pool.ConnectionTimeout = 30 * time.Second
-	
+
 	// 解析参数
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -183,7 +181,7 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 			}
 		}
 	}
-	
+
 	return config, nil
 }
 
@@ -195,7 +193,7 @@ func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 		// 在模拟模式下生成测试数据
 		return r.runSimulationTest(config, collector)
 	}
-	
+
 	// 执行真实的Redis测试
 	return r.runRealTest(ctx, adapter, config)
 }
@@ -203,10 +201,10 @@ func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 // runSimulationTest 运行模拟测试
 func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running Redis simulation test...\n")
-	
+
 	// Redis操作类型
 	operations := []string{"GET", "SET", "HGET", "HSET", "LPUSH", "RPOP"}
-	
+
 	// 生成模拟数据
 	for i := 0; i < config.BenchMark.Total; i++ {
 		// 模拟95%成功率
@@ -217,7 +215,7 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 		opType := operations[i%len(operations)]
 		// 读操作：GET, HGET
 		isRead := opType == "GET" || opType == "HGET"
-		
+
 		result := &interfaces.OperationResult{
 			Success:  success,
 			Duration: latency,
@@ -227,15 +225,15 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 				"key":            fmt.Sprintf("key_%d", i),
 			},
 		}
-		
+
 		collector.Record(result)
-		
+
 		// 模拟并发延迟
 		if i%config.BenchMark.Parallels == 0 {
 			time.Sleep(time.Millisecond)
 		}
 	}
-	
+
 	fmt.Printf("✅ Redis simulation test completed\n")
 	return nil
 }
@@ -243,33 +241,33 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 // runRealTest 运行真实测试
 func (r *RedisCommandHandler) runRealTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig) error {
 	fmt.Printf("📊 Running real Redis performance test...\n")
-	
+
 	// 创建操作
 	operations := []string{"SET", "GET", "HSET", "HGET"}
-	
+
 	// 执行操作
 	for i := 0; i < config.BenchMark.Total; i++ {
 		opType := operations[i%len(operations)]
 		operation := interfaces.Operation{
-			Type: opType,
-			Key:  fmt.Sprintf("test_key_%d", i),
+			Type:  opType,
+			Key:   fmt.Sprintf("test_key_%d", i),
 			Value: fmt.Sprintf("test_value_%d", i),
 			Params: map[string]interface{}{
 				"operation_type": opType,
 			},
 		}
-		
+
 		_, err := adapter.Execute(ctx, operation)
 		if err != nil {
 			log.Printf("Operation %d (%s) failed: %v", i+1, opType, err)
 		}
-		
+
 		// 控制并发
 		if i%config.BenchMark.Parallels == 0 {
 			time.Sleep(time.Millisecond)
 		}
 	}
-	
+
 	fmt.Printf("✅ Real Redis test completed\n")
 	return nil
 }
@@ -278,20 +276,20 @@ func (r *RedisCommandHandler) runRealTest(ctx context.Context, adapter interface
 func (r *RedisCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 获取指标快照
 	snapshot := collector.Snapshot()
-	
+
 	// 转换为结构化报告
 	report := reporting.ConvertFromMetricsSnapshot(snapshot)
-	
-	// 配置报告生成器
+
+	// 配置报告生成器 - 同时生成控制台和文件报告
 	reportConfig := &reporting.RenderConfig{
-		OutputFormats: []string{"console"},
+		OutputFormats: []string{"console", "json", "csv", "html"},
 		OutputDir:     "./reports",
 		FilePrefix:    "redis_performance",
 		Timestamp:     true,
 	}
-	
+
 	generator := reporting.NewReportGenerator(reportConfig)
-	
+
 	// 生成并显示报告
 	return generator.Generate(report)
 }

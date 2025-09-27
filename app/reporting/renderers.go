@@ -54,12 +54,12 @@ func (c *ConsoleRenderer) Extension() string {
 
 func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 	var buf bytes.Buffer
-	
+
 	// 报告头部
 	buf.WriteString("\n" + strings.Repeat("=", 80) + "\n")
 	buf.WriteString("             ABC-RUNNER 性能测试报告\n")
 	buf.WriteString(strings.Repeat("=", 80) + "\n")
-	
+
 	// 执行摘要
 	buf.WriteString("\n📊 执行摘要\n")
 	buf.WriteString(strings.Repeat("-", 40) + "\n")
@@ -67,7 +67,7 @@ func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 	buf.WriteString(fmt.Sprintf("系统状态: %s\n", c.formatStatus(report.Dashboard.StatusIndicator)))
 	buf.WriteString(fmt.Sprintf("协议类型: %s\n", report.Context.TestConfiguration.Protocol))
 	buf.WriteString(fmt.Sprintf("测试时长: %v\n", report.Context.TestConfiguration.TestDuration))
-	
+
 	// 核心指标
 	buf.WriteString("\n⚡ 核心性能指标\n")
 	buf.WriteString(strings.Repeat("-", 40) + "\n")
@@ -76,7 +76,7 @@ func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 	buf.WriteString(fmt.Sprintf("成功操作: %d (%.2f%%)\n", ops.SuccessfulOps, ops.SuccessRate))
 	buf.WriteString(fmt.Sprintf("失败操作: %d (%.2f%%)\n", ops.FailedOps, ops.ErrorRate))
 	buf.WriteString(fmt.Sprintf("吞吐量: %.2f ops/sec\n", ops.OperationsPerSecond))
-	
+
 	// 延迟分析
 	buf.WriteString("\n🚀 延迟分析\n")
 	buf.WriteString(strings.Repeat("-", 40) + "\n")
@@ -89,7 +89,7 @@ func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 	buf.WriteString(fmt.Sprintf("  P90: %v\n", latency.Percentiles.P90))
 	buf.WriteString(fmt.Sprintf("  P95: %v\n", latency.Percentiles.P95))
 	buf.WriteString(fmt.Sprintf("  P99: %v\n", latency.Percentiles.P99))
-	
+
 	// 系统健康状态
 	buf.WriteString("\n💻 系统健康状态\n")
 	buf.WriteString(strings.Repeat("-", 40) + "\n")
@@ -97,7 +97,7 @@ func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 	buf.WriteString(fmt.Sprintf("内存使用: %.2f%%\n", system.MemoryProfile.MemoryUsagePercent))
 	buf.WriteString(fmt.Sprintf("活跃协程: %d\n", system.RuntimeMetrics.ActiveGoroutines))
 	buf.WriteString(fmt.Sprintf("GC次数: %d\n", system.MemoryProfile.GCCount))
-	
+
 	// 关键洞察
 	if len(report.Dashboard.KeyInsights) > 0 {
 		buf.WriteString("\n💡 关键洞察\n")
@@ -106,23 +106,23 @@ func (c *ConsoleRenderer) Render(report *StructuredReport) ([]byte, error) {
 			buf.WriteString(fmt.Sprintf("• %s: %s\n", insight.Title, insight.Description))
 		}
 	}
-	
+
 	// 优化建议
 	if len(report.Dashboard.Recommendations) > 0 {
 		buf.WriteString("\n🔧 优化建议\n")
 		buf.WriteString(strings.Repeat("-", 40) + "\n")
 		for _, rec := range report.Dashboard.Recommendations {
-			buf.WriteString(fmt.Sprintf("• [%s] %s: %s\n", 
-				strings.ToUpper(string(rec.Priority)), 
-				rec.Category, 
+			buf.WriteString(fmt.Sprintf("• [%s] %s: %s\n",
+				strings.ToUpper(string(rec.Priority)),
+				rec.Category,
 				rec.Action))
 		}
 	}
-	
+
 	buf.WriteString("\n" + strings.Repeat("=", 80) + "\n")
 	buf.WriteString(fmt.Sprintf("报告生成时间: %s\n", report.Context.ExecutionContext.GeneratedAt.Format("2006-01-02 15:04:05")))
 	buf.WriteString(strings.Repeat("=", 80) + "\n")
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -176,20 +176,20 @@ func (c *CSVRenderer) Extension() string {
 func (c *CSVRenderer) Render(report *StructuredReport) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
-	
+
 	// 写入标题行
 	headers := []string{
 		"timestamp", "protocol", "performance_score", "status",
 		"total_ops", "successful_ops", "failed_ops", "success_rate", "error_rate", "rps",
-		"avg_latency_ms", "min_latency_ms", "max_latency_ms", 
+		"avg_latency_ms", "min_latency_ms", "max_latency_ms",
 		"p90_latency_ms", "p95_latency_ms", "p99_latency_ms",
 		"memory_usage_percent", "active_goroutines", "gc_count",
 	}
-	
+
 	if err := writer.Write(headers); err != nil {
 		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
-	
+
 	// 写入数据行
 	record := []string{
 		report.Context.ExecutionContext.GeneratedAt.Format(time.RFC3339),
@@ -212,16 +212,16 @@ func (c *CSVRenderer) Render(report *StructuredReport) ([]byte, error) {
 		fmt.Sprintf("%d", report.System.RuntimeMetrics.ActiveGoroutines),
 		fmt.Sprintf("%d", report.System.MemoryProfile.GCCount),
 	}
-	
+
 	if err := writer.Write(record); err != nil {
 		return nil, fmt.Errorf("failed to write CSV record: %w", err)
 	}
-	
+
 	writer.Flush()
 	if err := writer.Error(); err != nil {
 		return nil, fmt.Errorf("CSV writer error: %w", err)
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -241,13 +241,28 @@ func (h *HTMLRenderer) Extension() string {
 }
 
 func (h *HTMLRenderer) Render(report *StructuredReport) ([]byte, error) {
-	tmpl := template.Must(template.New("report").Parse(htmlTemplate))
-	
+	// 定义自定义模板函数
+	funcMap := template.FuncMap{
+		"upper": func(v interface{}) string {
+			// 处理 Priority 类型或其他自定义类型
+			switch val := v.(type) {
+			case Priority:
+				return strings.ToUpper(string(val))
+			case string:
+				return strings.ToUpper(val)
+			default:
+				return strings.ToUpper(fmt.Sprintf("%v", val))
+			}
+		},
+	}
+
+	tmpl := template.Must(template.New("report").Funcs(funcMap).Parse(htmlTemplate))
+
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, report); err != nil {
 		return nil, fmt.Errorf("failed to execute HTML template: %w", err)
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -262,18 +277,18 @@ func NewReportGenerator(config *RenderConfig) *ReportGenerator {
 	if config == nil {
 		config = DefaultRenderConfig()
 	}
-	
+
 	generator := &ReportGenerator{
 		config:    config,
 		renderers: make(map[string]Renderer),
 	}
-	
+
 	// 注册内置渲染器
 	generator.renderers["console"] = NewConsoleRenderer()
 	generator.renderers["json"] = NewJSONRenderer()
 	generator.renderers["csv"] = NewCSVRenderer()
 	generator.renderers["html"] = NewHTMLRenderer()
-	
+
 	return generator
 }
 
@@ -285,13 +300,13 @@ func (g *ReportGenerator) Generate(report *StructuredReport) error {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
-	
+
 	for _, format := range g.config.OutputFormats {
 		if err := g.renderFormat(report, format); err != nil {
 			return fmt.Errorf("failed to render %s format: %w", format, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -301,24 +316,24 @@ func (g *ReportGenerator) renderFormat(report *StructuredReport, format string) 
 	if !exists {
 		return fmt.Errorf("unsupported format: %s", format)
 	}
-	
+
 	content, err := renderer.Render(report)
 	if err != nil {
 		return fmt.Errorf("rendering failed: %w", err)
 	}
-	
+
 	if format == "console" {
 		// 控制台输出直接打印
 		fmt.Print(string(content))
 		return nil
 	}
-	
+
 	// 其他格式保存到文件
 	filename := g.generateFilename(renderer)
 	if err := g.writeToFile(filename, content); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filename, err)
 	}
-	
+
 	fmt.Printf("✅ %s report saved to: %s\n", strings.ToUpper(format), filename)
 	return nil
 }
@@ -326,18 +341,18 @@ func (g *ReportGenerator) renderFormat(report *StructuredReport, format string) 
 // generateFilename 生成文件名
 func (g *ReportGenerator) generateFilename(renderer Renderer) string {
 	filename := g.config.FilePrefix
-	
+
 	if g.config.Timestamp {
 		timestamp := time.Now().Format("20060102_150405")
 		filename = fmt.Sprintf("%s_%s", filename, timestamp)
 	}
-	
+
 	filename = fmt.Sprintf("%s.%s", filename, renderer.Extension())
-	
+
 	if g.config.OutputDir != "" {
 		filename = filepath.Join(g.config.OutputDir, filename)
 	}
-	
+
 	return filename
 }
 
@@ -348,7 +363,7 @@ func (g *ReportGenerator) writeToFile(filename string, content []byte) error {
 		return err
 	}
 	defer file.Close()
-	
+
 	_, err = file.Write(content)
 	return err
 }
