@@ -235,6 +235,10 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 	}
 
 	fmt.Printf("✅ Redis simulation test completed\n")
+	
+	// 等待稍许时间让延迟指标计算完成
+	time.Sleep(100 * time.Millisecond)
+	
 	return nil
 }
 

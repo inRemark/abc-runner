@@ -223,10 +223,15 @@ type SystemSnapshot struct {
 
 // NewSystemTracker 创建系统追踪器
 func NewSystemTracker(config SystemConfig) *SystemTracker {
-	return &SystemTracker{
+	st := &SystemTracker{
 		config:    config,
 		snapshots: NewRingBuffer[SystemSnapshot](config.SnapshotRetention),
 	}
+	
+	// 初始化时进行一次更新，确保有初始数据
+	st.Update()
+	
+	return st
 }
 
 // Update 更新系统指标

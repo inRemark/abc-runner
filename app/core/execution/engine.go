@@ -224,14 +224,20 @@ func (e *ExecutionEngine) worker(ctx context.Context, wg *sync.WaitGroup, jobCha
 
 // executeJob 执行单个任务
 func (e *ExecutionEngine) executeJob(job Job) *interfaces.OperationResult {
+	// 测量执行时间
+	startTime := time.Now()
+	
 	// 使用适配器执行操作
 	result, err := e.adapter.Execute(job.Context, job.Operation)
+	
+	// 计算执行时间
+	duration := time.Since(startTime)
 	
 	if err != nil {
 		// 如果适配器返回错误，创建失败结果
 		return &interfaces.OperationResult{
 			Success:  false,
-			Duration: 0,
+			Duration: duration, // 使用实际测量的时间
 			Error:    err,
 			IsRead:   false, // 默认为写操作，具体可以从operation中获取
 		}
@@ -241,10 +247,16 @@ func (e *ExecutionEngine) executeJob(job Job) *interfaces.OperationResult {
 		// 如果结果为空，创建默认失败结果
 		return &interfaces.OperationResult{
 			Success:  false,
-			Duration: 0,
+			Duration: duration, // 使用实际测量的时间
 			Error:    fmt.Errorf("adapter returned nil result"),
 			IsRead:   false,
 		}
+	}
+	
+	// 确保结果中有正确的执行时间
+	// 如果适配器返回的结果中没有或时间为0，使用我们测量的时间
+	if result.Duration == 0 {
+		result.Duration = duration
 	}
 	
 	return result

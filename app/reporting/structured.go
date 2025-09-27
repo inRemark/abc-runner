@@ -2,6 +2,8 @@ package reporting
 
 import (
 	"fmt"
+	"os"
+	"runtime"
 	"time"
 
 	"abc-runner/app/core/metrics"
@@ -327,15 +329,30 @@ func generateContextMetadata(snapshot *metrics.MetricsSnapshot[map[string]interf
 			TestDuration:    snapshot.Core.Duration,
 			Parameters:      snapshot.Protocol,
 		},
-		Environment: EnvInfo{
-			ABCRunnerVersion: "3.0.0",
-		},
+		Environment: generateEnvironmentInfo(),
 		ExecutionContext: ExecContext{
 			GeneratedAt:     time.Now(),
 			GeneratedBy:     "abc-runner-v3",
 			ReportVersion:   "3.0.0",
 			UniqueSessionID: generateSessionID(),
 		},
+	}
+}
+
+// generateEnvironmentInfo 生成完整的环境信息
+func generateEnvironmentInfo() EnvInfo {
+	// 获取主机名，失败时使用默认值
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	
+	return EnvInfo{
+		OSName:           runtime.GOOS,
+		Architecture:     runtime.GOARCH,
+		GoVersion:        runtime.Version(),
+		ABCRunnerVersion: "3.0.0",
+		Hostname:         hostname,
 	}
 }
 

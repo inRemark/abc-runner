@@ -279,18 +279,27 @@ func (lt *LatencyTracker) Record(duration time.Duration) {
 
 // GetMetrics 获取延迟指标
 func (lt *LatencyTracker) GetMetrics() LatencyMetrics {
-	// 检查是否需要重新计算
-	if time.Since(lt.lastCompute) < lt.config.ComputeInterval {
-		lt.mutex.RLock()
+	// 检查是否有数据但缓存为空，强制计算
+	count := atomic.LoadInt64(&lt.count)
+	if count == 0 {
+		return LatencyMetrics{}
+	}
+	
+	// 检查是否需要重新计算或缓存为空
+	lt.mutex.RLock()
+	cachedIsEmpty := lt.cached.Average == 0 && lt.cached.Min == 0 && lt.cached.Max == 0
+	needsRecompute := time.Since(lt.lastCompute) >= lt.config.ComputeInterval || cachedIsEmpty
+	if !needsRecompute {
 		cached := lt.cached
 		lt.mutex.RUnlock()
 		return cached
 	}
+	lt.mutex.RUnlock()
 
 	lt.mutex.Lock()
 	defer lt.mutex.Unlock()
 
-	count := atomic.LoadInt64(&lt.count)
+	// 再次检查数据量（双重检查）
 	if count == 0 {
 		return LatencyMetrics{}
 	}
@@ -299,8 +308,14 @@ func (lt *LatencyTracker) GetMetrics() LatencyMetrics {
 	min := atomic.LoadInt64(&lt.min)
 	max := atomic.LoadInt64(&lt.max)
 
+	// 修复：当min仍为初始值时，设置为0
+	minDuration := time.Duration(min)
+	if min == math.MaxInt64 {
+		minDuration = 0
+	}
+
 	metrics := LatencyMetrics{
-		Min:     time.Duration(min),
+		Min:     minDuration,
 		Max:     time.Duration(max),
 		Average: time.Duration(total / count),
 	}
