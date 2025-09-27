@@ -322,13 +322,8 @@ func (k *KafkaCommandHandler) generateReport(collector *metrics.BaseCollector[ma
 	// 转换为结构化报告
 	report := reporting.ConvertFromMetricsSnapshot(snapshot)
 
-	// 配置报告生成器 - 同时生成控制台和文件报告
-	reportConfig := &reporting.RenderConfig{
-		OutputFormats: []string{"console", "json", "csv", "html"},
-		OutputDir:     "./reports",
-		FilePrefix:    "kafka_performance",
-		Timestamp:     true,
-	}
+	// 使用标准报告配置
+	reportConfig := reporting.NewStandardReportConfig("kafka")
 
 	generator := reporting.NewReportGenerator(reportConfig)
 

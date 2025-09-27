@@ -245,13 +245,8 @@ func (h *HttpCommandHandler) generateReport(collector *metrics.BaseCollector[map
 	// 转换为结构化报告
 	report := reporting.ConvertFromMetricsSnapshot(snapshot)
 
-	// 配置报告生成器 - 同时生成控制台和文件报告
-	reportConfig := &reporting.RenderConfig{
-		OutputFormats: []string{"console", "json", "csv", "html"},
-		OutputDir:     "./reports",
-		FilePrefix:    "http_performance",
-		Timestamp:     true,
-	}
+	// 使用标准报告配置
+	reportConfig := reporting.NewStandardReportConfig("http")
 
 	generator := reporting.NewReportGenerator(reportConfig)
 
