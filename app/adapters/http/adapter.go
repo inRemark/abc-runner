@@ -112,9 +112,9 @@ func (h *HttpAdapter) Execute(ctx context.Context, operation interfaces.Operatio
 	if result != nil {
 		result.Duration = time.Since(startTime)
 
-		// 新架构：只使用通用指标收集器
-		if baseCollector := h.GetMetricsCollector(); baseCollector != nil {
-			baseCollector.RecordOperation(result)
+		// 记录操作到指标收集器
+		if metricsCollector := h.GetMetricsCollector(); metricsCollector != nil {
+			metricsCollector.RecordOperation(result)
 		}
 	}
 

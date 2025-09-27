@@ -13,7 +13,7 @@ import (
 // TestHTTPIntegration 测试HTTP集成
 func TestHTTPIntegration(t *testing.T) {
 	// 创建适配器
-	adapter := httpAdapter.NewHttpAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := httpAdapter.NewHttpAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 创建配置
 	config := &httpConfig.HttpAdapterConfig{
@@ -67,7 +67,7 @@ func TestHTTPIntegration(t *testing.T) {
 // TestHTTPExecute 测试HTTP执行
 func TestHTTPExecute(t *testing.T) {
 	// 创建适配器
-	adapter := httpAdapter.NewHttpAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := httpAdapter.NewHttpAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 创建配置
 	config := &httpConfig.HttpAdapterConfig{

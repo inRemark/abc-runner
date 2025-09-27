@@ -248,6 +248,11 @@ func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operati
 	// 更新协议指标
 	r.updateOperationMetrics(operation.Type, result.Success, result.Duration)
 
+	// 记录操作到指标收集器
+	if metricsCollector := r.GetMetricsCollector(); metricsCollector != nil {
+		metricsCollector.RecordOperation(result)
+	}
+
 	return result, nil
 }
 

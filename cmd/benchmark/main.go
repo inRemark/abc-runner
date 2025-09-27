@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"abc-runner/app/adapters/redis"
 	coreMetrics "abc-runner/app/core/metrics"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/reporting"
@@ -180,7 +179,9 @@ func testRedisCollectorFunctionality() BenchmarkResult {
 	runtime.ReadMemStats(&memStart)
 
 	config := coreMetrics.DefaultMetricsConfig()
-	collector := redis.NewRedisCollector(config)
+	collector := coreMetrics.NewBaseCollector(config, map[string]interface{}{
+		"protocol": "redis",
+	})
 	defer collector.Stop()
 
 	const numOps = 50000
@@ -197,11 +198,6 @@ func testRedisCollectorFunctionality() BenchmarkResult {
 			},
 		}
 		collector.Record(result)
-		
-		// 模拟连接事件
-		if i%100 == 0 {
-			collector.RecordConnection(true, time.Duration(i%10+1)*time.Millisecond)
-		}
 	}
 
 	duration := time.Since(start)
@@ -209,7 +205,6 @@ func testRedisCollectorFunctionality() BenchmarkResult {
 	var memEnd runtime.MemStats
 	runtime.ReadMemStats(&memEnd)
 
-	redisMetrics := collector.GetRedisMetrics()
 	snapshot := collector.Snapshot()
 
 	return BenchmarkResult{
@@ -219,7 +214,7 @@ func testRedisCollectorFunctionality() BenchmarkResult {
 		OpsPerSecond: float64(numOps) / duration.Seconds(),
 		AvgLatency:   snapshot.Core.Latency.Average,
 		MemoryUsed:   memEnd.TotalAlloc - memStart.TotalAlloc,
-		Success:      len(redisMetrics.Operations) > 0 && snapshot.Core.Operations.Total == numOps,
+		Success:      snapshot.Core.Operations.Total == numOps,
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 // TestKafkaIntegration 测试Kafka集成
 func TestKafkaIntegration(t *testing.T) {
 	// 创建适配器
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 创建配置
 	config := &kafkaConfig.KafkaAdapterConfig{
@@ -102,7 +102,7 @@ func TestKafkaIntegration(t *testing.T) {
 // TestKafkaExecute 测试Kafka执行
 func TestKafkaExecute(t *testing.T) {
 	// 创建适配器
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 创建配置
 	config := &kafkaConfig.KafkaAdapterConfig{

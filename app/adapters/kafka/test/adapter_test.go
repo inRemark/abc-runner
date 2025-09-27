@@ -10,9 +10,50 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
+// 测试用的简单指标收集器
+type testMetricsCollector struct {
+	metrics *interfaces.Metrics
+}
+
+func (t *testMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+	if t.metrics == nil {
+		t.metrics = &interfaces.Metrics{
+			StartTime: time.Now(),
+		}
+	}
+	t.metrics.TotalOps++
+	if result.Success {
+		t.metrics.SuccessOps++
+	} else {
+		t.metrics.FailedOps++
+	}
+	if result.IsRead {
+		t.metrics.ReadOps++
+	} else {
+		t.metrics.WriteOps++
+	}
+}
+
+func (t *testMetricsCollector) GetMetrics() *interfaces.Metrics {
+	if t.metrics == nil {
+		t.metrics = &interfaces.Metrics{}
+	}
+	return t.metrics
+}
+
+func (t *testMetricsCollector) Reset() {
+	t.metrics = &interfaces.Metrics{}
+}
+
+func (t *testMetricsCollector) Export() map[string]interface{} {
+	return map[string]interface{}{
+		"metrics": t.metrics,
+	}
+}
+
 // TestKafkaAdapter 测试Kafka适配器基本功能
 func TestKafkaAdapter(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 
 	// 测试适配器基本属性
 	if adapter.GetProtocolName() != "kafka" {
@@ -27,7 +68,7 @@ func TestKafkaAdapter(t *testing.T) {
 
 // TestKafkaAdapterConnect 测试Kafka适配器连接
 func TestKafkaAdapterConnect(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -52,7 +93,7 @@ func TestKafkaAdapterConnect(t *testing.T) {
 
 // TestKafkaAdapterMetrics 测试Kafka指标收集
 func TestKafkaAdapterMetrics(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
@@ -87,7 +128,7 @@ func TestKafkaAdapterMetrics(t *testing.T) {
 
 // TestKafkaOperationFactory 测试Kafka操作工厂
 func TestKafkaOperationFactory(t *testing.T) {
-	adapter := kafkaAdapter.NewKafkaAdapter(nil) // 注入nil指标收集器用于测试
+	adapter := kafkaAdapter.NewKafkaAdapter(&testMetricsCollector{}) // 注入指标收集器用于测试
 	config := createTestConfig()
 
 	ctx := context.Background()
