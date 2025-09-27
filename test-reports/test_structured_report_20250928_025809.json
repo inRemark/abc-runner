@@ -1,0 +1,112 @@
+{
+  "dashboard": {
+    "performance_score": 96,
+    "status_indicator": "warning",
+    "key_insights": [
+      {
+        "type": "performance",
+        "title": "高吞吐量性能",
+        "description": "系统展现出优秀的吞吐量表现",
+        "impact": "high"
+      }
+    ],
+    "recommendations": [
+      {
+        "priority": "high",
+        "category": "可靠性",
+        "action": "调查并修复错误源",
+        "description": "错误率过高，需要调查根本原因",
+        "expected_benefit": "提高系统可靠性和用户体验"
+      }
+    ]
+  },
+  "metrics": {
+    "core_operations": {
+      "total_operations": 100,
+      "successful_operations": 90,
+      "failed_operations": 10,
+      "success_rate": 90,
+      "error_rate": 10,
+      "operations_per_second": 1853293.3021980058,
+      "operation_types": {
+        "read": 50,
+        "write": 50
+      }
+    },
+    "latency_analysis": {
+      "average_latency": 0,
+      "min_latency": 0,
+      "max_latency": 0,
+      "percentiles": {
+        "p50": 0,
+        "p90": 0,
+        "p95": 0,
+        "p99": 0,
+        "p999": 0
+      },
+      "distribution": {
+        "under_1ms": 0,
+        "under_5ms": 0,
+        "under_10ms": 0,
+        "under_50ms": 0,
+        "under_100ms": 0,
+        "under_500ms": 0,
+        "under_1s": 0,
+        "above_1s": 0
+      }
+    },
+    "protocol_specific": {
+      "application": "abc-runner",
+      "protocol": "test",
+      "version": "3.0.0"
+    }
+  },
+  "system": {
+    "memory_profile": {
+      "allocated_memory": 0,
+      "total_allocations": 0,
+      "gc_count": 0,
+      "gc_pause_total": 0,
+      "memory_usage_percent": 0
+    },
+    "runtime_metrics": {
+      "active_goroutines": 0,
+      "cpu_usage_percent": 0,
+      "test_duration": 53958,
+      "start_time": "2025-09-28T02:58:09.519422042+08:00",
+      "end_time": "2025-09-28T02:58:09.519476+08:00"
+    },
+    "resource_health": {
+      "max_memory_used": 0,
+      "max_goroutines": 0,
+      "connections_active": 0,
+      "connections_total": 0
+    }
+  },
+  "context": {
+    "test_configuration": {
+      "protocol": "test",
+      "total_operations": 100,
+      "concurrent_clients": 0,
+      "test_duration": 53958,
+      "parameters": {
+        "application": "abc-runner",
+        "protocol": "test",
+        "version": "3.0.0"
+      }
+    },
+    "environment": {
+      "os_name": "",
+      "architecture": "",
+      "go_version": "",
+      "abc_runner_version": "3.0.0",
+      "hostname": ""
+    },
+    "execution_context": {
+      "generated_at": "2025-09-28T02:58:09.519489+08:00",
+      "generated_by": "abc-runner-v3",
+      "report_version": "3.0.0",
+      "unique_session_id": "session_1758999489"
+    }
+  }
+}
