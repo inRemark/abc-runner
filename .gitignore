@@ -29,3 +29,4 @@ test_output_*.json
 app/core/di/di.md
 .backup
 test-binary
+abc-runner-v3
