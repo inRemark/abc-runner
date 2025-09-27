@@ -103,7 +103,11 @@ func (k *KafkaSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("performance test execution failed: %w", err)
 	}
 
-	// 10. 生成报告
+	// 10. 设置协议特定指标（根据项目记忆要求）
+	protocolMetrics := k.adapter.GetProtocolMetrics()
+	k.reportManager.SetProtocolMetrics(protocolMetrics)
+
+	// 11. 生成报告
 	log.Println("Generating reports...")
 	if err := k.reportManager.GenerateReports(); err != nil {
 		return fmt.Errorf("report generation failed: %w", err)

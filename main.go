@@ -7,6 +7,7 @@ import (
 	"abc-runner/app/commands"
 	"abc-runner/app/core/di"
 	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/metrics"
 	"context"
 	"flag"
 	"fmt"
@@ -23,91 +24,105 @@ var (
 	container     *di.Container
 )
 
-// SimpleMetricsCollector 简单指标收集器实现
-type SimpleMetricsCollector struct {
-	operations []interfaces.OperationResult
-	startTime  time.Time
-	mutex      sync.RWMutex
+// MetricsCollectorAdapter 新指标系统适配器
+// 将新的泛型指标收集器适配到旧的 interfaces.MetricsCollector 接口
+type MetricsCollectorAdapter struct {
+	baseCollector *metrics.BaseCollector[map[string]interface{}]
+	mutex         sync.RWMutex
 }
 
-func (s *SimpleMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.operations = append(s.operations, *result)
+// NewMetricsCollectorAdapter 创建指标收集器适配器
+func NewMetricsCollectorAdapter() *MetricsCollectorAdapter {
+	config := metrics.DefaultMetricsConfig()
+
+	// 创建协议无关的基础收集器
+	protocolData := map[string]interface{}{
+		"application": "abc-runner",
+		"version":     "0.2.0",
+	}
+
+	baseCollector := metrics.NewBaseCollector(config, protocolData)
+
+	return &MetricsCollectorAdapter{
+		baseCollector: baseCollector,
+	}
 }
 
-func (s *SimpleMetricsCollector) GetMetrics() *interfaces.Metrics {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+// RecordOperation 实现 interfaces.MetricsCollector 接口
+func (m *MetricsCollectorAdapter) RecordOperation(result *interfaces.OperationResult) {
+	m.baseCollector.Record(result)
+}
 
-	totalOps := int64(len(s.operations))
-	var successOps, failedOps, readOps, writeOps int64
-	var totalLatency time.Duration
-	var minLatency, maxLatency time.Duration
+// GetMetrics 实现 interfaces.MetricsCollector 接口
+func (m *MetricsCollectorAdapter) GetMetrics() *interfaces.Metrics {
+	snapshot := m.baseCollector.Snapshot()
 
-	if totalOps > 0 {
-		minLatency = s.operations[0].Duration
-		for _, op := range s.operations {
-			if op.Success {
-				successOps++
-			} else {
-				failedOps++
-			}
-			if op.IsRead {
-				readOps++
-			} else {
-				writeOps++
-			}
-			totalLatency += op.Duration
-			if op.Duration < minLatency {
-				minLatency = op.Duration
-			}
-			if op.Duration > maxLatency {
-				maxLatency = op.Duration
-			}
-		}
-	}
-
-	errorRate := float64(0)
-	if totalOps > 0 {
-		errorRate = float64(failedOps) / float64(totalOps) * 100
-	}
-
-	avgLatency := time.Duration(0)
-	if totalOps > 0 {
-		avgLatency = totalLatency / time.Duration(totalOps)
-	}
-
+	// 转换新指标格式到旧格式
 	return &interfaces.Metrics{
-		TotalOps:   totalOps,
-		SuccessOps: successOps,
-		FailedOps:  failedOps,
-		ReadOps:    readOps,
-		WriteOps:   writeOps,
-		AvgLatency: avgLatency,
-		MinLatency: minLatency,
-		MaxLatency: maxLatency,
-		ErrorRate:  errorRate,
-		StartTime:  s.startTime,
+		TotalOps:   snapshot.Core.Operations.Total,
+		SuccessOps: snapshot.Core.Operations.Success,
+		FailedOps:  snapshot.Core.Operations.Failed,
+		ReadOps:    snapshot.Core.Operations.Read,
+		WriteOps:   snapshot.Core.Operations.Write,
+		AvgLatency: snapshot.Core.Latency.Average,
+		MinLatency: snapshot.Core.Latency.Min,
+		MaxLatency: snapshot.Core.Latency.Max,
+		P90Latency: snapshot.Core.Latency.P90,
+		P95Latency: snapshot.Core.Latency.P95,
+		P99Latency: snapshot.Core.Latency.P99,
+		ErrorRate:  float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100,
+		StartTime:  time.Now().Add(-snapshot.Core.Duration),
 		EndTime:    time.Now(),
-		Duration:   time.Since(s.startTime),
+		Duration:   snapshot.Core.Duration,
+		RPS:        int32(snapshot.Core.Throughput.RPS),
 	}
 }
 
-func (s *SimpleMetricsCollector) Reset() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.operations = make([]interfaces.OperationResult, 0)
-	s.startTime = time.Now()
+// Reset 实现 interfaces.MetricsCollector 接口
+func (m *MetricsCollectorAdapter) Reset() {
+	m.baseCollector.Reset()
 }
 
-func (s *SimpleMetricsCollector) Export() map[string]interface{} {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+// Export 实现 interfaces.MetricsCollector 接口
+func (m *MetricsCollectorAdapter) Export() map[string]interface{} {
+	snapshot := m.baseCollector.Snapshot()
+
+	// 根据项目记忆，确保延迟字段为 int64 类型（纳秒）
 	return map[string]interface{}{
-		"total_ops":  len(s.operations),
-		"start_time": s.startTime,
+		"total_ops":    snapshot.Core.Operations.Total,
+		"success_ops":  snapshot.Core.Operations.Success,
+		"failed_ops":   snapshot.Core.Operations.Failed,
+		"read_ops":     snapshot.Core.Operations.Read,
+		"write_ops":    snapshot.Core.Operations.Write,
+		"success_rate": snapshot.Core.Operations.Rate,
+		"rps":          snapshot.Core.Throughput.RPS,
+		"avg_latency":  int64(snapshot.Core.Latency.Average),
+		"min_latency":  int64(snapshot.Core.Latency.Min),
+		"max_latency":  int64(snapshot.Core.Latency.Max),
+		"p90_latency":  int64(snapshot.Core.Latency.P90),
+		"p95_latency":  int64(snapshot.Core.Latency.P95),
+		"p99_latency":  int64(snapshot.Core.Latency.P99),
+		"error_rate":   float64(snapshot.Core.Operations.Failed) / float64(snapshot.Core.Operations.Total) * 100,
+		"start_time":   time.Now().Add(-snapshot.Core.Duration),
+		"end_time":     time.Now(),
+		"duration":     int64(snapshot.Core.Duration),
+		// 系统指标
+		"memory_usage":    snapshot.System.Memory.Usage,
+		"goroutine_count": snapshot.System.Goroutine.Active,
+		"gc_count":        snapshot.System.GC.NumGC,
+		// 协议数据
+		"protocol_data": snapshot.Protocol,
 	}
+}
+
+// GetSnapshot 获取新指标快照（额外方法，供新系统使用）
+func (m *MetricsCollectorAdapter) GetSnapshot() *metrics.MetricsSnapshot[map[string]interface{}] {
+	return m.baseCollector.Snapshot()
+}
+
+// Stop 停止收集器
+func (m *MetricsCollectorAdapter) Stop() {
+	m.baseCollector.Stop()
 }
 
 // CustomAdapterFactory 自定义适配器工厂
@@ -202,13 +217,10 @@ func initializeCommandSystem() error {
 
 // registerCommandHandlers 注册命令处理器
 func registerCommandHandlers() error {
-	// 创建简单的指标收集器实现，兼容 interfaces.MetricsCollector 接口
-	metricsCollector := &SimpleMetricsCollector{
-		operations: make([]interfaces.OperationResult, 0),
-		startTime:  time.Now(),
-	}
+	// 使用新的泛型指标系统适配器
+	metricsCollector := NewMetricsCollectorAdapter()
 
-	// 创建自定义适配器工厂，注入具体实现
+	// 创建自定义适配器工厂，注入新的指标收集器
 	adapterFactory := &CustomAdapterFactory{
 		metricsCollector: metricsCollector,
 	}

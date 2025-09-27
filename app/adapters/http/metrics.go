@@ -63,62 +63,62 @@ type HttpMethodStat struct {
 
 // HttpURLStat HTTP URL统计
 type HttpURLStat struct {
-	Count         int64         `json:"count"`
-	SuccessCount  int64         `json:"success_count"`
-	FailureCount  int64         `json:"failure_count"`
-	TotalLatency  time.Duration `json:"total_latency"`
-	AvgLatency    time.Duration `json:"avg_latency"`
-	MinLatency    time.Duration `json:"min_latency"`
-	MaxLatency    time.Duration `json:"max_latency"`
-	ResponseSizes []int64       `json:"response_sizes"`
-	AvgSize       float64       `json:"avg_size"`
+	Count         int64            `json:"count"`
+	SuccessCount  int64            `json:"success_count"`
+	FailureCount  int64            `json:"failure_count"`
+	TotalLatency  time.Duration    `json:"total_latency"`
+	AvgLatency    time.Duration    `json:"avg_latency"`
+	MinLatency    time.Duration    `json:"min_latency"`
+	MaxLatency    time.Duration    `json:"max_latency"`
+	ResponseSizes []int64          `json:"response_sizes"`
+	AvgSize       float64          `json:"avg_size"`
 	ErrorTypes    map[string]int64 `json:"error_types"`
 }
 
 // HttpContentTypeStat HTTP内容类型统计
 type HttpContentTypeStat struct {
-	Count         int64   `json:"count"`
-	TotalSize     int64   `json:"total_size"`
-	AvgSize       float64 `json:"avg_size"`
-	MinSize       int64   `json:"min_size"`
-	MaxSize       int64   `json:"max_size"`
-	Compression   float64 `json:"compression_ratio"`
+	Count       int64   `json:"count"`
+	TotalSize   int64   `json:"total_size"`
+	AvgSize     float64 `json:"avg_size"`
+	MinSize     int64   `json:"min_size"`
+	MaxSize     int64   `json:"max_size"`
+	Compression float64 `json:"compression_ratio"`
 }
 
 // HttpNetworkStat HTTP网络统计
 type HttpNetworkStat struct {
-	DNSLookupTime    time.Duration `json:"dns_lookup_time"`
-	ConnectionTime   time.Duration `json:"connection_time"`
-	TLSHandshakeTime time.Duration `json:"tls_handshake_time"`
-	FirstByteTime    time.Duration `json:"first_byte_time"`
-	TransferTime     time.Duration `json:"transfer_time"`
-	TotalBytesRead   int64         `json:"total_bytes_read"`
-	TotalBytesWritten int64        `json:"total_bytes_written"`
-	KeepAliveReused  int64         `json:"keep_alive_reused"`
-	KeepAliveWaits   int64         `json:"keep_alive_waits"`
+	DNSLookupTime     time.Duration `json:"dns_lookup_time"`
+	ConnectionTime    time.Duration `json:"connection_time"`
+	TLSHandshakeTime  time.Duration `json:"tls_handshake_time"`
+	FirstByteTime     time.Duration `json:"first_byte_time"`
+	TransferTime      time.Duration `json:"transfer_time"`
+	TotalBytesRead    int64         `json:"total_bytes_read"`
+	TotalBytesWritten int64         `json:"total_bytes_written"`
+	KeepAliveReused   int64         `json:"keep_alive_reused"`
+	KeepAliveWaits    int64         `json:"keep_alive_waits"`
 }
 
 // HttpConnectionStat HTTP连接统计
 type HttpConnectionStat struct {
-	ActiveConnections   int32   `json:"active_connections"`
-	TotalConnections    int64   `json:"total_connections"`
-	FailedConnections   int64   `json:"failed_connections"`
-	ConnectionTimeouts  int64   `json:"connection_timeouts"`
-	ConnectionReused    int64   `json:"connection_reused"`
-	PoolUtilization     float64 `json:"pool_utilization"`
-	AvgConnectionTime   time.Duration `json:"avg_connection_time"`
-	MaxConcurrent       int32   `json:"max_concurrent"`
+	ActiveConnections  int32         `json:"active_connections"`
+	TotalConnections   int64         `json:"total_connections"`
+	FailedConnections  int64         `json:"failed_connections"`
+	ConnectionTimeouts int64         `json:"connection_timeouts"`
+	ConnectionReused   int64         `json:"connection_reused"`
+	PoolUtilization    float64       `json:"pool_utilization"`
+	AvgConnectionTime  time.Duration `json:"avg_connection_time"`
+	MaxConcurrent      int32         `json:"max_concurrent"`
 }
 
 // HttpSecurityStat HTTP安全统计
 type HttpSecurityStat struct {
-	TLSConnections     int64                    `json:"tls_connections"`
-	TLSVersions        map[string]int64         `json:"tls_versions"`
-	CipherSuites       map[string]int64         `json:"cipher_suites"`
-	CertificateErrors  int64                    `json:"certificate_errors"`
-	SecurityHeaders    map[string]int64         `json:"security_headers"`
-	RedirectCount      int64                    `json:"redirect_count"`
-	AuthenticationFails int64                   `json:"authentication_fails"`
+	TLSConnections      int64            `json:"tls_connections"`
+	TLSVersions         map[string]int64 `json:"tls_versions"`
+	CipherSuites        map[string]int64 `json:"cipher_suites"`
+	CertificateErrors   int64            `json:"certificate_errors"`
+	SecurityHeaders     map[string]int64 `json:"security_headers"`
+	RedirectCount       int64            `json:"redirect_count"`
+	AuthenticationFails int64            `json:"authentication_fails"`
 }
 
 // HttpPerformanceStat HTTP性能统计
@@ -128,8 +128,8 @@ type HttpPerformanceStat struct {
 	MedianResponseTime time.Duration `json:"median_response_time"`
 	P95ResponseTime    time.Duration `json:"p95_response_time"`
 	P99ResponseTime    time.Duration `json:"p99_response_time"`
-	SlowRequests       int64         `json:"slow_requests"`        // > 2s
-	VerySlowRequests   int64         `json:"very_slow_requests"`   // > 5s
+	SlowRequests       int64         `json:"slow_requests"`      // > 2s
+	VerySlowRequests   int64         `json:"very_slow_requests"` // > 5s
 	TimeoutRate        float64       `json:"timeout_rate"`
 	ErrorRate          float64       `json:"error_rate"`
 	SuccessRate        float64       `json:"success_rate"`
@@ -138,21 +138,21 @@ type HttpPerformanceStat struct {
 // HttpCollector HTTP指标收集器
 type HttpCollector struct {
 	*metrics.BaseCollector[HttpMetrics]
-	
+
 	// HTTP特定指标
 	httpMetrics *HttpMetrics
 	mutex       sync.RWMutex
-	
+
 	// 追踪器
-	statusCodeTracker   *HttpStatusCodeTracker
-	methodTracker       *HttpMethodTracker
-	urlTracker          *HttpURLTracker
-	contentTypeTracker  *HttpContentTypeTracker
-	networkTracker      *HttpNetworkTracker
-	connectionTracker   *HttpConnectionTracker
-	securityTracker     *HttpSecurityTracker
-	performanceTracker  *HttpPerformanceTracker
-	
+	statusCodeTracker  *HttpStatusCodeTracker
+	methodTracker      *HttpMethodTracker
+	urlTracker         *HttpURLTracker
+	contentTypeTracker *HttpContentTypeTracker
+	networkTracker     *HttpNetworkTracker
+	connectionTracker  *HttpConnectionTracker
+	securityTracker    *HttpSecurityTracker
+	performanceTracker *HttpPerformanceTracker
+
 	// 配置
 	config *metrics.MetricsConfig
 }
@@ -171,7 +171,7 @@ func NewHttpCollector(config *metrics.MetricsConfig) *HttpCollector {
 		ContentTypes: make(map[string]*HttpContentTypeStat),
 		Network:      &HttpNetworkStat{},
 		Connection:   &HttpConnectionStat{},
-		Security:     &HttpSecurityStat{
+		Security: &HttpSecurityStat{
 			TLSVersions:     make(map[string]int64),
 			CipherSuites:    make(map[string]int64),
 			SecurityHeaders: make(map[string]int64),
@@ -183,16 +183,16 @@ func NewHttpCollector(config *metrics.MetricsConfig) *HttpCollector {
 	baseCollector := metrics.NewBaseCollector(config, *httpMetrics)
 
 	collector := &HttpCollector{
-		BaseCollector:       baseCollector,
-		httpMetrics:         httpMetrics,
-		statusCodeTracker:   NewHttpStatusCodeTracker(),
-		methodTracker:       NewHttpMethodTracker(),
-		urlTracker:          NewHttpURLTracker(),
-		contentTypeTracker:  NewHttpContentTypeTracker(),
-		networkTracker:      NewHttpNetworkTracker(),
-		connectionTracker:   NewHttpConnectionTracker(),
-		securityTracker:     NewHttpSecurityTracker(),
-		performanceTracker:  NewHttpPerformanceTracker(),
+		BaseCollector:      baseCollector,
+		httpMetrics:        httpMetrics,
+		statusCodeTracker:  NewHttpStatusCodeTracker(),
+		methodTracker:      NewHttpMethodTracker(),
+		urlTracker:         NewHttpURLTracker(),
+		contentTypeTracker: NewHttpContentTypeTracker(),
+		networkTracker:     NewHttpNetworkTracker(),
+		connectionTracker:  NewHttpConnectionTracker(),
+		securityTracker:    NewHttpSecurityTracker(),
+		performanceTracker: NewHttpPerformanceTracker(),
 		config:             config,
 	}
 
@@ -284,7 +284,7 @@ func (hc *HttpCollector) GetHttpMetrics() *HttpMetrics {
 		ContentTypes: make(map[string]*HttpContentTypeStat),
 		Network:      &HttpNetworkStat{},
 		Connection:   &HttpConnectionStat{},
-		Security:     &HttpSecurityStat{
+		Security: &HttpSecurityStat{
 			TLSVersions:     make(map[string]int64),
 			CipherSuites:    make(map[string]int64),
 			SecurityHeaders: make(map[string]int64),
@@ -324,7 +324,7 @@ func (hc *HttpCollector) GetHttpMetrics() *HttpMetrics {
 	for url, stat := range hc.httpMetrics.URLs {
 		sizeCopy := make([]int64, len(stat.ResponseSizes))
 		copy(sizeCopy, stat.ResponseSizes)
-		
+
 		errorTypesCopy := make(map[string]int64)
 		for errType, count := range stat.ErrorTypes {
 			errorTypesCopy[errType] = count
@@ -439,7 +439,7 @@ func (hc *HttpCollector) Reset() {
 		ContentTypes: make(map[string]*HttpContentTypeStat),
 		Network:      &HttpNetworkStat{},
 		Connection:   &HttpConnectionStat{},
-		Security:     &HttpSecurityStat{
+		Security: &HttpSecurityStat{
 			TLSVersions:     make(map[string]int64),
 			CipherSuites:    make(map[string]int64),
 			SecurityHeaders: make(map[string]int64),

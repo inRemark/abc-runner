@@ -102,7 +102,11 @@ func (h *RedisSimpleHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	// 10. 生成报告
+	// 10. 设置协议特定指标（根据项目记忆要求）
+	protocolMetrics := h.adapter.GetProtocolMetrics()
+	h.reportManager.SetProtocolMetrics(protocolMetrics)
+
+	// 11. 生成报告
 	log.Println("Generating reports...")
 	if err := h.reportManager.GenerateReports(); err != nil {
 		return fmt.Errorf("report generation failed: %w", err)
