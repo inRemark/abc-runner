@@ -9,10 +9,10 @@ import (
 
 	"abc-runner/app/adapters/http"
 	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
 	"abc-runner/app/reporting"
-	"abc-runner/app/core/execution"
 )
 
 // HttpCommandHandler HTTP命令处理器
@@ -205,16 +205,16 @@ func (h *HttpCommandHandler) runConcurrentTest(ctx context.Context, adapter inte
 	fmt.Printf("📊 Running concurrent HTTP performance test with ExecutionEngine...\n")
 
 	// 创建基准配置适配器
-	benchmarkConfig := execution.NewHttpBenchmarkConfigAdapter(&config.Benchmark)
+	benchmarkConfig := http.NewBenchmarkConfigAdapter(&config.Benchmark)
 
 	// 创建操作工厂
-	operationFactory := execution.NewHttpOperationFactory(config)
+	operationFactory := http.NewOperationFactory(config)
 
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
 
 	// 配置执行引擎参数
-	engine.SetMaxWorkers(100) // 设置最大工作协程数
+	engine.SetMaxWorkers(100)         // 设置最大工作协程数
 	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
 
 	// 运行基准测试

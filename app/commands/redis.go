@@ -10,10 +10,10 @@ import (
 
 	"abc-runner/app/adapters/redis"
 	redisConfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
 	"abc-runner/app/reporting"
-	"abc-runner/app/core/execution"
 )
 
 // RedisCommandHandler Redis命令处理器
@@ -243,16 +243,16 @@ func (r *RedisCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	fmt.Printf("📊 Running concurrent Redis performance test with ExecutionEngine...\n")
 
 	// 创建基准配置适配器
-	benchmarkConfig := execution.NewRedisBenchmarkConfigAdapter(config.GetBenchmark())
+	benchmarkConfig := redis.NewBenchmarkConfigAdapter(config.GetBenchmark())
 
 	// 创建操作工厂
-	operationFactory := execution.NewRedisOperationFactory(config)
+	operationFactory := redis.NewOperationFactory(config)
 
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
 
 	// 配置执行引擎参数
-	engine.SetMaxWorkers(100) // 设置最大工作协程数
+	engine.SetMaxWorkers(100)         // 设置最大工作协程数
 	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
 
 	// 运行基准测试
