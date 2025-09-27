@@ -13,6 +13,7 @@ import (
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
 	"abc-runner/app/reporting"
+	"abc-runner/app/core/execution"
 )
 
 // KafkaCommandHandler Kafka命令处理器
@@ -57,9 +58,8 @@ func (k *KafkaCommandHandler) Execute(ctx context.Context, args []string) error 
 	})
 	defer metricsCollector.Stop()
 
-	// 使用共享的指标适配器
-	metricsAdapter := NewSharedMetricsAdapter(metricsCollector)
-	adapter := kafka.NewKafkaAdapter(metricsAdapter)
+	// 直接使用MetricsCollector创建Kafka适配器
+	adapter := kafka.NewKafkaAdapter(metricsCollector)
 
 	// 连接并执行测试
 	if err := adapter.Connect(ctx, config); err != nil {
@@ -164,7 +164,7 @@ func (k *KafkaCommandHandler) parseArgs(args []string) (*kafkaConfig.KafkaAdapte
 	return config, nil
 }
 
-// runPerformanceTest 运行性能测试
+// runPerformanceTest 运行性能测试 - 使用新的ExecutionEngine
 func (k *KafkaCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *kafkaConfig.KafkaAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
@@ -173,8 +173,8 @@ func (k *KafkaCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 		return k.runSimulationTest(config, collector)
 	}
 
-	// 执行真实的Kafka测试
-	return k.runRealTest(ctx, adapter, config)
+	// 使用新的ExecutionEngine执行真实测试
+	return k.runConcurrentTest(ctx, adapter, config, collector)
 }
 
 // runSimulationTest 运行模拟测试
@@ -214,24 +214,41 @@ func (k *KafkaCommandHandler) runSimulationTest(config *kafkaConfig.KafkaAdapter
 	return nil
 }
 
-// runRealTest 运行真实测试
-func (k *KafkaCommandHandler) runRealTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *kafkaConfig.KafkaAdapterConfig) error {
-	fmt.Printf("📊 Running real Kafka performance test...\n")
+// runConcurrentTest 使用ExecutionEngine运行并发测试
+func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *kafkaConfig.KafkaAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
+	fmt.Printf("📊 Running concurrent Kafka performance test with ExecutionEngine...\n")
 
-	// 根据测试类型执行不同的操作
-	switch config.Benchmark.TestType {
-	case "producer":
-		return k.runProducerTest(ctx, adapter, config)
-	case "consumer":
-		return k.runConsumerTest(ctx, adapter, config)
-	case "both":
-		if err := k.runProducerTest(ctx, adapter, config); err != nil {
-			return err
-		}
-		return k.runConsumerTest(ctx, adapter, config)
-	default:
-		return k.runProducerTest(ctx, adapter, config)
+	// 创建基准配置适配器
+	benchmarkConfig := execution.NewKafkaBenchmarkConfigAdapter(&config.Benchmark)
+
+	// 创建操作工厂
+	operationFactory := execution.NewKafkaOperationFactory(config)
+
+	// 创建执行引擎
+	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
+
+	// 配置执行引擎参数
+	engine.SetMaxWorkers(100) // 设置最大工作协程数
+	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
+
+	// 运行基准测试
+	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
+	if err != nil {
+		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
+
+	// 输出执行结果
+	fmt.Printf("✅ Concurrent Kafka test completed\n")
+	fmt.Printf("   Total Jobs: %d\n", result.TotalJobs)
+	fmt.Printf("   Completed: %d\n", result.CompletedJobs)
+	fmt.Printf("   Success: %d\n", result.SuccessJobs)
+	fmt.Printf("   Failed: %d\n", result.FailedJobs)
+	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	if result.CompletedJobs > 0 {
+		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
+	}
+
+	return nil
 }
 
 // runProducerTest 运行生产者测试

@@ -14,11 +14,11 @@ import (
 // ConsumerOperations 消费者操作实现
 type ConsumerOperations struct {
 	pool             *connection.ConnectionPool
-	metricsCollector interfaces.MetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewConsumerOperations 创建消费者操作实例
-func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.MetricsCollector) *ConsumerOperations {
+func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ConsumerOperations {
 	return &ConsumerOperations{
 		pool:             pool,
 		metricsCollector: metricsCollector,
@@ -58,7 +58,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 				"offset":         -1,
 			},
 		}
-		c.metricsCollector.RecordOperation(defaultOperationResult)
+		c.metricsCollector.Record(defaultOperationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -106,7 +106,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 			"client_id":      "consumer",
 		},
 	}
-	c.metricsCollector.RecordOperation(consumeResult)
+	c.metricsCollector.Record(consumeResult)
 
 	if err != nil {
 		return &interfaces.OperationResult{
@@ -183,7 +183,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 				"offset":         -1,
 			},
 		}
-		c.metricsCollector.RecordOperation(defaultOperationResult)
+		c.metricsCollector.Record(defaultOperationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -248,7 +248,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 				"client_id":      "consumer",
 			},
 		}
-		c.metricsCollector.RecordOperation(msgResult)
+		c.metricsCollector.Record(msgResult)
 	}
 
 	duration := time.Since(startTime)
@@ -269,7 +269,7 @@ func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation 
 				"offset":         -1,
 			},
 		}
-		c.metricsCollector.RecordOperation(batchFailResult)
+		c.metricsCollector.Record(batchFailResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,

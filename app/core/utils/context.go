@@ -89,7 +89,7 @@ func (g *DefaultKeyGenerator) Reset() {
 type TestContextImpl struct {
 	adapter          interfaces.ProtocolAdapter
 	config           interfaces.Config
-	metricsCollector interfaces.MetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 	keyGenerator     interfaces.KeyGenerator
 	cancelled        bool
 	cancelMutex      sync.RWMutex
@@ -99,7 +99,7 @@ type TestContextImpl struct {
 func NewTestContext(
 	adapter interfaces.ProtocolAdapter,
 	config interfaces.Config,
-	metricsCollector interfaces.MetricsCollector,
+	metricsCollector interfaces.DefaultMetricsCollector,
 	keyGenerator interfaces.KeyGenerator,
 ) *TestContextImpl {
 	return &TestContextImpl{
@@ -121,7 +121,7 @@ func (t *TestContextImpl) GetConfig() interfaces.Config {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (t *TestContextImpl) GetMetricsCollector() interfaces.MetricsCollector {
+func (t *TestContextImpl) GetMetricsCollector() interfaces.DefaultMetricsCollector {
 	return t.metricsCollector
 }
 

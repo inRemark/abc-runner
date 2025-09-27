@@ -12,6 +12,7 @@ import (
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
 	"abc-runner/app/reporting"
+	"abc-runner/app/core/execution"
 )
 
 // HttpCommandHandler HTTP命令处理器
@@ -56,9 +57,8 @@ func (h *HttpCommandHandler) Execute(ctx context.Context, args []string) error {
 	})
 	defer metricsCollector.Stop()
 
-	// 使用共享的指标适配器
-	metricsAdapter := NewSharedMetricsAdapter(metricsCollector)
-	adapter := http.NewHttpAdapter(metricsAdapter)
+	// 直接使用MetricsCollector创建HTTP适配器
+	adapter := http.NewHttpAdapter(metricsCollector)
 
 	// 连接并执行测试
 	if err := adapter.Connect(ctx, config); err != nil {
@@ -154,7 +154,7 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 	return config, nil
 }
 
-// runPerformanceTest 运行性能测试
+// runPerformanceTest 运行性能测试 - 使用新的ExecutionEngine
 func (h *HttpCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *httpConfig.HttpAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
@@ -163,8 +163,8 @@ func (h *HttpCommandHandler) runPerformanceTest(ctx context.Context, adapter int
 		return h.runSimulationTest(config, collector)
 	}
 
-	// 执行真实的HTTP测试
-	return h.runRealTest(ctx, adapter, config)
+	// 使用新的ExecutionEngine执行真实测试
+	return h.runConcurrentTest(ctx, adapter, config, collector)
 }
 
 // runSimulationTest 运行模拟测试
@@ -200,34 +200,40 @@ func (h *HttpCommandHandler) runSimulationTest(config *httpConfig.HttpAdapterCon
 	return nil
 }
 
-// runRealTest 运行真实测试
-func (h *HttpCommandHandler) runRealTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *httpConfig.HttpAdapterConfig) error {
-	fmt.Printf("📊 Running real HTTP performance test...\n")
+// runConcurrentTest 使用ExecutionEngine运行并发测试
+func (h *HttpCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *httpConfig.HttpAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
+	fmt.Printf("📊 Running concurrent HTTP performance test with ExecutionEngine...\n")
 
-	// 创建操作
-	operation := interfaces.Operation{
-		Type: "http_request",
-		Key:  "performance_test",
-		Params: map[string]interface{}{
-			"method": config.Benchmark.Method,
-			"path":   config.Benchmark.Path,
-		},
+	// 创建基准配置适配器
+	benchmarkConfig := execution.NewHttpBenchmarkConfigAdapter(&config.Benchmark)
+
+	// 创建操作工厂
+	operationFactory := execution.NewHttpOperationFactory(config)
+
+	// 创建执行引擎
+	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
+
+	// 配置执行引擎参数
+	engine.SetMaxWorkers(100) // 设置最大工作协程数
+	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
+
+	// 运行基准测试
+	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
+	if err != nil {
+		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	// 执行请求
-	for i := 0; i < config.Benchmark.Total; i++ {
-		_, err := adapter.Execute(ctx, operation)
-		if err != nil {
-			log.Printf("Request %d failed: %v", i+1, err)
-		}
-
-		// 控制并发
-		if i%config.Benchmark.Parallels == 0 {
-			time.Sleep(time.Millisecond)
-		}
+	// 输出执行结果
+	fmt.Printf("✅ Concurrent HTTP test completed\n")
+	fmt.Printf("   Total Jobs: %d\n", result.TotalJobs)
+	fmt.Printf("   Completed: %d\n", result.CompletedJobs)
+	fmt.Printf("   Success: %d\n", result.SuccessJobs)
+	fmt.Printf("   Failed: %d\n", result.FailedJobs)
+	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	if result.CompletedJobs > 0 {
+		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
 	}
 
-	fmt.Printf("✅ Real HTTP test completed\n")
 	return nil
 }
 

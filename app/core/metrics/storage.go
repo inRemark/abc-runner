@@ -5,6 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"abc-runner/app/core/interfaces"
 )
 
 // RingBuffer 内存安全的环形缓冲区
@@ -212,11 +214,11 @@ type SystemTracker struct {
 
 // SystemSnapshot 系统快照
 type SystemSnapshot struct {
-	Timestamp time.Time     `json:"timestamp"`
-	Memory    MemoryMetrics `json:"memory"`
-	GC        GCMetrics     `json:"gc"`
-	Goroutine GoroutineMetrics `json:"goroutine"`
-	CPU       CPUMetrics    `json:"cpu"`
+	Timestamp      time.Time                  `json:"timestamp"`
+	Memory         interfaces.MemoryMetrics   `json:"memory"`
+	GC             interfaces.GCMetrics       `json:"gc"`
+	GoroutineCount int                        `json:"goroutine"`
+	CPU            interfaces.CPUMetrics      `json:"cpu"`
 }
 
 // NewSystemTracker 创建系统追踪器
@@ -250,13 +252,10 @@ func (st *SystemTracker) Update() {
 		Timestamp: time.Now(),
 		Memory:    st.getMemoryMetrics(),
 		GC:        st.getGCMetrics(),
-		Goroutine: GoroutineMetrics{
-			Active: st.goroutineCount,
-			Peak:   st.peakGoroutines,
-		},
-		CPU: CPUMetrics{
-			Usage: st.cpuUsage,
-			Cores: runtime.NumCPU(),
+		GoroutineCount: st.goroutineCount,
+		CPU: interfaces.CPUMetrics{
+			UsagePercent: st.cpuUsage,
+			Cores:        runtime.NumCPU(),
 		},
 	}
 	
@@ -269,15 +268,12 @@ func (st *SystemTracker) GetMetrics() SystemMetrics {
 	defer st.mutex.RUnlock()
 	
 	return SystemMetrics{
-		Memory:    st.getMemoryMetrics(),
-		GC:        st.getGCMetrics(),
-		Goroutine: GoroutineMetrics{
-			Active: st.goroutineCount,
-			Peak:   st.peakGoroutines,
-		},
-		CPU: CPUMetrics{
-			Usage: st.cpuUsage,
-			Cores: runtime.NumCPU(),
+		MemoryUsage:    st.getMemoryMetrics(),
+		GCStats:        st.getGCMetrics(),
+		GoroutineCount: st.goroutineCount,
+		CPUUsage: interfaces.CPUMetrics{
+			UsagePercent: st.cpuUsage,
+			Cores:        runtime.NumCPU(),
 		},
 	}
 }
@@ -297,51 +293,32 @@ func (st *SystemTracker) GetSnapshots() []SystemSnapshot {
 }
 
 // getMemoryMetrics 获取内存指标
-func (st *SystemTracker) getMemoryMetrics() MemoryMetrics {
+func (st *SystemTracker) getMemoryMetrics() interfaces.MemoryMetrics {
 	memStats := &st.memStats
 	
-	usage := float64(memStats.Alloc) / float64(memStats.Sys) * 100.0
-	if memStats.Sys == 0 {
-		usage = 0
-	}
-	
-	return MemoryMetrics{
+	return interfaces.MemoryMetrics{
 		Allocated:  memStats.Alloc,
+		InUse:      memStats.Alloc,  // 使用Alloc作为InUse的值
 		TotalAlloc: memStats.TotalAlloc,
 		Sys:        memStats.Sys,
-		NumGC:      memStats.NumGC,
-		Usage:      usage,
+		GCReleased: 0, // 可以根据需要计算
 	}
 }
 
 // getGCMetrics 获取GC指标
-func (st *SystemTracker) getGCMetrics() GCMetrics {
+func (st *SystemTracker) getGCMetrics() interfaces.GCMetrics {
 	memStats := &st.memStats
 	
-	var pauseAvg time.Duration
+	var avgPause time.Duration
 	if memStats.NumGC > 0 {
-		pauseAvg = time.Duration(memStats.PauseTotalNs / uint64(memStats.NumGC))
+		avgPause = time.Duration(memStats.PauseTotalNs / uint64(memStats.NumGC))
 	}
 	
-	var lastPause time.Duration
-	if memStats.NumGC > 0 {
-		// 获取最近的GC暂停时间
-		lastPause = time.Duration(memStats.PauseNs[(memStats.NumGC+255)%256])
-	}
-	
-	// 计算强制GC次数（简化估算）
-	var forcedGC uint32
-	if memStats.NumGC > st.lastGCNum {
-		// 这里可以根据实际需求实现更精确的强制GC检测
-		forcedGC = st.lastGCNum
-	}
-	
-	return GCMetrics{
-		NumGC:      memStats.NumGC,
-		PauseTotal: time.Duration(memStats.PauseTotalNs),
-		PauseAvg:   pauseAvg,
-		LastPause:  lastPause,
-		ForcedGC:   forcedGC,
+	return interfaces.GCMetrics{
+		LastGC:       time.Unix(0, int64(memStats.LastGC)),
+		NumGC:        memStats.NumGC,
+		TotalPause:   time.Duration(memStats.PauseTotalNs),
+		AveragePause: avgPause,
 	}
 }
 

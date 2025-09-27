@@ -14,11 +14,11 @@ import (
 // ProducerOperations 生产者操作实现
 type ProducerOperations struct {
 	pool             *connection.ConnectionPool
-	metricsCollector interfaces.MetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewProducerOperations 创建生产者操作实例
-func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.MetricsCollector) *ProducerOperations {
+func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ProducerOperations {
 	return &ProducerOperations{
 		pool:             pool,
 		metricsCollector: metricsCollector,
@@ -58,7 +58,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 				"batch_size":     1,
 			},
 		}
-		p.metricsCollector.RecordOperation(operationResult)
+		p.metricsCollector.Record(operationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -113,7 +113,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 			"client_id":      "producer",
 		},
 	}
-	p.metricsCollector.RecordOperation(operationResult)
+	p.metricsCollector.Record(operationResult)
 
 	if err != nil {
 		return &interfaces.OperationResult{
@@ -190,7 +190,7 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 				"batch_size":     len(messages),
 			},
 		}
-		p.metricsCollector.RecordOperation(operationResult)
+		p.metricsCollector.Record(operationResult)
 		return &interfaces.OperationResult{
 			Success:  false,
 			Duration: duration,
@@ -249,7 +249,7 @@ func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation 
 			"client_id":      "producer",
 		},
 	}
-	p.metricsCollector.RecordOperation(batchOperationResult)
+	p.metricsCollector.Record(batchOperationResult)
 
 	if err != nil {
 		return &interfaces.OperationResult{

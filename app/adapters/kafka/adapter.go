@@ -35,7 +35,7 @@ type KafkaAdapter struct {
 }
 
 // NewKafkaAdapter 创建Kafka适配器
-func NewKafkaAdapter(metricsCollector interfaces.MetricsCollector) *KafkaAdapter {
+func NewKafkaAdapter(metricsCollector interfaces.DefaultMetricsCollector) *KafkaAdapter {
 	adapter := &KafkaAdapter{
 		BaseAdapter: base.NewBaseAdapter("kafka"),
 	}
@@ -114,7 +114,7 @@ func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operati
 
 		// 记录操作到指标收集器
 		if metricsCollector := k.GetMetricsCollector(); metricsCollector != nil {
-			metricsCollector.RecordOperation(result)
+			metricsCollector.Record(result)
 		}
 	}
 
@@ -411,7 +411,7 @@ func (k *KafkaAdapter) GetOperationFactory() interfaces.OperationFactory {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (k *KafkaAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+func (k *KafkaAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
 	// 新架构：只返回BaseAdapter的通用指标收集器
 	return k.BaseAdapter.GetMetricsCollector()
 }

@@ -24,17 +24,11 @@ type RedisAdapter struct {
 	mutex            sync.RWMutex
 }
 
-// NewRedisAdapter 创建Redis适配器
-func NewRedisAdapter(metricsCollector interfaces.MetricsCollector) *RedisAdapter {
+// NewRedisAdapter 创建 Redis适配器 - 纯新架构
+func NewRedisAdapter(metricsCollector interfaces.DefaultMetricsCollector) *RedisAdapter {
 	adapter := &RedisAdapter{
-		BaseAdapter: base.NewBaseAdapter("redis"),
+		BaseAdapter: base.NewBaseAdapter("redis", metricsCollector),
 	}
-
-	// 设置指标收集器
-	if metricsCollector != nil {
-		adapter.SetMetricsCollector(metricsCollector)
-	}
-
 	return adapter
 }
 
@@ -250,7 +244,7 @@ func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operati
 
 	// 记录操作到指标收集器
 	if metricsCollector := r.GetMetricsCollector(); metricsCollector != nil {
-		metricsCollector.RecordOperation(result)
+		metricsCollector.Record(result)
 	}
 
 	return result, nil
@@ -483,9 +477,11 @@ func (r *RedisAdapter) Subscribe(ctx context.Context, channels ...string) *redis
 }
 
 // GetMetricsCollector 获取指标收集器
-func (r *RedisAdapter) GetMetricsCollector() interfaces.MetricsCollector {
-	return r.BaseAdapter.GetMetricsCollector()
+func (r *RedisAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
+	// 返回 nil 表示使用 BaseAdapter 的旧接口
+	return nil
 }
+
 
 // executeIncr 执行INCR操作
 func (r *RedisAdapter) executeIncr(ctx context.Context, operation interfaces.Operation) (int64, error) {

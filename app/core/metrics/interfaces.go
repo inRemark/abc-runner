@@ -1,120 +1,23 @@
 package metrics
 
 import (
-	"context"
 	"time"
 
 	"abc-runner/app/core/interfaces"
 )
 
-// MetricsCollector 新的泛型指标收集器接口
-type MetricsCollector[T any] interface {
-	// Record 记录操作结果
-	Record(result *interfaces.OperationResult)
+// 使用来自 interfaces 包中的 SystemMetrics 和 MetricsCollector
+type SystemMetrics = interfaces.SystemMetrics
+type MetricsCollector[T any] = interfaces.MetricsCollector[T]
+type MetricsSnapshot[T any] = interfaces.MetricsSnapshot[T]
+type CoreMetrics = interfaces.CoreMetrics
+type OperationMetrics = interfaces.OperationMetrics
+type LatencyMetrics = interfaces.LatencyMetrics
+type ThroughputMetrics = interfaces.ThroughputMetrics
+type DefaultMetricsCollector = interfaces.DefaultMetricsCollector
+type DefaultMetricsSnapshot = interfaces.DefaultMetricsSnapshot
 
-	// Snapshot 获取当前指标快照
-	Snapshot() *MetricsSnapshot[T]
 
-	// Reset 重置所有指标
-	Reset()
-}
-
-// MetricsSnapshot 指标快照结构
-type MetricsSnapshot[T any] struct {
-	// Core 通用核心指标
-	Core CoreMetrics `json:"core"`
-
-	// Protocol 协议特定指标
-	Protocol T `json:"protocol"`
-
-	// System 系统监控指标
-	System SystemMetrics `json:"system"`
-
-	// Timestamp 快照时间戳
-	Timestamp time.Time `json:"timestamp"`
-}
-
-// CoreMetrics 核心通用指标
-type CoreMetrics struct {
-	// Operations 操作指标
-	Operations OperationMetrics `json:"operations"`
-
-	// Latency 延迟指标
-	Latency LatencyMetrics `json:"latency"`
-
-	// Throughput 吞吐量指标
-	Throughput ThroughputMetrics `json:"throughput"`
-
-	// Duration 测试持续时间
-	Duration time.Duration `json:"duration"`
-}
-
-// OperationMetrics 操作指标
-type OperationMetrics struct {
-	Total   int64   `json:"total"`         // 总操作数
-	Success int64   `json:"success"`       // 成功操作数
-	Failed  int64   `json:"failed"`        // 失败操作数
-	Read    int64   `json:"read"`          // 读操作数
-	Write   int64   `json:"write"`         // 写操作数
-	Rate    float64 `json:"success_rate"`  // 成功率 (%)
-}
-
-// LatencyMetrics 延迟指标
-type LatencyMetrics struct {
-	Min         time.Duration `json:"min"`          // 最小延迟
-	Max         time.Duration `json:"max"`          // 最大延迟
-	Average     time.Duration `json:"average"`      // 平均延迟
-	P50         time.Duration `json:"p50"`          // P50分位数
-	P90         time.Duration `json:"p90"`          // P90分位数
-	P95         time.Duration `json:"p95"`          // P95分位数
-	P99         time.Duration `json:"p99"`          // P99分位数
-	StdDeviation time.Duration `json:"std_dev"`     // 标准差
-}
-
-// ThroughputMetrics 吞吐量指标
-type ThroughputMetrics struct {
-	RPS     float64 `json:"rps"`      // 每秒请求数
-	ReadRPS float64 `json:"read_rps"` // 每秒读请求数
-	WriteRPS float64 `json:"write_rps"` // 每秒写请求数
-}
-
-// SystemMetrics 系统监控指标
-type SystemMetrics struct {
-	Memory    MemoryMetrics    `json:"memory"`    // 内存指标
-	GC        GCMetrics        `json:"gc"`        // GC指标
-	Goroutine GoroutineMetrics `json:"goroutine"` // 协程指标
-	CPU       CPUMetrics       `json:"cpu"`       // CPU指标
-}
-
-// MemoryMetrics 内存指标
-type MemoryMetrics struct {
-	Allocated   uint64  `json:"allocated"`    // 已分配内存(bytes)
-	TotalAlloc  uint64  `json:"total_alloc"`  // 累计分配内存(bytes)
-	Sys         uint64  `json:"sys"`          // 系统内存(bytes)
-	NumGC       uint32  `json:"num_gc"`       // GC次数
-	Usage       float64 `json:"usage"`        // 内存使用率(%)
-}
-
-// GCMetrics GC指标
-type GCMetrics struct {
-	NumGC        uint32        `json:"num_gc"`         // GC次数
-	PauseTotal   time.Duration `json:"pause_total"`    // 总暂停时间
-	PauseAvg     time.Duration `json:"pause_avg"`      // 平均暂停时间
-	LastPause    time.Duration `json:"last_pause"`     // 最后暂停时间
-	ForcedGC     uint32        `json:"forced_gc"`      // 强制GC次数
-}
-
-// GoroutineMetrics 协程指标
-type GoroutineMetrics struct {
-	Active int `json:"active"` // 活跃协程数
-	Peak   int `json:"peak"`   // 峰值协程数
-}
-
-// CPUMetrics CPU指标
-type CPUMetrics struct {
-	Usage   float64 `json:"usage"`   // CPU使用率(%)
-	Cores   int     `json:"cores"`   // CPU核心数
-}
 
 // MetricsConfig 指标配置
 type MetricsConfig struct {
@@ -269,41 +172,4 @@ type TimeRange struct {
 	End   time.Time `json:"end"`
 }
 
-// HealthStatus 健康状态
-type HealthStatus string
-
-const (
-	HealthStatusHealthy   HealthStatus = "healthy"
-	HealthStatusWarning   HealthStatus = "warning"
-	HealthStatusCritical  HealthStatus = "critical"
-	HealthStatusUnknown   HealthStatus = "unknown"
-)
-
-// HealthCheckResult 健康检查结果
-type HealthCheckResult struct {
-	Status     HealthStatus          `json:"status"`
-	Message    string                `json:"message"`
-	Metrics    SystemMetrics         `json:"metrics"`
-	Violations []ThresholdViolation  `json:"violations"`
-	CheckedAt  time.Time             `json:"checked_at"`
-}
-
-// ThresholdViolation 阈值违反
-type ThresholdViolation struct {
-	Metric    string  `json:"metric"`
-	Current   float64 `json:"current"`
-	Threshold float64 `json:"threshold"`
-	Severity  string  `json:"severity"`
-}
-
-// HealthChecker 健康检查器接口
-type HealthChecker interface {
-	// Check 执行健康检查
-	Check(ctx context.Context, metrics SystemMetrics) *HealthCheckResult
-
-	// RegisterThreshold 注册阈值
-	RegisterThreshold(metric string, threshold float64, severity string)
-
-	// GetThresholds 获取所有阈值
-	GetThresholds() map[string]float64
-}
+// 注意：HealthStatus、HealthCheckResult、HealthChecker 现在定义在 advanced_health_checker.go 中

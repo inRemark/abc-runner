@@ -13,6 +13,7 @@ import (
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
 	"abc-runner/app/reporting"
+	"abc-runner/app/core/execution"
 )
 
 // RedisCommandHandler Redis命令处理器
@@ -65,9 +66,8 @@ func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error 
 	})
 	defer metricsCollector.Stop()
 
-	// 使用共享的指标适配器
-	metricsAdapter := NewSharedMetricsAdapter(metricsCollector)
-	adapter := redis.NewRedisAdapter(metricsAdapter)
+	// 直接使用MetricsCollector创建Redis适配器
+	adapter := redis.NewRedisAdapter(metricsCollector)
 
 	// 连接并执行测试
 	if err := adapter.Connect(ctx, config); err != nil {
@@ -185,7 +185,7 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 	return config, nil
 }
 
-// runPerformanceTest 运行性能测试
+// runPerformanceTest 运行性能测试 - 使用新的ExecutionEngine
 func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
@@ -194,11 +194,11 @@ func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 		return r.runSimulationTest(config, collector)
 	}
 
-	// 执行真实的Redis测试
-	return r.runRealTest(ctx, adapter, config)
+	// 使用新的ExecutionEngine执行真实测试
+	return r.runConcurrentTest(ctx, adapter, config, collector)
 }
 
-// runSimulationTest 运行模拟测试
+// runSimulationTest 运行模拟测试 (保持不变，用于连接失败时的后备方案)
 func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running Redis simulation test...\n")
 
@@ -238,37 +238,38 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 	return nil
 }
 
-// runRealTest 运行真实测试
-func (r *RedisCommandHandler) runRealTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig) error {
-	fmt.Printf("📊 Running real Redis performance test...\n")
+// runConcurrentTest 使用ExecutionEngine运行并发测试
+func (r *RedisCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
+	fmt.Printf("📊 Running concurrent Redis performance test with ExecutionEngine...\n")
 
-	// 创建操作
-	operations := []string{"SET", "GET", "HSET", "HGET"}
+	// 创建基准配置适配器
+	benchmarkConfig := execution.NewRedisBenchmarkConfigAdapter(config.GetBenchmark())
 
-	// 执行操作
-	for i := 0; i < config.BenchMark.Total; i++ {
-		opType := operations[i%len(operations)]
-		operation := interfaces.Operation{
-			Type:  opType,
-			Key:   fmt.Sprintf("test_key_%d", i),
-			Value: fmt.Sprintf("test_value_%d", i),
-			Params: map[string]interface{}{
-				"operation_type": opType,
-			},
-		}
+	// 创建操作工厂
+	operationFactory := execution.NewRedisOperationFactory(config)
 
-		_, err := adapter.Execute(ctx, operation)
-		if err != nil {
-			log.Printf("Operation %d (%s) failed: %v", i+1, opType, err)
-		}
+	// 创建执行引擎
+	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
 
-		// 控制并发
-		if i%config.BenchMark.Parallels == 0 {
-			time.Sleep(time.Millisecond)
-		}
+	// 配置执行引擎参数
+	engine.SetMaxWorkers(100) // 设置最大工作协程数
+	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
+
+	// 运行基准测试
+	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
+	if err != nil {
+		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	fmt.Printf("✅ Real Redis test completed\n")
+	// 输出执行结果
+	fmt.Printf("✅ Concurrent Redis test completed\n")
+	fmt.Printf("   Total Jobs: %d\n", result.TotalJobs)
+	fmt.Printf("   Completed: %d\n", result.CompletedJobs)
+	fmt.Printf("   Success: %d\n", result.SuccessJobs)
+	fmt.Printf("   Failed: %d\n", result.FailedJobs)
+	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
+
 	return nil
 }
 

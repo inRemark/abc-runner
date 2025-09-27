@@ -11,7 +11,7 @@ import (
 
 	coreMetrics "abc-runner/app/core/metrics"
 	"abc-runner/app/core/interfaces"
-	"abc-runner/app/core/reporting"
+	"abc-runner/app/reporting"
 )
 
 // BenchmarkResult 基准测试结果
@@ -462,20 +462,25 @@ func testReportGenerationPerformance() BenchmarkResult {
 
 	snapshot := collector.Snapshot()
 
-	// 测试报告生成
-	reportConfig := reporting.DefaultReportConfig()
-	reportConfig.Formats = []reporting.ReportFormat{
-		reporting.FormatJSON,
-		reporting.FormatCSV,
-		reporting.FormatConsole,
+	// 测试报告生成 - 使用新的结构化报告系统
+	// 转换为结构化报告
+	report := reporting.ConvertFromMetricsSnapshot(snapshot)
+	
+	// 配置报告生成器
+	reportConfig := &reporting.RenderConfig{
+		OutputFormats: []string{"console", "json"},
+		OutputDir:     "./benchmark-reports",
+		FilePrefix:    "benchmark_test",
+		Timestamp:     true,
 	}
 	
-	generator := reporting.NewUniversalReportGenerator(reportConfig)
+	generator := reporting.NewReportGenerator(reportConfig)
 	
 	const numReports = 100
 	
 	for i := 0; i < numReports; i++ {
-		_, err := generator.Generate(snapshot)
+		// 生成报告
+		err := generator.Generate(report)
 		if err != nil {
 			return BenchmarkResult{
 				TestName:     "报告生成性能测试",

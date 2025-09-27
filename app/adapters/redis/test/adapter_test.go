@@ -159,11 +159,11 @@ func TestMetricsCollector(t *testing.T) {
 			Duration: time.Millisecond * 10,
 		}
 
-		collector.RecordOperation(result)
+		collector.Record(result)
 
-		metricsData := collector.Export()
+		snapshot := collector.Snapshot()
 
-		if metricsData["total_ops"] == nil {
+		if snapshot.Core.Operations.Total == 0 {
 			t.Error("Basic metrics not found")
 		}
 	})
@@ -171,6 +171,7 @@ func TestMetricsCollector(t *testing.T) {
 	t.Run("MetricsReset", func(t *testing.T) {
 		// 使用新架构的指标收集器
 		collector := createTestMetricsCollector()
+		adapter := createTestMetricsAdapter(collector)
 
 		// 添加一些数据
 		result := &interfaces.OperationResult{
@@ -178,12 +179,12 @@ func TestMetricsCollector(t *testing.T) {
 			IsRead:   false,
 			Duration: time.Millisecond * 5,
 		}
-		collector.RecordOperation(result)
+		collector.Record(result)
 
 		// 重置
 		collector.Reset()
 
-		metricsData := collector.Export()
+		metricsData := adapter.Export()
 		if totalOps, ok := metricsData["total_ops"].(int64); !ok || totalOps != 0 {
 			t.Error("Metrics not reset properly")
 		}
@@ -192,6 +193,7 @@ func TestMetricsCollector(t *testing.T) {
 	t.Run("LatencyCalculation", func(t *testing.T) {
 		// 使用新架构的指标收集器
 		collector := createTestMetricsCollector()
+		adapter := createTestMetricsAdapter(collector)
 
 		// 添加多个延迟样本
 		latencies := []time.Duration{
@@ -208,13 +210,13 @@ func TestMetricsCollector(t *testing.T) {
 				IsRead:   true,
 				Duration: latency,
 			}
-			collector.RecordOperation(result)
+			collector.Record(result)
 		}
 
 		// 给一些时间让指标计算完成
 		time.Sleep(10 * time.Millisecond)
 		
-		metricsData := collector.GetMetrics()
+		metricsData := adapter.GetMetrics()
 		// 只要有数据被计算就通过，不要过于严格
 		if metricsData.TotalOps != 5 {
 			t.Errorf("Expected 5 operations, got %d", metricsData.TotalOps)
@@ -256,13 +258,20 @@ func TestConnection(t *testing.T) {
 }
 
 // createTestMetricsCollector 创建测试用的指标收集器
-func createTestMetricsCollector() interfaces.MetricsCollector {
+func createTestMetricsCollector() interfaces.DefaultMetricsCollector {
 	config := metrics.DefaultMetricsConfig()
 	protocolData := map[string]interface{}{
 		"protocol": "redis",
 	}
-	baseCollector := metrics.NewBaseCollector(config, protocolData)
-	return &testMetricsAdapter{baseCollector: baseCollector}
+	return metrics.NewBaseCollector(config, protocolData)
+}
+
+// createTestMetricsAdapter 创建测试用的指标适配器
+func createTestMetricsAdapter(collector interfaces.DefaultMetricsCollector) *testMetricsAdapter {
+	baseCollector, _ := collector.(*metrics.BaseCollector[map[string]interface{}])
+	return &testMetricsAdapter{
+		baseCollector: baseCollector,
+	}
 }
 
 // testMetricsAdapter 测试用的指标适配器

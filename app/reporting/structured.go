@@ -291,23 +291,29 @@ func generateMetricsBreakdown(snapshot *metrics.MetricsSnapshot[map[string]inter
 
 // generateSystemHealth 生成系统健康状态
 func generateSystemHealth(snapshot *metrics.MetricsSnapshot[map[string]interface{}]) SystemHealth {
+	// 安全计算内存使用百分比，避免NaN
+	var memoryUsagePercent float64
+	if snapshot.System.MemoryUsage.Sys > 0 {
+		memoryUsagePercent = float64(snapshot.System.MemoryUsage.InUse) / float64(snapshot.System.MemoryUsage.Sys) * 100
+	}
+	
 	return SystemHealth{
 		MemoryProfile: MemoryMetrics{
-			AllocatedMemory:    int64(snapshot.System.Memory.Allocated),
-			TotalAllocations:   int64(snapshot.System.Memory.TotalAlloc),
-			GCCount:            snapshot.System.GC.NumGC,
-			GCPauseTotal:       int64(snapshot.System.GC.PauseTotal),
-			MemoryUsagePercent: snapshot.System.Memory.Usage,
+			AllocatedMemory:    int64(snapshot.System.MemoryUsage.Allocated),
+			TotalAllocations:   int64(snapshot.System.MemoryUsage.TotalAlloc),
+			GCCount:            snapshot.System.GCStats.NumGC,
+			GCPauseTotal:       int64(snapshot.System.GCStats.TotalPause),
+			MemoryUsagePercent: memoryUsagePercent,
 		},
 		RuntimeMetrics: RuntimeHealth{
-			ActiveGoroutines: snapshot.System.Goroutine.Active,
+			ActiveGoroutines: snapshot.System.GoroutineCount,
 			TestDuration:     snapshot.Core.Duration,
 			StartTime:        snapshot.Timestamp.Add(-snapshot.Core.Duration),
 			EndTime:          snapshot.Timestamp,
 		},
 		ResourceHealth: ResourceMetrics{
-			MaxMemoryUsed: int64(snapshot.System.Memory.Allocated),
-			MaxGoroutines: snapshot.System.Goroutine.Active,
+			MaxMemoryUsed: int64(snapshot.System.MemoryUsage.InUse),
+			MaxGoroutines: snapshot.System.GoroutineCount,
 		},
 	}
 }

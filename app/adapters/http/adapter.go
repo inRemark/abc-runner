@@ -33,7 +33,7 @@ type HttpAdapter struct {
 }
 
 // NewHttpAdapter 创建HTTP适配器
-func NewHttpAdapter(metricsCollector interfaces.MetricsCollector) *HttpAdapter {
+func NewHttpAdapter(metricsCollector interfaces.DefaultMetricsCollector) *HttpAdapter {
 	adapter := &HttpAdapter{
 		BaseAdapter: base.NewBaseAdapter("http"),
 	}
@@ -114,7 +114,7 @@ func (h *HttpAdapter) Execute(ctx context.Context, operation interfaces.Operatio
 
 		// 记录操作到指标收集器
 		if metricsCollector := h.GetMetricsCollector(); metricsCollector != nil {
-			metricsCollector.RecordOperation(result)
+			metricsCollector.Record(result)
 		}
 	}
 
@@ -292,7 +292,7 @@ func (h *HttpAdapter) GetOperationFactory() interfaces.OperationFactory {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (h *HttpAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+func (h *HttpAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
 	// 新架构：只返回BaseAdapter的通用指标收集器
 	return h.BaseAdapter.GetMetricsCollector()
 }

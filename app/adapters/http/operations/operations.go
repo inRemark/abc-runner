@@ -14,14 +14,14 @@ import (
 type HttpOperations struct {
 	pool             *connection.ConnectionPool
 	config           *httpConfig.HttpAdapterConfig
-	metricsCollector interfaces.MetricsCollector
+	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewHttpOperations 创建HTTP操作执行器
 func NewHttpOperations(
 	pool *connection.ConnectionPool,
 	config *httpConfig.HttpAdapterConfig,
-	metricsCollector interfaces.MetricsCollector,
+	metricsCollector interfaces.DefaultMetricsCollector,
 ) *HttpOperations {
 	return &HttpOperations{
 		pool:             pool,
@@ -91,7 +91,7 @@ func (h *HttpOperations) ExecuteOperation(ctx context.Context, operation interfa
 				"url":         reqConfig.Path,
 			},
 		}
-		h.metricsCollector.RecordOperation(operationResult)
+		h.metricsCollector.Record(operationResult)
 	}
 
 	return result, err

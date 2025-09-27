@@ -31,3 +31,8 @@ app/core/di/di.md
 test-binary
 abc-runner-v3
 benchmark
+http
+kafka
+redis
+test_reporting
+test-reports

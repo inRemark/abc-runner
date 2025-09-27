@@ -18,17 +18,17 @@ type BaseAdapter struct {
 	connMutex        sync.RWMutex
 	metrics          map[string]interface{}
 	metricsMutex     sync.RWMutex
-	metricsCollector interfaces.MetricsCollector        // 外部注入的指标收集器
+	metricsCollector interfaces.DefaultMetricsCollector        // 外部注入的指标收集器
 	errorHandler     *errorhandler.ErrorHandler // 错误处理器
 }
 
-// NewBaseAdapter 创建基础适配器（兼容性重载）
-func NewBaseAdapter(protocol string, metricsCollector ...interfaces.MetricsCollector) *BaseAdapter {
-	var collector interfaces.MetricsCollector
+// NewBaseAdapter 创建基础适配器（完全新架构）
+func NewBaseAdapter(protocol string, metricsCollector ...interfaces.DefaultMetricsCollector) *BaseAdapter {
+	var collector interfaces.DefaultMetricsCollector
 	if len(metricsCollector) > 0 {
 		collector = metricsCollector[0]
 	} else {
-		// 使用默认的增强指标收集器
+		// 使用默认的泛型指标收集器
 		collector = createDefaultMetricsCollector()
 	}
 	return &BaseAdapter{
@@ -69,12 +69,12 @@ func (b *BaseAdapter) SetConfig(config interfaces.Config) {
 }
 
 // GetMetricsCollector 获取指标收集器
-func (b *BaseAdapter) GetMetricsCollector() interfaces.MetricsCollector {
+func (b *BaseAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
 	return b.metricsCollector
 }
 
 // SetMetricsCollector 设置指标收集器
-func (b *BaseAdapter) SetMetricsCollector(collector interfaces.MetricsCollector) {
+func (b *BaseAdapter) SetMetricsCollector(collector interfaces.DefaultMetricsCollector) {
 	b.metricsCollector = collector
 }
 
@@ -115,9 +115,9 @@ func (b *BaseAdapter) ExecuteWithRetry(ctx context.Context, operation interfaces
 	return b.errorHandler.ExecuteWithRetry(ctx, operation, executeFunc)
 }
 
-// createDefaultMetricsCollector 创建默认指标收集器（避免循环引用）
-func createDefaultMetricsCollector() interfaces.MetricsCollector {
-	// 返回一个简单的实现，避免引入 monitoring 包导致的循环引用
+// createDefaultMetricsCollector 创建默认指标收集器
+func createDefaultMetricsCollector() interfaces.DefaultMetricsCollector {
+	// 使用新架构的默认实现
 	return &simpleMetricsCollector{}
 }
 
@@ -127,15 +127,51 @@ type simpleMetricsCollector struct {
 	startTime  time.Time
 }
 
-func (s *simpleMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+func (s *simpleMetricsCollector) Record(result *interfaces.OperationResult) {
 	s.operations = append(s.operations, *result)
 }
 
-func (s *simpleMetricsCollector) GetMetrics() *interfaces.Metrics {
-	return &interfaces.Metrics{
-		TotalOps:  int64(len(s.operations)),
-		StartTime: s.startTime,
-		EndTime:   time.Now(),
+func (s *simpleMetricsCollector) Snapshot() *interfaces.DefaultMetricsSnapshot {
+	total := int64(len(s.operations))
+	var success, failed, read, write int64
+	
+	for _, op := range s.operations {
+		if op.Success {
+			success++
+		} else {
+			failed++
+		}
+		if op.IsRead {
+			read++
+		} else {
+			write++
+		}
+	}
+	
+	var rate float64
+	if total > 0 {
+		rate = float64(success) / float64(total) * 100.0
+	}
+	
+	return &interfaces.DefaultMetricsSnapshot{
+		Core: interfaces.CoreMetrics{
+			Operations: interfaces.OperationMetrics{
+				Total:   total,
+				Success: success,
+				Failed:  failed,
+				Read:    read,
+				Write:   write,
+				Rate:    rate,
+			},
+			Latency: interfaces.LatencyMetrics{},
+			Throughput: interfaces.ThroughputMetrics{},
+			Duration: time.Since(s.startTime),
+		},
+		Protocol: map[string]interface{}{
+			"simple": "default_collector",
+		},
+		System: interfaces.SystemMetrics{},
+		Timestamp: time.Now(),
 	}
 }
 
@@ -144,9 +180,34 @@ func (s *simpleMetricsCollector) Reset() {
 	s.startTime = time.Now()
 }
 
+func (s *simpleMetricsCollector) Stop() {
+	// 简单实现无需停止操作
+}
+
+// 以下是兼容性方法，用于支持旧代码调用
+func (s *simpleMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
+	s.Record(result)
+}
+
+func (s *simpleMetricsCollector) GetMetrics() *interfaces.Metrics {
+	snapshot := s.Snapshot()
+	return &interfaces.Metrics{
+		TotalOps:  snapshot.Core.Operations.Total,
+		SuccessOps: snapshot.Core.Operations.Success,
+		FailedOps: snapshot.Core.Operations.Failed,
+		StartTime: s.startTime,
+		EndTime:   time.Now(),
+		Duration:  snapshot.Core.Duration,
+	}
+}
+
 func (s *simpleMetricsCollector) Export() map[string]interface{} {
+	snapshot := s.Snapshot()
 	return map[string]interface{}{
-		"total_ops": len(s.operations),
+		"total_ops": snapshot.Core.Operations.Total,
+		"success_ops": snapshot.Core.Operations.Success,
+		"failed_ops": snapshot.Core.Operations.Failed,
+		"success_rate": snapshot.Core.Operations.Rate,
 	}
 }
 func (b *BaseAdapter) isReadOperation(operationType string) bool {

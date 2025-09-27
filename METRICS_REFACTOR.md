@@ -29,7 +29,7 @@ app/core/metrics/               # 新的核心指标模块
 ├── config.go                  # 配置管理系统 🆕
 └── metrics_test.go            # 全面单元测试 🆕
 
-app/core/reporting/             # 新的报告生成系统
+app/reporting/               # 结构化报告系统
 └── generator.go               # 通用报告生成器 🆕
 
 app/core/monitoring/            # 新的系统监控模块
@@ -115,7 +115,7 @@ kafkaMetrics := kafkaCollector.GetKafkaMetrics()
 ### 3. 报告生成
 
 ```go
-import "abc-runner/app/core/reporting"
+import "abc-runner/app/reporting"
 
 // 配置报告
 reportConfig := reporting.DefaultReportConfig()

@@ -12,43 +12,52 @@ import (
 
 // 测试用的简单指标收集器
 type testMetricsCollector struct {
-	metrics *interfaces.Metrics
+	records []*interfaces.OperationResult
 }
 
-func (t *testMetricsCollector) RecordOperation(result *interfaces.OperationResult) {
-	if t.metrics == nil {
-		t.metrics = &interfaces.Metrics{
-			StartTime: time.Now(),
+func (t *testMetricsCollector) Record(result *interfaces.OperationResult) {
+	t.records = append(t.records, result)
+}
+
+func (t *testMetricsCollector) Snapshot() *interfaces.MetricsSnapshot[map[string]interface{}] {
+	// 计算基本指标
+	var total, success, failed, read, write int64
+	for _, record := range t.records {
+		total++
+		if record.Success {
+			success++
+		} else {
+			failed++
+		}
+		if record.IsRead {
+			read++
+		} else {
+			write++
 		}
 	}
-	t.metrics.TotalOps++
-	if result.Success {
-		t.metrics.SuccessOps++
-	} else {
-		t.metrics.FailedOps++
+	
+	return &interfaces.MetricsSnapshot[map[string]interface{}]{
+		Core: interfaces.CoreMetrics{
+			Operations: interfaces.OperationMetrics{
+				Total:   total,
+				Success: success,
+				Failed:  failed,
+				Read:    read,
+				Write:   write,
+				Rate:    float64(success) / float64(total) * 100,
+			},
+		},
+		Protocol:  map[string]interface{}{"test_data": "http"},
+		Timestamp: time.Now(),
 	}
-	if result.IsRead {
-		t.metrics.ReadOps++
-	} else {
-		t.metrics.WriteOps++
-	}
-}
-
-func (t *testMetricsCollector) GetMetrics() *interfaces.Metrics {
-	if t.metrics == nil {
-		t.metrics = &interfaces.Metrics{}
-	}
-	return t.metrics
 }
 
 func (t *testMetricsCollector) Reset() {
-	t.metrics = &interfaces.Metrics{}
+	t.records = nil
 }
 
-func (t *testMetricsCollector) Export() map[string]interface{} {
-	return map[string]interface{}{
-		"metrics": t.metrics,
-	}
+func (t *testMetricsCollector) Stop() {
+	// 测试实现不需要特殊处理
 }
 
 // TestHttpAdapter 测试HTTP适配器基本功能
@@ -112,18 +121,18 @@ func TestHttpAdapterMetrics(t *testing.T) {
 		IsRead:   true,
 	}
 
-	metricsCollector.RecordOperation(result)
+	metricsCollector.Record(result)
 
 	// 检查指标更新
-	metrics := metricsCollector.GetMetrics()
-	if metrics.TotalOps != 1 {
-		t.Errorf("Expected total ops 1, got %d", metrics.TotalOps)
+	snapshot := metricsCollector.Snapshot()
+	if snapshot.Core.Operations.Total != 1 {
+		t.Errorf("Expected total ops 1, got %d", snapshot.Core.Operations.Total)
 	}
-	if metrics.SuccessOps != 1 {
-		t.Errorf("Expected success ops 1, got %d", metrics.SuccessOps)
+	if snapshot.Core.Operations.Success != 1 {
+		t.Errorf("Expected success ops 1, got %d", snapshot.Core.Operations.Success)
 	}
-	if metrics.ReadOps != 1 {
-		t.Errorf("Expected read ops 1, got %d", metrics.ReadOps)
+	if snapshot.Core.Operations.Read != 1 {
+		t.Errorf("Expected read ops 1, got %d", snapshot.Core.Operations.Read)
 	}
 }
 
