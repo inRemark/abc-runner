@@ -1,0 +1,42 @@
+# UDP协议配置文件
+udp:
+  # 连接配置
+  connection:
+    address: "localhost"       # 目标服务器地址
+    port: 9090                # 目标端口
+    timeout: "10s"            # 操作超时时间
+    buffer_size: 65536        # 缓冲区大小 (64KB)
+    read_buffer_size: 65536   # 读缓冲区大小
+    write_buffer_size: 65536  # 写缓冲区大小
+
+  # 基准测试配置
+  benchmark:
+    total: 1000               # 总数据包数
+    parallels: 20             # 并发发送者数
+    data_size: 1024           # 数据包大小（字节）
+    duration: "60s"           # 测试持续时间
+    read_percent: 50          # 读操作百分比
+    random_keys: 1000         # 随机键数量
+    test_case: "packet_send"  # 测试用例：packet_send, packet_receive, echo_udp, multicast
+    packet_rate: 1000         # 每秒数据包发送率
+
+  # UDP特定配置
+  udp_specific:
+    packet_mode: "unicast"    # 数据包模式：unicast, broadcast, multicast
+    broadcast: false          # 启用广播模式
+    multicast_group: ""       # 组播地址 (如: 224.0.0.1)
+    ttl: 64                   # 数据包TTL值
+    local_address: ""         # 本地绑定地址
+    reuse_address: true       # 启用SO_REUSEADDR
+    checksum_enabled: true    # 启用校验和验证
+
+# 测试用例说明：
+# - packet_send: 发送数据包测试
+# - packet_receive: 接收数据包测试  
+# - echo_udp: UDP回显测试
+# - multicast: 组播测试
+
+# 数据包模式说明：
+# - unicast: 单播模式，点对点通信
+# - broadcast: 广播模式，发送到网络广播地址
+# - multicast: 组播模式，发送到组播组

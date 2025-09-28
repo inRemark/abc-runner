@@ -106,6 +106,10 @@ func (builder *AutoDIBuilder) discoverProtocolAdapters() error {
 		{"redis", &RedisAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 		{"http", &HttpAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 		{"kafka", &KafkaAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"tcp", &TCPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"udp", &UDPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"grpc", &GRPCAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"websocket", &WebSocketAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 	}
 	
 	for _, protocol := range protocols {
@@ -146,6 +150,15 @@ func (builder *AutoDIBuilder) registerCommandHandlers() error {
 		case "kafka":
 			handler := commands.NewKafkaCommandHandler(factory)
 			builder.components[handlerName] = handler
+		case "tcp":
+			handler := commands.NewTCPCommandHandler(factory)
+			builder.components[handlerName] = handler
+		case "udp":
+			handler := commands.NewUDPCommandHandler(factory)
+			builder.components[handlerName] = handler
+		// TODO: 实现gRPC和WebSocket命令处理器
+		// case "grpc":
+		// case "websocket":
 		}
 		
 		log.Printf("✅ Registered command handler: %s", handlerName)
@@ -441,4 +454,60 @@ func (w *KafkaAdapterWrapper) GetProtocolName() string {
 
 func (w *KafkaAdapterWrapper) GetMetricsCollector() interfaces.MetricsCollector[map[string]interface{}] {
 	return w.metricsCollector
+}
+
+// TCPAdapterFactory TCP适配器工厂
+type TCPAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *TCPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 模拟TCP适配器创建
+	return nil // 暂时返回nil，实际需要实现TCP适配器
+}
+
+func (f *TCPAdapterFactory) GetProtocolName() string {
+	return "tcp"
+}
+
+// UDPAdapterFactory UDP适配器工厂
+type UDPAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *UDPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 模拟UDP适配器创建
+	return nil // 暂时返回nil，实际需要实现UDP适配器
+}
+
+func (f *UDPAdapterFactory) GetProtocolName() string {
+	return "udp"
+}
+
+// GRPCAdapterFactory gRPC适配器工厂
+type GRPCAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *GRPCAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 模拟gRPC适配器创建
+	return nil // 暂时返回nil，实际需要实现gRPC适配器
+}
+
+func (f *GRPCAdapterFactory) GetProtocolName() string {
+	return "grpc"
+}
+
+// WebSocketAdapterFactory WebSocket适配器工厂
+type WebSocketAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *WebSocketAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 模拟WebSocket适配器创建
+	return nil // 暂时返回nil，实际需要实现WebSocket适配器
+}
+
+func (f *WebSocketAdapterFactory) GetProtocolName() string {
+	return "websocket"
 }
