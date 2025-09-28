@@ -21,7 +21,7 @@
 - **Go 版本**: 1.21 或更高版本
 - **网络端口**: 确保以下端口可用：
   - HTTP: 8080 (默认)
-  - TCP: 9090 (默认) 
+  - TCP: 9090 (默认)
   - UDP: 9091 (默认)
   - gRPC: 50051 (默认)
 
@@ -81,6 +81,7 @@ curl -d '{"test":"data"}' http://localhost:8080/echo
 ```
 
 **可用端点:**
+
 - `/` - 服务信息
 - `/health` - 健康检查
 - `/metrics` - 指标信息
@@ -100,6 +101,7 @@ echo "Hello TCP" | nc localhost 9090
 ```
 
 **特性:**
+
 - 回显服务器
 - 长度前缀协议
 - 连接池管理
@@ -117,6 +119,7 @@ echo "Hello UDP" | nc -u localhost 9091
 ```
 
 **特性:**
+
 - 数据包回显
 - 丢包模拟
 - 多播支持
@@ -135,6 +138,7 @@ curl -X POST -d '{"message":"hello"}' http://localhost:50051/TestService/Echo
 ```
 
 **服务方法:**
+
 - `Echo` - 回显服务
 - `ServerStream` - 服务端流
 - `ClientStream` - 客户端流
@@ -182,7 +186,7 @@ curl -X POST -d '{"message":"hello"}' http://localhost:50051/TestService/Echo
 
 ### 配置文件位置
 
-```
+```bash
 config/
 ├── servers/
 │   ├── http-server.yaml
@@ -257,12 +261,14 @@ log_connections: true
 ### 日志管理
 
 #### 日志级别
+
 - `debug` - 详细调试信息
 - `info` - 一般信息（推荐）
 - `warn` - 警告信息
 - `error` - 错误信息
 
 #### 日志格式
+
 ```json
 {
   "timestamp": "2023-09-28T10:30:00Z",
@@ -278,11 +284,13 @@ log_connections: true
 ### 指标监控
 
 #### HTTP指标端点
+
 ```bash
 curl http://localhost:8080/metrics
 ```
 
 #### 关键指标
+
 - `total_requests` - 总请求数
 - `success_requests` - 成功请求数
 - `failed_requests` - 失败请求数
@@ -293,6 +301,7 @@ curl http://localhost:8080/metrics
 ### 健康检查
 
 #### 自动健康检查
+
 ```bash
 # 使用健康检查脚本
 ./scripts/health-check.sh
@@ -302,6 +311,7 @@ curl http://localhost:8080/metrics
 ```
 
 #### 手动健康检查
+
 ```bash
 # HTTP健康检查
 curl -f http://localhost:8080/health
@@ -467,6 +477,7 @@ udp:
 ### 常见问题
 
 #### 1. 端口占用
+
 ```bash
 # 检查端口占用
 netstat -tlnp | grep :8080
@@ -479,6 +490,7 @@ pkill -f http-server
 ```
 
 #### 2. 权限问题
+
 ```bash
 # 检查文件权限
 ls -la bin/
@@ -489,6 +501,7 @@ sudo ./bin/http-server --port 80
 ```
 
 #### 3. 内存不足
+
 ```bash
 # 检查内存使用
 free -h
@@ -502,6 +515,7 @@ done
 ```
 
 #### 4. 网络连接问题
+
 ```bash
 # 检查网络连接
 ss -tlnp | grep :8080
@@ -515,6 +529,7 @@ iptables -L
 ### 日志分析
 
 #### 查看实时日志
+
 ```bash
 # 如果使用后台运行
 tail -f logs/multi.log
@@ -527,6 +542,7 @@ grep "ERROR" logs/*.log
 ```
 
 #### 性能分析
+
 ```bash
 # 分析请求延迟
 grep "duration" logs/http.log | awk '{print $NF}' | sort -n
@@ -543,6 +559,7 @@ grep -c "ERROR" logs/*.log
 ### TLS/SSL 配置
 
 #### 生成自签名证书
+
 ```bash
 # 生成私钥
 openssl genrsa -out server.key 2048
@@ -555,6 +572,7 @@ openssl req -new -x509 -key server.key -out server.crt -days 365
 ```
 
 #### TLS配置文件
+
 ```yaml
 # config/https.yaml
 tls:
@@ -566,6 +584,7 @@ tls:
 ### 防火墙配置
 
 #### iptables 规则
+
 ```bash
 # 允许特定端口
 iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
@@ -578,6 +597,7 @@ iptables-save > /etc/iptables/rules.v4
 ```
 
 #### ufw 配置
+
 ```bash
 ufw allow 8080/tcp
 ufw allow 9090/tcp
@@ -604,6 +624,7 @@ go test ./test/integration/... -cover
 ### 负载测试
 
 #### HTTP负载测试
+
 ```bash
 # 使用ab（Apache Bench）
 ab -n 10000 -c 100 http://localhost:8080/health
@@ -613,6 +634,7 @@ wrk -t12 -c400 -d30s http://localhost:8080/health
 ```
 
 #### 自定义测试脚本
+
 ```bash
 #!/bin/bash
 # load-test.sh
@@ -637,6 +659,7 @@ echo "负载测试完成"
 ### 定期维护任务
 
 #### 日志轮转
+
 ```bash
 # 配置logrotate
 cat > /etc/logrotate.d/abc-runner << EOF
@@ -655,6 +678,7 @@ EOF
 ```
 
 #### 性能监控脚本
+
 ```bash
 #!/bin/bash
 # monitor.sh
@@ -684,6 +708,7 @@ done
 ### 备份和恢复
 
 #### 配置备份
+
 ```bash
 #!/bin/bash
 # backup-config.sh
@@ -702,6 +727,7 @@ echo "Backup completed: $BACKUP_DIR"
 ```
 
 #### 配置恢复
+
 ```bash
 #!/bin/bash
 # restore-config.sh
