@@ -129,7 +129,7 @@ func TestTCPConfigInterfaces(t *testing.T) {
 		t.Errorf("Expected 1 address, got %d", len(addresses))
 	}
 
-	expectedAddr := "localhost:8080"
+	expectedAddr := "localhost:9090"
 	if addresses[0] != expectedAddr {
 		t.Errorf("Expected address '%s', got '%s'", expectedAddr, addresses[0])
 	}

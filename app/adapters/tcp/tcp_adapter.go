@@ -66,7 +66,7 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 // Execute 执行操作
 func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	result := &interfaces.OperationResult{
 		Success:  false,
 		Duration: 0,
@@ -81,6 +81,15 @@ func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation
 		result.Error = fmt.Errorf("adapter not connected")
 		result.Duration = time.Since(startTime)
 		return result, result.Error
+	}
+
+	// 检查上下文是否已取消
+	select {
+	case <-ctx.Done():
+		result.Error = ctx.Err()
+		result.Duration = time.Since(startTime)
+		return result, result.Error
+	default:
 	}
 
 	// 获取连接
@@ -107,7 +116,14 @@ func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation
 	}
 
 	result.Duration = time.Since(startTime)
-	
+
+	// 添加通用元数据
+	result.Metadata["protocol"] = "tcp"
+	result.Metadata["operation_type"] = operation.Type
+	result.Metadata["connection_mode"] = t.config.TCPSpecific.ConnectionMode
+	result.Metadata["no_delay"] = t.config.TCPSpecific.NoDelay
+	result.Metadata["execution_time_ms"] = float64(result.Duration.Nanoseconds()) / 1e6
+
 	// 记录指标
 	if t.metricsCollector != nil {
 		t.metricsCollector.Record(result)
@@ -126,7 +142,10 @@ func (t *TCPAdapter) executeEchoTest(ctx context.Context, conn net.Conn, operati
 
 	// 构造测试数据
 	testData := t.buildTestData(operation)
-	
+	if len(testData) == 0 {
+		testData = []byte(fmt.Sprintf("ECHO_TEST_%d_%d", time.Now().Unix(), len(testData)))
+	}
+
 	// 设置超时
 	if err := conn.SetDeadline(time.Now().Add(t.config.Connection.Timeout)); err != nil {
 		result.Error = fmt.Errorf("failed to set deadline: %w", err)
@@ -134,7 +153,7 @@ func (t *TCPAdapter) executeEchoTest(ctx context.Context, conn net.Conn, operati
 	}
 
 	// 发送数据
-	_, err := conn.Write(testData)
+	sentBytes, err := conn.Write(testData)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to send data: %w", err)
 		return result, result.Error
@@ -152,9 +171,18 @@ func (t *TCPAdapter) executeEchoTest(ctx context.Context, conn net.Conn, operati
 	receivedData := buffer[:n]
 	result.Value = receivedData
 	result.Success = true
-	result.Metadata["sent_bytes"] = len(testData)
-	result.Metadata["received_bytes"] = len(receivedData)
+
+	// 记录详细指标
+	result.Metadata["sent_bytes"] = sentBytes
+	result.Metadata["received_bytes"] = n
+	result.Metadata["expected_bytes"] = len(testData)
 	result.Metadata["data_match"] = string(testData) == string(receivedData)
+	result.Metadata["echo_ratio"] = float64(n) / float64(sentBytes)
+
+	// 检查数据完整性
+	if n != len(testData) {
+		result.Metadata["warning"] = "received data length mismatch"
+	}
 
 	return result, nil
 }
@@ -169,24 +197,59 @@ func (t *TCPAdapter) executeSendOnly(ctx context.Context, conn net.Conn, operati
 
 	// 构造测试数据
 	testData := t.buildTestData(operation)
-	
-	// 设置超时
+	if len(testData) == 0 {
+		testData = []byte(fmt.Sprintf("SEND_ONLY_%d_%d", time.Now().Unix(), operation.Params["job_id"]))
+	}
+
+	// 设置写超时
 	if err := conn.SetWriteDeadline(time.Now().Add(t.config.Connection.Timeout)); err != nil {
 		result.Error = fmt.Errorf("failed to set write deadline: %w", err)
 		return result, result.Error
 	}
 
-	// 发送数据
-	n, err := conn.Write(testData)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to send data: %w", err)
-		return result, result.Error
+	// 发送数据（分块发送支持大数据包）
+	totalSent := 0
+	bufferSize := t.config.TCPSpecific.BufferSize
+	if bufferSize <= 0 {
+		bufferSize = 4096
+	}
+
+	for totalSent < len(testData) {
+		// 检查上下文取消
+		select {
+		case <-ctx.Done():
+			result.Error = ctx.Err()
+			return result, result.Error
+		default:
+		}
+
+		// 计算本次发送的数据大小
+		remaining := len(testData) - totalSent
+		chunkSize := remaining
+		if chunkSize > bufferSize {
+			chunkSize = bufferSize
+		}
+
+		// 发送数据块
+		n, err := conn.Write(testData[totalSent : totalSent+chunkSize])
+		if err != nil {
+			result.Error = fmt.Errorf("failed to send data chunk (sent %d/%d bytes): %w", totalSent, len(testData), err)
+			return result, result.Error
+		}
+		totalSent += n
+
+		// 记录进度
+		if totalSent%bufferSize == 0 || totalSent == len(testData) {
+			result.Metadata["progress"] = fmt.Sprintf("%d/%d bytes", totalSent, len(testData))
+		}
 	}
 
 	result.Success = true
-	result.Value = n
-	result.Metadata["sent_bytes"] = n
+	result.Value = totalSent
+	result.Metadata["sent_bytes"] = totalSent
 	result.Metadata["expected_bytes"] = len(testData)
+	result.Metadata["send_complete"] = totalSent == len(testData)
+	result.Metadata["throughput_bps"] = float64(totalSent) / result.Duration.Seconds()
 
 	return result, nil
 }
@@ -199,23 +262,66 @@ func (t *TCPAdapter) executeReceiveOnly(ctx context.Context, conn net.Conn, oper
 		Metadata: make(map[string]interface{}),
 	}
 
-	// 设置超时
+	// 设置读超时
 	if err := conn.SetReadDeadline(time.Now().Add(t.config.Connection.Timeout)); err != nil {
 		result.Error = fmt.Errorf("failed to set read deadline: %w", err)
 		return result, result.Error
 	}
 
-	// 接收数据
-	buffer := make([]byte, t.config.BenchMark.DataSize*2)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to receive data: %w", err)
-		return result, result.Error
+	// 准备接收缓冲区
+	bufferSize := t.config.BenchMark.DataSize * 2
+	if bufferSize < 4096 {
+		bufferSize = 4096
+	}
+	buffer := make([]byte, bufferSize)
+
+	// 接收数据（支持多次读取）
+	totalReceived := 0
+	allData := make([]byte, 0, bufferSize)
+	maxReadAttempts := 10 // 防止无限等待
+
+	for i := 0; i < maxReadAttempts; i++ {
+		// 检查上下文取消
+		select {
+		case <-ctx.Done():
+			result.Error = ctx.Err()
+			return result, result.Error
+		default:
+		}
+
+		// 读取数据
+		n, err := conn.Read(buffer)
+		if err != nil {
+			// 如果已经读取了一些数据，这可能不是错误
+			if totalReceived > 0 && (err.Error() == "EOF" || err.Error() == "connection reset by peer") {
+				break
+			}
+			result.Error = fmt.Errorf("failed to receive data (attempt %d, received %d bytes): %w", i+1, totalReceived, err)
+			return result, result.Error
+		}
+
+		if n > 0 {
+			allData = append(allData, buffer[:n]...)
+			totalReceived += n
+			result.Metadata[fmt.Sprintf("read_%d_bytes", i+1)] = n
+		}
+
+		// 如果读取的数据小于缓冲区，可能已经读完
+		if n < len(buffer) {
+			break
+		}
 	}
 
-	result.Success = true
-	result.Value = buffer[:n]
-	result.Metadata["received_bytes"] = n
+	result.Success = totalReceived > 0
+	result.Value = allData
+	result.Metadata["received_bytes"] = totalReceived
+	result.Metadata["read_attempts"] = maxReadAttempts
+	result.Metadata["buffer_size"] = bufferSize
+
+	// 计算接收速率
+	if result.Duration > 0 {
+		result.Metadata["receive_rate_bps"] = float64(totalReceived) / result.Duration.Seconds()
+	}
 
 	return result, nil
 }
@@ -230,59 +336,119 @@ func (t *TCPAdapter) executeBidirectional(ctx context.Context, conn net.Conn, op
 
 	// 构造测试数据
 	testData := t.buildTestData(operation)
-	
+	if len(testData) == 0 {
+		testData = []byte(fmt.Sprintf("BIDI_TEST_%d_%d", time.Now().Unix(), operation.Params["job_id"]))
+	}
+
 	// 设置超时
 	if err := conn.SetDeadline(time.Now().Add(t.config.Connection.Timeout)); err != nil {
 		result.Error = fmt.Errorf("failed to set deadline: %w", err)
 		return result, result.Error
 	}
 
-	// 异步发送和接收
-	sendCh := make(chan error, 1)
-	receiveCh := make(chan []byte, 1)
-	
+	// 使用带缓冲的通道进行异步发送和接收
+	sendResult := make(chan error, 1)
+	receiveResult := make(chan []byte, 1)
+	receiveError := make(chan error, 1)
+
 	// 发送协程
 	go func() {
-		_, err := conn.Write(testData)
-		sendCh <- err
-	}()
-	
-	// 接收协程
-	go func() {
-		buffer := make([]byte, len(testData)*2)
-		n, err := conn.Read(buffer)
-		if err != nil {
-			receiveCh <- nil
-		} else {
-			receiveCh <- buffer[:n]
+		defer func() {
+			if r := recover(); r != nil {
+				sendResult <- fmt.Errorf("send goroutine panic: %v", r)
+			}
+		}()
+
+		totalSent := 0
+		bufferSize := t.config.TCPSpecific.BufferSize
+		if bufferSize <= 0 {
+			bufferSize = 4096
 		}
+
+		// 分块发送
+		for totalSent < len(testData) {
+			remaining := len(testData) - totalSent
+			chunkSize := remaining
+			if chunkSize > bufferSize {
+				chunkSize = bufferSize
+			}
+
+			n, err := conn.Write(testData[totalSent : totalSent+chunkSize])
+			if err != nil {
+				sendResult <- fmt.Errorf("failed to send data chunk: %w", err)
+				return
+			}
+			totalSent += n
+
+			// 等待一小段时间以允许接收操作
+			time.Sleep(time.Millisecond)
+		}
+		sendResult <- nil
 	}()
 
-	// 等待结果
-	select {
-	case err := <-sendCh:
+	// 接收协程
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				receiveError <- fmt.Errorf("receive goroutine panic: %v", r)
+			}
+		}()
+
+		buffer := make([]byte, len(testData)*3) // 留出额外缓冲区
+		n, err := conn.Read(buffer)
 		if err != nil {
-			result.Error = fmt.Errorf("failed to send data: %w", err)
+			receiveError <- fmt.Errorf("failed to receive data: %w", err)
+			return
+		}
+		receiveResult <- buffer[:n]
+	}()
+
+	// 等待发送结果
+	var sendErr error
+	select {
+	case sendErr = <-sendResult:
+		if sendErr != nil {
+			result.Error = fmt.Errorf("send operation failed: %w", sendErr)
 			return result, result.Error
 		}
 	case <-ctx.Done():
-		result.Error = ctx.Err()
+		result.Error = fmt.Errorf("send operation cancelled: %w", ctx.Err())
+		return result, result.Error
+	case <-time.After(t.config.Connection.Timeout):
+		result.Error = fmt.Errorf("send operation timeout")
 		return result, result.Error
 	}
 
+	// 等待接收结果
+	var receivedData []byte
 	select {
-	case receivedData := <-receiveCh:
-		if receivedData == nil {
-			result.Error = fmt.Errorf("failed to receive data")
-			return result, result.Error
-		}
-		result.Value = receivedData
-		result.Success = true
-		result.Metadata["sent_bytes"] = len(testData)
-		result.Metadata["received_bytes"] = len(receivedData)
-	case <-ctx.Done():
-		result.Error = ctx.Err()
+	case receivedData = <-receiveResult:
+		// 成功接收
+	case err := <-receiveError:
+		result.Error = fmt.Errorf("receive operation failed: %w", err)
 		return result, result.Error
+	case <-ctx.Done():
+		result.Error = fmt.Errorf("receive operation cancelled: %w", ctx.Err())
+		return result, result.Error
+	case <-time.After(t.config.Connection.Timeout):
+		result.Error = fmt.Errorf("receive operation timeout")
+		return result, result.Error
+	}
+
+	result.Value = receivedData
+	result.Success = true
+
+	// 记录详细指标
+	result.Metadata["sent_bytes"] = len(testData)
+	result.Metadata["received_bytes"] = len(receivedData)
+	result.Metadata["data_match"] = string(testData) == string(receivedData)
+	result.Metadata["bidirectional_success"] = true
+	result.Metadata["echo_ratio"] = float64(len(receivedData)) / float64(len(testData))
+
+	// 计算双向吞吐量
+	if result.Duration > 0 {
+		totalBytes := len(testData) + len(receivedData)
+		result.Metadata["bidirectional_throughput_bps"] = float64(totalBytes) / result.Duration.Seconds()
 	}
 
 	return result, nil
@@ -311,7 +477,7 @@ func (t *TCPAdapter) buildTestData(operation interfaces.Operation) []byte {
 // testConnection 测试连接
 func (t *TCPAdapter) testConnection(ctx context.Context) error {
 	address := fmt.Sprintf("%s:%d", t.config.Connection.Address, t.config.Connection.Port)
-	
+
 	conn, err := net.DialTimeout("tcp", address, t.config.Connection.Timeout)
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", address, err)
@@ -339,15 +505,33 @@ func (t *TCPAdapter) Close() error {
 // GetProtocolMetrics 获取协议特定指标
 func (t *TCPAdapter) GetProtocolMetrics() map[string]interface{} {
 	metrics := make(map[string]interface{})
-	
+
 	if t.connectionPool != nil {
+		// 连接池指标
 		metrics["connection_pool_size"] = t.config.Connection.Pool.PoolSize
 		metrics["connection_pool_active"] = t.connectionPool.ActiveConnections()
+		metrics["connection_pool_available"] = t.connectionPool.AvailableConnections()
+
+		// TCP特定配置指标
 		metrics["connection_mode"] = t.config.TCPSpecific.ConnectionMode
 		metrics["no_delay_enabled"] = t.config.TCPSpecific.NoDelay
 		metrics["buffer_size"] = t.config.TCPSpecific.BufferSize
+		metrics["linger_timeout"] = t.config.TCPSpecific.LingerTimeout
+		metrics["reuse_address"] = t.config.TCPSpecific.ReuseAddress
+
+		// 连接配置指标
+		metrics["keep_alive"] = t.config.Connection.KeepAlive
+		metrics["keep_alive_period"] = t.config.Connection.KeepAlivePeriod.String()
+		metrics["connection_timeout"] = t.config.Connection.Timeout.String()
+
+		// 连接池详细信息
+		if poolStats := t.connectionPool.Stats(); poolStats != nil {
+			for key, value := range poolStats {
+				metrics["pool_"+key] = value
+			}
+		}
 	}
-	
+
 	return metrics
 }
 

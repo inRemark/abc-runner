@@ -102,7 +102,7 @@ DESCRIPTION:
 OPTIONS:
   --help              Show this help message
   --host HOST         TCP server host (default: localhost)
-  --port PORT         TCP server port (default: 8080)
+  --port PORT         TCP server port (default: 9090)
   -n COUNT            Number of operations (default: 1000)
   -c COUNT            Concurrent connections (default: 10)
   --data-size SIZE    Data packet size in bytes (default: 1024)
@@ -119,9 +119,9 @@ TEST CASES:
   
 EXAMPLES:
   abc-runner tcp --help
-  abc-runner tcp --host localhost --port 8080
+  abc-runner tcp --host localhost --port 9090
   abc-runner tcp --host 192.168.1.100 --port 9090 --test-case echo_test
-  abc-runner tcp -h localhost -p 8080 -n 5000 -c 20 --data-size 2048
+  abc-runner tcp -h localhost -p 9090 -n 5000 -c 20 --data-size 2048
 
 NOTE: 
   This implementation performs real TCP performance testing with metrics collection.`
@@ -206,27 +206,44 @@ func (t *TCPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 		return t.runSimulationTest(config, collector)
 	}
 
+	// 使用新的TCP特定组件执行真实测试
+	return t.runConcurrentTest(ctx, adapter, config, collector)
+}
+
+// runConcurrentTest 使用ExecutionEngine运行并发测试
+func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *tcpConfig.TCPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
+	// 创建基准配置适配器
+	benchmarkConfig := tcp.NewBenchmarkConfigAdapter(config.GetBenchmark())
+	
+	// 创建操作工厂
+	operationFactory := tcp.NewOperationFactory(config)
+	
 	// 创建执行引擎
-	factory := NewSimpleOperationFactory(config.BenchMark.TestCase, config.BenchMark.DataSize)
-	benchConfig := NewSimpleBenchmarkConfig(config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.Duration)
-	engine := execution.NewExecutionEngine(adapter, collector, factory)
-
-	// 执行测试
-	fmt.Printf("📊 Executing %d %s operations with %d concurrent connections...\n", 
-		config.BenchMark.Total, config.BenchMark.TestCase, config.BenchMark.Parallels)
-
-	startTime := time.Now()
-	result, err := engine.RunBenchmark(ctx, benchConfig)
-	duration := time.Since(startTime)
-
+	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
+	
+	// 配置执行引擎参数（根据设计文档优化）
+	engine.SetMaxWorkers(200)         // 提高最大工作协程数支持TCP并发
+	engine.SetBufferSizes(2000, 2000) // 增大缓冲区减少任务调度延迟
+	
+	// 运行基准测试
+	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
-
-	fmt.Printf("✅ Test completed in %v\n", duration)
-	fmt.Printf("📈 Processed %d operations (%d successful, %d failed)\n", 
-		result.CompletedJobs, result.SuccessJobs, result.FailedJobs)
-
+	
+	// 输出执行结果
+	fmt.Printf("✅ Concurrent TCP test completed\n")
+	fmt.Printf("   Test Case: %s\n", config.BenchMark.TestCase)
+	fmt.Printf("   Total Jobs: %d\n", result.TotalJobs)
+	fmt.Printf("   Completed: %d\n", result.CompletedJobs)
+	fmt.Printf("   Success: %d\n", result.SuccessJobs)
+	fmt.Printf("   Failed: %d\n", result.FailedJobs)
+	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	if result.CompletedJobs > 0 {
+		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
+		fmt.Printf("   Throughput: %.2f ops/sec\n", float64(result.CompletedJobs)/result.TotalDuration.Seconds())
+	}
+	
 	return nil
 }
 
