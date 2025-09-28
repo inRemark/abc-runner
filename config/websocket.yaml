@@ -1,0 +1,61 @@
+# WebSocket协议配置文件
+websocket:
+  # 连接配置
+  connection:
+    url: "ws://localhost:8080/ws" # WebSocket服务器URL
+    timeout: "30s"                # 连接超时时间
+    ping_interval: "30s"          # 心跳间隔
+    pong_timeout: "10s"           # Pong超时时间
+    
+    # 连接池配置（WebSocket通常不使用连接池，但保持结构一致性）
+    pool:
+      pool_size: 10           # 连接池大小
+      min_idle: 1             # 最小空闲连接数
+      max_idle: 5             # 最大空闲连接数
+      idle_timeout: "300s"    # 空闲连接超时时间
+      connection_timeout: "30s" # 创建连接超时时间
+
+  # 基准测试配置
+  benchmark:
+    total: 2000               # 总消息数
+    parallels: 30             # 并发连接数
+    data_size: 1024           # 消息大小（字节）
+    duration: "60s"           # 测试持续时间
+    read_percent: 50          # 读操作百分比
+    random_keys: 1000         # 随机键数量
+    test_case: "message_exchange" # 测试用例：message_exchange, ping_pong, broadcast, large_message
+
+  # WebSocket特定配置
+  websocket_specific:
+    subprotocol: ""           # 子协议
+    compression: false        # 启用压缩
+    message_type: "text"      # 消息类型：text, binary
+    auto_reconnect: true      # 自动重连
+    reconnect_interval: "5s"  # 重连间隔
+    max_reconnect_attempts: 3 # 最大重连次数
+    buffer_size: 4096         # 读写缓冲区大小
+    write_timeout: "10s"      # 写超时时间
+    read_timeout: "10s"       # 读超时时间
+    
+    # 心跳配置
+    heartbeat:
+      enabled: true           # 启用心跳
+      interval: "30s"         # 心跳间隔
+      timeout: "10s"          # 心跳超时
+      max_missed: 3           # 最大丢失心跳次数
+    
+    # 扩展配置
+    extensions:
+      per_message_deflate: false # 启用per-message-deflate扩展
+      no_context_takeover: false # 无上下文接管
+      max_window_bits: 15        # 最大窗口位数
+
+# 测试用例说明：
+# - message_exchange: 消息交换测试
+# - ping_pong: 心跳检测测试
+# - broadcast: 广播消息测试
+# - large_message: 大消息传输测试
+
+# 消息类型说明：
+# - text: 文本消息（UTF-8编码）
+# - binary: 二进制消息

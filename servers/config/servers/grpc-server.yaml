@@ -1,0 +1,32 @@
+# gRPC服务端配置文件
+protocol: grpc
+host: localhost
+port: 50051
+
+# gRPC特定配置
+max_recv_message_size: 4194304  # 4MB
+max_send_message_size: 4194304  # 4MB
+connection_timeout: 30s
+max_concurrent_streams: 100
+
+# TLS配置
+tls:
+  enabled: false
+  cert_file: ""
+  key_file: ""
+
+# 认证配置
+auth:
+  enabled: false
+  auth_token: ""
+  require_auth: false
+
+# 健康检查配置
+health_check:
+  enabled: true
+
+# 反射配置
+enable_reflection: true
+
+# 日志配置
+log_requests: true

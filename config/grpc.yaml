@@ -1,0 +1,67 @@
+# gRPC协议配置文件
+grpc:
+  # 连接配置
+  connection:
+    address: "localhost"       # gRPC服务器地址
+    port: 50051               # gRPC服务器端口
+    timeout: "30s"            # 连接超时时间
+    keep_alive: true          # 启用Keep-Alive
+    keep_alive_period: "30s"  # Keep-Alive周期
+    
+    # 连接池配置
+    pool:
+      pool_size: 10           # 连接池大小
+      min_idle: 1             # 最小空闲连接数
+      max_idle: 5             # 最大空闲连接数
+      idle_timeout: "300s"    # 空闲连接超时时间
+      connection_timeout: "30s" # 创建连接超时时间
+
+  # 基准测试配置
+  benchmark:
+    total: 1000               # 总RPC调用数
+    parallels: 10             # 并发客户端数
+    data_size: 1024           # 请求数据大小（字节）
+    duration: "60s"           # 测试持续时间
+    read_percent: 80          # 读操作百分比
+    random_keys: 1000         # 随机键数量
+    test_case: "unary_call"   # 测试用例：unary_call, server_stream, client_stream, bidirectional_stream
+
+  # gRPC特定配置
+  grpc_specific:
+    service_name: "TestService"    # gRPC服务名
+    method_name: "Echo"            # gRPC方法名
+    load_balancing: "round_robin"  # 负载均衡策略：round_robin, pick_first, random
+    compression: "gzip"            # 压缩算法：gzip, deflate, none
+    max_message_size: 4194304      # 最大消息大小（4MB）
+    
+    # TLS配置
+    tls:
+      enabled: false              # 启用TLS
+      cert_file: ""              # 证书文件路径
+      key_file: ""               # 私钥文件路径
+      ca_file: ""                # CA文件路径
+      insecure_skip_verify: true # 跳过证书验证
+      server_name: ""            # 服务器名称
+    
+    # 认证配置
+    auth:
+      enabled: false             # 启用认证
+      method: "token"            # 认证方法：token, oauth, basic
+      token: ""                  # 认证令牌
+      username: ""               # 用户名
+      password: ""               # 密码
+      metadata: {}               # 额外的元数据
+    
+    # 拦截器配置
+    interceptors:
+      logging: true              # 启用日志拦截器
+      tracing: false             # 启用追踪拦截器
+      metrics: true              # 启用指标拦截器
+      retry: false               # 启用重试拦截器
+      timeout: true              # 启用超时拦截器
+
+# 测试用例说明：
+# - unary_call: 一元RPC调用测试
+# - server_stream: 服务端流测试
+# - client_stream: 客户端流测试
+# - bidirectional_stream: 双向流测试

@@ -81,6 +81,14 @@ func (r *CommandRouter) registerCommonAliases(protocol string) {
 		aliases = []string{"h"}
 	case "kafka":
 		aliases = []string{"k"}
+	case "tcp":
+		aliases = []string{"t"}
+	case "udp":
+		aliases = []string{"u"}
+	case "grpc":
+		aliases = []string{"g"}
+	case "websocket":
+		aliases = []string{"ws"}
 	}
 	
 	for _, alias := range aliases {

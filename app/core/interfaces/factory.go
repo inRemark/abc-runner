@@ -10,4 +10,16 @@ type AdapterFactory interface {
 
 	// CreateKafkaAdapter 创建Kafka适配器
 	CreateKafkaAdapter() ProtocolAdapter
+
+	// CreateTCPAdapter 创建TCP适配器
+	CreateTCPAdapter() ProtocolAdapter
+
+	// CreateUDPAdapter 创建UDP适配器
+	CreateUDPAdapter() ProtocolAdapter
+
+	// CreateGRPCAdapter 创建gRPC适配器
+	CreateGRPCAdapter() ProtocolAdapter
+
+	// CreateWebSocketAdapter 创建WebSocket适配器
+	CreateWebSocketAdapter() ProtocolAdapter
 }

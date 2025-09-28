@@ -12,6 +12,10 @@ import (
 	"abc-runner/app/adapters/http"
 	"abc-runner/app/adapters/kafka"
 	"abc-runner/app/adapters/redis"
+	"abc-runner/app/adapters/grpc"
+	"abc-runner/app/adapters/tcp"
+	"abc-runner/app/adapters/udp"
+	"abc-runner/app/adapters/websocket"
 	"abc-runner/app/commands"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -106,6 +110,10 @@ func (builder *AutoDIBuilder) discoverProtocolAdapters() error {
 		{"redis", &RedisAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 		{"http", &HttpAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 		{"kafka", &KafkaAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"tcp", &TCPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"udp", &UDPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"grpc", &GRPCAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
+		{"websocket", &WebSocketAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
 	}
 	
 	for _, protocol := range protocols {
@@ -135,7 +143,7 @@ func (builder *AutoDIBuilder) registerCommandHandlers() error {
 	for protocolName, factory := range builder.factories {
 		handlerName := protocolName + "_handler"
 		
-		// 使用新的简化命令处理器
+		// 使用具体的命令处理器创建函数
 		switch protocolName {
 		case "redis":
 			handler := commands.NewRedisCommandHandler(factory)
@@ -146,6 +154,21 @@ func (builder *AutoDIBuilder) registerCommandHandlers() error {
 		case "kafka":
 			handler := commands.NewKafkaCommandHandler(factory)
 			builder.components[handlerName] = handler
+		case "tcp":
+			handler := commands.NewTCPCommandHandler(factory)
+			builder.components[handlerName] = handler
+		case "udp":
+			handler := commands.NewUDPCommandHandler(factory)
+			builder.components[handlerName] = handler
+		case "grpc":
+			handler := commands.NewGRPCCommandHandler(factory)
+			builder.components[handlerName] = handler
+		case "websocket":
+			handler := commands.NewWebSocketCommandHandler(factory)
+			builder.components[handlerName] = handler
+		default:
+			log.Printf("⚠️  Unknown protocol: %s", protocolName)
+			continue
 		}
 		
 		log.Printf("✅ Registered command handler: %s", handlerName)
@@ -177,6 +200,11 @@ func (builder *AutoDIBuilder) GetFactory(protocol string) (AdapterFactory, bool)
 // GetAllFactories 获取所有工厂
 func (builder *AutoDIBuilder) GetAllFactories() map[string]AdapterFactory {
 	return builder.factories
+}
+
+// AddComponent 添加组件
+func (builder *AutoDIBuilder) AddComponent(name string, component interface{}) {
+	builder.components[name] = component
 }
 
 // RedisAdapterFactory Redis适配器工厂
@@ -441,4 +469,64 @@ func (w *KafkaAdapterWrapper) GetProtocolName() string {
 
 func (w *KafkaAdapterWrapper) GetMetricsCollector() interfaces.MetricsCollector[map[string]interface{}] {
 	return w.metricsCollector
+}
+
+// TCPAdapterFactory TCP适配器工厂
+type TCPAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *TCPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 创建TCP适配器实例
+	tcpAdapter := tcp.NewTCPAdapter(f.metricsCollector)
+	return tcpAdapter
+}
+
+func (f *TCPAdapterFactory) GetProtocolName() string {
+	return "tcp"
+}
+
+// UDPAdapterFactory UDP适配器工厂
+type UDPAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *UDPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 创建UDP适配器实例
+	udpAdapter := udp.NewUDPAdapter(f.metricsCollector)
+	return udpAdapter
+}
+
+func (f *UDPAdapterFactory) GetProtocolName() string {
+	return "udp"
+}
+
+// GRPCAdapterFactory gRPC适配器工厂
+type GRPCAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *GRPCAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 创建gRPC适配器实例
+	grpcAdapter := grpc.NewGRPCAdapter(f.metricsCollector)
+	return grpcAdapter
+}
+
+func (f *GRPCAdapterFactory) GetProtocolName() string {
+	return "grpc"
+}
+
+// WebSocketAdapterFactory WebSocket适配器工厂
+type WebSocketAdapterFactory struct {
+	metricsCollector interfaces.DefaultMetricsCollector
+}
+
+func (f *WebSocketAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	// 创建WebSocket适配器实例
+	websocketAdapter := websocket.NewWebSocketAdapter(f.metricsCollector)
+	return websocketAdapter
+}
+
+func (f *WebSocketAdapterFactory) GetProtocolName() string {
+	return "websocket"
 }
