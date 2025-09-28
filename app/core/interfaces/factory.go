@@ -1,25 +1,55 @@
 package interfaces
 
-// AdapterFactory 适配器工厂接口
-type AdapterFactory interface {
-	// CreateRedisAdapter 创建Redis适配器
+// 协议特定适配器工厂接口 - 接口分离设计
+// 符合SOLID原则
+// 单一职责：每个工厂只负责一种协议
+// 开闭原则：扩展新协议时不需修改现有代码
+// 接口隔离：客户端只依赖需要的接口方法
+// 依赖倒置：依赖抽象而非具体实现
+//
+// RedisAdapterFactory Redis适配器工厂接口
+type RedisAdapterFactory interface {
 	CreateRedisAdapter() ProtocolAdapter
+}
 
-	// CreateHttpAdapter 创建HTTP适配器
+// HttpAdapterFactory HTTP适配器工厂接口
+type HttpAdapterFactory interface {
 	CreateHttpAdapter() ProtocolAdapter
+}
 
-	// CreateKafkaAdapter 创建Kafka适配器
+// KafkaAdapterFactory Kafka适配器工厂接口
+type KafkaAdapterFactory interface {
 	CreateKafkaAdapter() ProtocolAdapter
+}
 
-	// CreateTCPAdapter 创建TCP适配器
+// TCPAdapterFactory TCP适配器工厂接口
+type TCPAdapterFactory interface {
 	CreateTCPAdapter() ProtocolAdapter
+}
 
-	// CreateUDPAdapter 创建UDP适配器
+// UDPAdapterFactory UDP适配器工厂接口
+type UDPAdapterFactory interface {
 	CreateUDPAdapter() ProtocolAdapter
+}
 
-	// CreateGRPCAdapter 创建gRPC适配器
+// GRPCAdapterFactory gRPC适配器工厂接口
+type GRPCAdapterFactory interface {
 	CreateGRPCAdapter() ProtocolAdapter
+}
 
-	// CreateWebSocketAdapter 创建WebSocket适配器
+// WebSocketAdapterFactory WebSocket适配器工厂接口
+type WebSocketAdapterFactory interface {
 	CreateWebSocketAdapter() ProtocolAdapter
+}
+
+// AdapterFactory 统一适配器工厂接口（组合接口）
+// 注意：这个接口仅用于类型约束，实际实现应该只实现所需的特定接口
+type AdapterFactory interface {
+	RedisAdapterFactory
+	HttpAdapterFactory
+	KafkaAdapterFactory
+	TCPAdapterFactory
+	UDPAdapterFactory
+	GRPCAdapterFactory
+	WebSocketAdapterFactory
 }

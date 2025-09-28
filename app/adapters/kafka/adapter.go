@@ -415,3 +415,60 @@ func (k *KafkaAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector 
 	// 新架构：只返回BaseAdapter的通用指标收集器
 	return k.BaseAdapter.GetMetricsCollector()
 }
+
+// === 架构兼容性方法，与 operations 系统集成 ===
+
+// GetSupportedOperations 获取支持的操作类型（架构兼容性）
+func (k *KafkaAdapter) GetSupportedOperations() []string {
+	return []string{
+		"produce", "produce_message", "produce_batch",
+		"consume", "consume_message", "consume_batch",
+		"create_topic", "delete_topic", "list_topics",
+		"describe_consumer_groups", "get_metadata",
+	}
+}
+
+// ValidateOperation 验证操作是否受支持（架构兼容性）
+func (k *KafkaAdapter) ValidateOperation(operationType string) error {
+	supportedOps := k.GetSupportedOperations()
+	for _, op := range supportedOps {
+		if op == operationType {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported operation type: %s", operationType)
+}
+
+// GetOperationMetadata 获取操作元数据（架构兼容性）
+func (k *KafkaAdapter) GetOperationMetadata(operationType string) map[string]interface{} {
+	metadata := map[string]interface{}{
+		"protocol": "kafka",
+		"adapter_type": "kafka_adapter",
+		"operation_type": operationType,
+		"is_read": k.isReadOperation(operationType),
+	}
+	
+	if k.config != nil {
+		metadata["brokers"] = k.config.Brokers
+		metadata["producer_pool_size"] = k.config.Performance.ProducerPoolSize
+		metadata["consumer_pool_size"] = k.config.Performance.ConsumerPoolSize
+	}
+	
+	return metadata
+}
+
+// isReadOperation 判断是否为读操作
+func (k *KafkaAdapter) isReadOperation(operationType string) bool {
+	readOps := []string{"consume", "consume_message", "consume_batch", "list_topics", "describe_consumer_groups", "get_metadata"}
+	for _, readOp := range readOps {
+		if readOp == operationType {
+			return true
+		}
+	}
+	return false
+}
+
+// GetKafkaOperationFactory 获取Kafka操作工厂（架构兼容性）
+func (k *KafkaAdapter) GetKafkaOperationFactory() *operations.KafkaOperationFactory {
+	return k.operationFactory
+}

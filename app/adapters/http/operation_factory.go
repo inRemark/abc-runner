@@ -32,15 +32,36 @@ func (h *OperationFactory) CreateOperation(jobID int, benchmarkConfig execution.
 		}
 	}
 
+	// 使用具体的HTTP方法作为操作类型
+	operationType := reqConfig.Method
+	if operationType == "" {
+		operationType = "GET"
+	}
+
+	// 构建请求路径
+	requestPath := reqConfig.Path
+	if requestPath == "" {
+		requestPath = "/"
+	}
+
+	// 构建操作对象
 	return interfaces.Operation{
-		Type: "http_request",
-		Key:  fmt.Sprintf("http_job_%d", jobID),
+		Type:  operationType, // 使用HTTP方法作为操作类型
+		Key:   requestPath,   // 使用路径作为键
+		Value: reqConfig.Body, // 请求体
 		Params: map[string]interface{}{
-			"method":  reqConfig.Method,
-			"path":    reqConfig.Path,
-			"headers": reqConfig.Headers,
-			"body":    reqConfig.Body,
-			"weight":  reqConfig.Weight,
+			"method":   reqConfig.Method,
+			"path":     reqConfig.Path,
+			"headers":  reqConfig.Headers,
+			"body":     reqConfig.Body,
+			"weight":   reqConfig.Weight,
+			"job_id":   jobID,
+		},
+		Metadata: map[string]string{
+			"protocol":      "http",
+			"operation_type": operationType,
+			"job_id":        fmt.Sprintf("%d", jobID),
+			"path":          requestPath,
 		},
 	}
 }
