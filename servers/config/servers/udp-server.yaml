@@ -1,0 +1,26 @@
+# UDP服务端配置文件
+protocol: udp
+host: localhost
+port: 9091
+
+# UDP特定配置
+buffer_size: 4096
+max_packet_size: 65507
+read_timeout: 30s
+write_timeout: 30s
+
+# 行为配置
+echo_mode: true
+response_delay: 0ms
+packet_loss_rate: 0.0
+
+# 多播配置
+enable_multicast: false
+multicast_group: "224.0.0.1"
+multicast_ttl: 1
+
+# 广播配置
+enable_broadcast: false
+
+# 日志配置
+log_packets: false

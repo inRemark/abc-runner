@@ -1,0 +1,26 @@
+# TCP服务端配置文件
+protocol: tcp
+host: localhost
+port: 9090
+
+# TCP特定配置
+max_connections: 1000
+connection_timeout: 30s
+read_timeout: 30s
+write_timeout: 30s
+keep_alive: true
+no_delay: true
+
+# 缓冲区配置
+buffer_size: 4096
+read_buffer_size: 4096
+write_buffer_size: 4096
+
+# 行为配置
+echo_mode: true
+response_delay: 0ms
+max_message_size: 65536
+
+# 日志配置
+log_connections: true
+log_messages: false
