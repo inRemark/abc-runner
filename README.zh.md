@@ -6,8 +6,6 @@
 
 一个用于Redis、HTTP和Kafka协议的统一性能测试工具。
 
-⚠️ **重大变更通知**: 此版本 (v0.1.0) 引入了重大变更。请参阅[迁移指南](docs/CHANGELOG.md)了解升级说明。
-
 ## 特性
 
 ### Redis测试
@@ -73,6 +71,28 @@ go build -o abc-runner .
 
 # 或从发布页面下载预构建的二进制文件
 ```
+
+### 构建
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/abc-runner.git
+cd abc-runner
+
+# Build for current platform
+make build
+
+# Build for all supported platforms
+make build-all
+
+# Create release packages
+make release
+
+# Create release packages with specific version
+VERSION=1.0.0 make release
+```
+
+For detailed information about the packaging process, see [Packaging Guide](docs/packaging-guide.md).
 
 ### 基本用法
 
@@ -199,153 +219,15 @@ go build -o abc-runner .
 
 您可以使用YAML配置文件进行复杂设置：
 
-### 核心配置 (config/core.yaml)
-
-核心配置文件包含所有协议共享的通用设置：
-
-```yaml
-core:
-  # 日志配置
-  logging:
-    level: "info"              # 日志级别: debug, info, warn, error
-    format: "json"             # 日志格式: json, text
-    output: "stdout"           # 输出目标: stdout, file, 或文件路径
-    file_path: "./logs"        # 日志文件目录
-    max_size: "100MB"          # 单个日志文件最大大小
-    max_age: 7                 # 日志文件保留天数
-    max_backups: 5             # 最大备份文件数
-    compress: true             # 是否压缩旧日志文件
-
-  # 报告配置
-  reports:
-    enabled: true              # 是否启用报告
-    formats: ["console"]       # 报告格式: console, json, csv, text, all
-    output_dir: "./reports"    # 报告输出目录
-    file_prefix: "benchmark"   # 报告文件前缀
-    include_timestamp: true    # 文件名包含时间戳
-    enable_console_report: true # 启用控制台详细报告
-    overwrite_existing: false  # 是否覆盖已存在文件
-
-  # 监控配置
-  monitoring:
-    enabled: true              # 是否启用监控
-    metrics_interval: "5s"     # 指标收集间隔
-    prometheus:
-      enabled: false           # 是否启用Prometheus导出
-      port: 9090               # Prometheus导出端口
-    statsd:
-      enabled: false           # 是否启用StatsD导出
-      host: "localhost:8125"   # StatsD服务器地址
-
-  # 全局连接配置
-  connection:
-    timeout: "30s"             # 默认连接超时
-    keep_alive: "30s"          # 连接保持时间
-    max_idle_conns: 100        # 最大空闲连接数
-    idle_conn_timeout: "90s"   # 空闲连接超时时间
-```
-
-### Redis配置 (config/redis.yaml)
-
-```yaml
-redis:
-  mode: "standalone"    # 选项: standalone, sentinel, cluster
-  benchmark:
-    total: 10000              # 默认10000个请求
-    parallels: 50             # 默认50个并行连接
-    random_keys: 50           # 0:递增键, >0:随机键范围是[0, r]
-    read_percent: 50          # 默认50%读取和50%写入
-    data_size: 3              # 默认3字节
-    ttl: 120                  # 默认120秒
-    case: "set_get_random"    # 操作类型: set_get_random, set, get, del, pub, sub
-  pool:
-    pool_size: 10
-    min_idle: 2
-  standalone:
-    addr: 127.0.0.1:6379
-    password: "pwd@redis"
-    db: 0
-  sentinel:
-    master_name: "mymaster"
-    addrs:
-      - "127.0.0.1:26371"
-      - "127.0.0.1:26372"
-      - "127.0.0.1:26373"
-    password: "pwd@redis"
-    db: 0
-  cluster:
-    addrs:
-      - "127.0.0.1:6371"
-      - "127.0.0.1:6372"
-      - "127.0.0.1:6373"
-    password: "pwd@redis"
-```
-
-### HTTP配置 (config/http.yaml)
-
-```yaml
-http:
-  connection:
-    base_url: "http://localhost:8080"
-    timeout: 30s
-    keep_alive: 90s
-    max_idle_conns: 50
-    max_conns_per_host: 20
-    idle_conn_timeout: 90s
-    disable_compression: false
-  benchmark:
-    total: 100000
-    parallels: 50
-    duration: "5m"
-    ramp_up: "30s"
-    data_size: 1024
-    ttl: 0s
-    read_percent: 70
-    random_keys: 0
-    test_case: "mixed_operations"
-    timeout: 30s
-  requests:
-    - method: "GET"
-      path: "/api/users"
-      headers:
-        Accept: "application/json"
-      weight: 100
-```
-
-### Kafka配置 (config/kafka.yaml)
-
-```yaml
-kafka:
-  brokers:
-    - "localhost:9092"
-  client_id: "abc-runner-kafka-client"
-  version: "2.8.0"
-  producer:
-    acks: "all"
-    retries: 3
-    batch_size: 16384
-    linger_ms: "5ms"
-    compression: "snappy"
-    idempotence: true
-    max_in_flight: 5
-    request_timeout: "30s"
-    write_timeout: "10s"
-    read_timeout: "10s"
-  benchmark:
-    default_topic: "benchmark-topic"
-    message_size_range:
-      min: 100
-      max: 10240
-    batch_sizes: [1, 10, 100, 1000]
-    partition_strategy: "round_robin"
-    total: 100000
-    parallels: 50
-    data_size: 1024
-    ttl: 0
-    read_percent: 50
-    random_keys: 10000
-    test_case: "produce"
-    timeout: "30s"
+```bash
+config/core.yaml
+config.http.yaml
+config/redis.yaml
+config/kafka.yaml
+config/tcp.yaml
+config/udp.yaml
+config/grpc.yaml
+config/websocket.yaml
 ```
 
 ## 文档
@@ -360,60 +242,6 @@ kafka:
 - [Kafka测试指南](docs/en/user-guide/kafka.md) - Kafka特定功能和用法 | [Kafka测试指南](docs/zh/user-guide/kafka.md)
 - [贡献指南](docs/en/developer-guide/contributing.md) - 贡献指南 | [贡献指南](docs/zh/developer-guide/contributing.md)
 - [扩展abc-runner](docs/en/developer-guide/extending.md) - 如何扩展工具 | [扩展abc-runner](docs/zh/developer-guide/extending.md)
-
-## 从v0.0.x迁移
-
-此版本引入了重大变更。主要变更：
-
-- `redis-enhanced` → `redis`
-- `http-enhanced` → `http`  
-- `kafka-enhanced` → `kafka`
-- 简化的命令结构
-- 统一的配置格式
-
-请参阅[迁移指南](docs/CHANGELOG.md)了解详细的升级说明。
-
-## 示例
-
-### Redis性能测试
-
-```bash
-# 基本性能测试
-./abc-runner redis -h 127.0.0.1 -p 6379 -n 100000 -c 50
-
-# 带认证的集群模式
-./abc-runner redis --mode cluster -h localhost -p 6371 \n  -a "password" -n 100000 -c 10 -d 64 --read-ratio 50
-
-# 自定义测试模式
-./abc-runner redis -t incr -n 50000 -c 100  # 计数器操作
-./abc-runner redis -t lpush_lpop -n 10000 -c 50  # 列表操作
-```
-
-### HTTP负载测试
-
-```bash
-# API端点测试
-./abc-runner http --url http://api.example.com/health -n 10000 -c 100
-
-# 带JSON负载的POST
-./abc-runner http --url http://api.example.com/users \n  --method POST \n  --body '{"name":"John","email":"john@example.com"}' \n  --content-type "application/json" -n 1000 -c 20
-
-# 带渐进的负载测试
-./abc-runner http --url http://www.example.com \n  --duration 300s -c 200 --ramp-up 30s
-```
-
-### Kafka性能测试
-
-```bash
-# 生产者吞吐量测试
-./abc-runner kafka --broker localhost:9092 --topic throughput-test \n  --message-size 1024 -n 100000 -c 10
-
-# 消费者延迟测试
-./abc-runner kafka --broker localhost:9092 --topic test-topic \n  --test-type consume --group-id perf-test-group -n 50000
-
-# 端到端延迟测试
-./abc-runner kafka --brokers localhost:9092,localhost:9093 \n  --topic latency-test --test-type produce_consume \n  --message-size 512 --duration 120s -c 5
-```
 
 ## 许可证
 
@@ -430,7 +258,3 @@ kafka:
 - 查看[迁移指南](docs/CHANGELOG.md)
 - 查看命令帮助: `./abc-runner <command> --help`
 - 提交issue报告bug或功能请求
-
-## 文档维护
-
-本项目维护英文和中文两种语言的文档。有关维护多语言文档的指南，请参阅[文档翻译指南](docs/maintenance/document-translation-guide.md)。
