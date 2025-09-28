@@ -362,3 +362,54 @@ func indexOf(s, substr string) int {
 	}
 	return -1
 }
+
+// === 架构兼容性方法，与 operations 系统集成 ===
+
+// GetSupportedOperations 获取支持的操作类型（架构兼容性）
+func (h *HttpAdapter) GetSupportedOperations() []string {
+	return []string{
+		"http_get", "http_post", "http_put", "http_patch", "http_delete",
+		"http_head", "http_options", "http_trace", "http_connect", "http_upload",
+		// 也支持直接的 HTTP 方法
+		"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS",
+	}
+}
+
+// ValidateOperation 验证操作是否受支持（架构兼容性）
+func (h *HttpAdapter) ValidateOperation(operationType string) error {
+	supportedOps := h.GetSupportedOperations()
+	for _, op := range supportedOps {
+		if op == operationType {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported operation type: %s", operationType)
+}
+
+// GetOperationMetadata 获取操作元数据（架构兼容性）
+func (h *HttpAdapter) GetOperationMetadata(operationType string) map[string]interface{} {
+	metadata := map[string]interface{}{
+		"protocol": "http",
+		"adapter_type": "http_adapter",
+		"operation_type": operationType,
+		"is_read": h.isReadOperation(operationType),
+	}
+	
+	if h.config != nil {
+		metadata["base_url"] = h.config.Connection.BaseURL
+		metadata["timeout"] = h.config.Connection.Timeout.String()
+	}
+	
+	return metadata
+}
+
+// isReadOperation 判断是否为读操作
+func (h *HttpAdapter) isReadOperation(operationType string) bool {
+	readOps := []string{"http_get", "http_head", "http_options", "GET", "HEAD", "OPTIONS"}
+	for _, readOp := range readOps {
+		if readOp == operationType {
+			return true
+		}
+	}
+	return false
+}

@@ -1,40 +1,28 @@
 package commands
 
 import (
-	"abc-runner/app/core/interfaces"
 	"context"
 	"fmt"
 	"strconv"
 	"time"
+
+	"abc-runner/app/adapters/grpc"
+	"abc-runner/app/adapters/grpc/config"
+	"abc-runner/app/core/execution"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/metrics"
 )
-
-// BaseCommandHandler 基础命令处理器
-type BaseCommandHandler struct {
-	protocolName string
-}
-
-// NewBaseCommandHandler 创建基础命令处理器
-func NewBaseCommandHandler(protocolName string) *BaseCommandHandler {
-	return &BaseCommandHandler{
-		protocolName: protocolName,
-	}
-}
-
-// GetProtocolName 获取协议名称
-func (h *BaseCommandHandler) GetProtocolName() string {
-	return h.protocolName
-}
 
 // GRPCCommandHandler gRPC命令处理器
 type GRPCCommandHandler struct {
 	protocolName string
-	factory      interface{} // AdapterFactory接口
+	factory      interfaces.GRPCAdapterFactory // 使用gRPC专用工厂接口
 }
 
 // NewGRPCCommandHandler 创建gRPC命令处理器
-func NewGRPCCommandHandler(factory interface{}) *GRPCCommandHandler {
+func NewGRPCCommandHandler(factory interfaces.GRPCAdapterFactory) *GRPCCommandHandler {
 	if factory == nil {
-		panic("adapterFactory cannot be nil - dependency injection required")
+		panic("grpcAdapterFactory cannot be nil - dependency injection required")
 	}
 
 	return &GRPCCommandHandler{
@@ -65,10 +53,16 @@ func (h *GRPCCommandHandler) Execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to parse arguments: %w", err)
 	}
 
+	// 创建指标收集器
+	metricsConfig := metrics.DefaultMetricsConfig()
+	metricsCollector := metrics.NewBaseCollector(metricsConfig, map[string]interface{}{
+		"protocol":  "grpc",
+		"test_type": "performance",
+	})
+	defer metricsCollector.Stop()
+
 	// 创建适配器
-	// adapter := h.factory.CreateAdapter()
-	// 暂时使用模拟适配器，因为没有导入discovery包
-	adapter := h.createMockAdapter()
+	adapter := h.factory.CreateGRPCAdapter()
 	if adapter == nil {
 		return fmt.Errorf("failed to create gRPC adapter")
 	}
@@ -76,20 +70,30 @@ func (h *GRPCCommandHandler) Execute(ctx context.Context, args []string) error {
 
 	// 连接到gRPC服务器
 	fmt.Printf("🔗 Connecting to gRPC server: %s:%d\n", 
-		config["address"].(string), config["port"].(int))
+		config.Connection.Address, config.Connection.Port)
 	
-	if err := adapter.Connect(ctx, h.createConfigWrapper(config)); err != nil {
+	if err := adapter.Connect(ctx, config); err != nil {
 		fmt.Printf("⚠️  Connection failed to %s:%d: %v\n", 
-			config["address"].(string), config["port"].(int), err)
+			config.Connection.Address, config.Connection.Port, err)
 		fmt.Printf("🔍 Possible causes: gRPC server not running, wrong host/port, TLS issues, or network problems\n")
-		return err
+	} else {
+		fmt.Printf("✅ Successfully connected to gRPC server\n")
 	}
 
-	fmt.Printf("✅ Successfully connected to gRPC server\n")
+	// 运行性能测试
+	fmt.Printf("🚀 Starting gRPC performance test...\n")
+	fmt.Printf("Target: %s:%d\n", config.Connection.Address, config.Connection.Port)
+	fmt.Printf("Test Case: %s\n", config.BenchMark.TestCase)
+	fmt.Printf("Operations: %d, Concurrency: %d, Data Size: %d bytes\n", 
+		config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.DataSize)
 
-	// 运行基准测试
-	testCase := config["test_case"].(string)
-	return h.runTestCase(ctx, adapter, testCase, config)
+	err = h.runPerformanceTest(ctx, adapter, config, metricsCollector)
+	if err != nil {
+		return fmt.Errorf("performance test failed: %w", err)
+	}
+
+	// 生成并显示报告
+	return h.generateReport(metricsCollector)
 }
 
 // GetHelp 获取帮助信息
@@ -132,44 +136,33 @@ NOTE:
 }
 
 // parseArgs 解析命令行参数
-func (h *GRPCCommandHandler) parseArgs(args []string) (map[string]interface{}, error) {
+func (h *GRPCCommandHandler) parseArgs(args []string) (*config.GRPCConfig, error) {
 	// 创建默认配置
-	config := map[string]interface{}{
-		"address":     "localhost",
-		"port":        50051,
-		"service_name": "TestService",
-		"method_name":  "Echo",
-		"test_case":   "unary_call",
-		"parallels":   10,
-		"total":       1000,
-		"timeout":     30 * time.Second,
-		"tls_enabled": false,
-		"token":       "",
-	}
+	gRPCConfig := config.NewDefaultGRPCConfig()
 
 	// 解析参数
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--address":
 			if i+1 < len(args) {
-				config["address"] = args[i+1]
+				gRPCConfig.Connection.Address = args[i+1]
 				i++
 			}
 		case "--port":
 			if i+1 < len(args) {
 				if port, err := strconv.Atoi(args[i+1]); err == nil && port > 0 && port <= 65535 {
-					config["port"] = port
+					gRPCConfig.Connection.Port = port
 				}
 				i++
 			}
 		case "--service":
 			if i+1 < len(args) {
-				config["service_name"] = args[i+1]
+				gRPCConfig.GRPCSpecific.ServiceName = args[i+1]
 				i++
 			}
 		case "--method":
 			if i+1 < len(args) {
-				config["method_name"] = args[i+1]
+				gRPCConfig.GRPCSpecific.MethodName = args[i+1]
 				i++
 			}
 		case "--test-case":
@@ -178,7 +171,7 @@ func (h *GRPCCommandHandler) parseArgs(args []string) (map[string]interface{}, e
 				testCase := args[i+1]
 				for _, valid := range validCases {
 					if testCase == valid {
-						config["test_case"] = testCase
+						gRPCConfig.BenchMark.TestCase = testCase
 						break
 					}
 				}
@@ -187,167 +180,99 @@ func (h *GRPCCommandHandler) parseArgs(args []string) (map[string]interface{}, e
 		case "-c":
 			if i+1 < len(args) {
 				if count, err := strconv.Atoi(args[i+1]); err == nil && count > 0 {
-					config["parallels"] = count
+					gRPCConfig.BenchMark.Parallels = count
+					gRPCConfig.Connection.Pool.PoolSize = count
 				}
 				i++
 			}
 		case "-n":
 			if i+1 < len(args) {
 				if count, err := strconv.Atoi(args[i+1]); err == nil && count > 0 {
-					config["total"] = count
+					gRPCConfig.BenchMark.Total = count
 				}
 				i++
 			}
 		case "--timeout":
 			if i+1 < len(args) {
 				if duration, err := time.ParseDuration(args[i+1]); err == nil {
-					config["timeout"] = duration
+					gRPCConfig.Connection.Timeout = duration
+					gRPCConfig.BenchMark.Timeout = duration
 				}
 				i++
 			}
 		case "--tls":
-			config["tls_enabled"] = true
+			gRPCConfig.GRPCSpecific.TLS.Enabled = true
 		case "--token":
 			if i+1 < len(args) {
-				config["token"] = args[i+1]
+				gRPCConfig.GRPCSpecific.Auth.Enabled = true
+				gRPCConfig.GRPCSpecific.Auth.Method = "token"
+				gRPCConfig.GRPCSpecific.Auth.Token = args[i+1]
 				i++
 			}
 		}
 	}
 
-	return config, nil
+	return gRPCConfig, nil
 }
 
-// runTestCase 运行特定的测试用例
-func (h *GRPCCommandHandler) runTestCase(ctx context.Context, adapter interfaces.ProtocolAdapter, testCase string, config map[string]interface{}) error {
-	fmt.Printf("🚀 Starting gRPC %s test...\n", testCase)
-	fmt.Printf("Service: %s, Method: %s\n", config["service_name"], config["method_name"])
-	fmt.Printf("Operations: %d, Concurrency: %d\n", config["total"], config["parallels"])
-
-	switch testCase {
-	case "unary_call":
-		return h.runUnaryCallTest(ctx, adapter, config)
-	case "server_stream":
-		return h.runServerStreamTest(ctx, adapter, config)
-	case "client_stream":
-		return h.runClientStreamTest(ctx, adapter, config)
-	case "bidirectional_stream":
-		return h.runBidirectionalStreamTest(ctx, adapter, config)
-	default:
-		return fmt.Errorf("unsupported test case: %s", testCase)
-	}
-}
-
-// runUnaryCallTest 运行一元调用测试
-func (h *GRPCCommandHandler) runUnaryCallTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config map[string]interface{}) error {
-	total := config["total"].(int)
-	concurrent := config["parallels"].(int)
-	serviceName := config["service_name"].(string)
-	methodName := config["method_name"].(string)
-
-	// 创建测试操作
-	operation := interfaces.Operation{
-		Type:  "unary_call",
-		Key:   fmt.Sprintf("%s.%s", serviceName, methodName),
-		Value: "test_request_data",
-		Metadata: map[string]string{
-			"total":       strconv.Itoa(total),
-			"concurrent":  strconv.Itoa(concurrent),
-			"service":     serviceName,
-			"method":      methodName,
-		},
-	}
-
-	// 执行操作
-	result, err := adapter.Execute(ctx, operation)
+// runPerformanceTest 运行性能测试
+func (h *GRPCCommandHandler) runPerformanceTest(
+	ctx context.Context, 
+	adapter interfaces.ProtocolAdapter, 
+	config *config.GRPCConfig, 
+	metricsCollector interfaces.DefaultMetricsCollector,
+) error {
+	// 创建操作工厂
+	operationFactory := grpc.NewOperationFactory(config)
+	
+	// 创建执行引擎
+	engine := execution.NewExecutionEngine(adapter, metricsCollector, operationFactory)
+	
+	// 配置执行引擎
+	engine.SetMaxWorkers(config.BenchMark.Parallels * 3) // 适度超配以提高并发性能
+	engine.SetBufferSizes(
+		config.BenchMark.Parallels*10, // job buffer
+		config.BenchMark.Parallels*10, // result buffer
+	)
+	
+	// 运行基准测试
+	result, err := engine.RunBenchmark(ctx, &config.BenchMark)
 	if err != nil {
-		return fmt.Errorf("unary call test failed: %w", err)
+		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
-
-	// 打印结果
-	fmt.Printf("✅ Unary call test completed: Success=%t, Duration=%v\n", 
-		result.Success, result.Duration)
+	
+	// 输出执行结果
+	fmt.Printf("\n📊 Execution Results:\n")
+	fmt.Printf("Total Jobs: %d\n", result.TotalJobs)
+	fmt.Printf("Completed Jobs: %d\n", result.CompletedJobs)
+	fmt.Printf("Success Jobs: %d\n", result.SuccessJobs)
+	fmt.Printf("Failed Jobs: %d\n", result.FailedJobs)
+	fmt.Printf("Total Duration: %v\n", result.TotalDuration)
+	fmt.Printf("Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.TotalJobs)*100)
+	
 	return nil
 }
 
-// runServerStreamTest 运行服务器流测试
-func (h *GRPCCommandHandler) runServerStreamTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config map[string]interface{}) error {
-	concurrent := config["parallels"].(int)
-	serviceName := config["service_name"].(string)
-	methodName := config["method_name"].(string)
-
-	operation := interfaces.Operation{
-		Type:  "server_stream",
-		Key:   fmt.Sprintf("%s.%s", serviceName, methodName),
-		Value: "stream_request",
-		Metadata: map[string]string{
-			"concurrent": strconv.Itoa(concurrent),
-			"service":    serviceName,
-			"method":     methodName,
-		},
+// generateReport 生成报告
+func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultMetricsCollector) error {
+	snapshot := metricsCollector.Snapshot()
+	if snapshot == nil {
+		return fmt.Errorf("failed to get metrics snapshot")
 	}
-
-	result, err := adapter.Execute(ctx, operation)
-	if err != nil {
-		return fmt.Errorf("server stream test failed: %w", err)
-	}
-
-	fmt.Printf("✅ Server stream test completed: Success=%t, Duration=%v\n", 
-		result.Success, result.Duration)
-	return nil
-}
-
-// runClientStreamTest 运行客户端流测试
-func (h *GRPCCommandHandler) runClientStreamTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config map[string]interface{}) error {
-	concurrent := config["parallels"].(int)
-	serviceName := config["service_name"].(string)
-	methodName := config["method_name"].(string)
-
-	operation := interfaces.Operation{
-		Type:  "client_stream",
-		Key:   fmt.Sprintf("%s.%s", serviceName, methodName),
-		Value: "stream_data",
-		Metadata: map[string]string{
-			"concurrent": strconv.Itoa(concurrent),
-			"service":    serviceName,
-			"method":     methodName,
-		},
-	}
-
-	result, err := adapter.Execute(ctx, operation)
-	if err != nil {
-		return fmt.Errorf("client stream test failed: %w", err)
-	}
-
-	fmt.Printf("✅ Client stream test completed: Success=%t, Duration=%v\n", 
-		result.Success, result.Duration)
-	return nil
-}
-
-// runBidirectionalStreamTest 运行双向流测试
-func (h *GRPCCommandHandler) runBidirectionalStreamTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config map[string]interface{}) error {
-	concurrent := config["parallels"].(int)
-	serviceName := config["service_name"].(string)
-	methodName := config["method_name"].(string)
-
-	operation := interfaces.Operation{
-		Type:  "bidirectional_stream",
-		Key:   fmt.Sprintf("%s.%s", serviceName, methodName),
-		Value: "bidi_stream_data",
-		Metadata: map[string]string{
-			"concurrent": strconv.Itoa(concurrent),
-			"service":    serviceName,
-			"method":     methodName,
-		},
-	}
-
-	result, err := adapter.Execute(ctx, operation)
-	if err != nil {
-		return fmt.Errorf("bidirectional stream test failed: %w", err)
-	}
-
-	fmt.Printf("✅ Bidirectional stream test completed: Success=%t, Duration=%v\n", 
-		result.Success, result.Duration)
+	
+	// 输出简单报告
+	fmt.Printf("\n📊 Performance Metrics:\n")
+	fmt.Printf("Core Metrics:\n")
+	fmt.Printf("  Total Operations: %d\n", snapshot.Core.Operations.Total)
+	fmt.Printf("  Successful Operations: %d\n", snapshot.Core.Operations.Success)
+	fmt.Printf("  Failed Operations: %d\n", snapshot.Core.Operations.Failed)
+	fmt.Printf("  Success Rate: %.2f%%\n", snapshot.Core.Operations.Rate)
+	fmt.Printf("Latency Metrics:\n")
+	fmt.Printf("  Average: %v\n", snapshot.Core.Latency.Average)
+	fmt.Printf("  P95: %v\n", snapshot.Core.Latency.P95)
+	fmt.Printf("  P99: %v\n", snapshot.Core.Latency.P99)
+	fmt.Printf("Throughput: %.2f RPS\n", snapshot.Core.Throughput.RPS)
+	
 	return nil
 }
 
@@ -357,90 +282,6 @@ func (h *GRPCCommandHandler) GetProtocolName() string {
 }
 
 // GetFactory 获取适配器工厂
-func (h *GRPCCommandHandler) GetFactory() interface{} {
+func (h *GRPCCommandHandler) GetFactory() interfaces.GRPCAdapterFactory {
 	return h.factory
 }
-
-// createMockAdapter 创建模拟适配器
-func (h *GRPCCommandHandler) createMockAdapter() interfaces.ProtocolAdapter {
-	// 返回模拟适配器，实际应用中将由application.go中的注册逻辑处理
-	return &MockGRPCAdapter{}
-}
-
-// MockGRPCAdapter 模拟适配器
-type MockGRPCAdapter struct{}
-
-func (m *MockGRPCAdapter) Connect(ctx context.Context, config interfaces.Config) error {
-	return nil
-}
-
-func (m *MockGRPCAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return &interfaces.OperationResult{
-		Success:  true,
-		Duration: 10 * time.Millisecond,
-		Value:    "mock result",
-	}, nil
-}
-
-func (m *MockGRPCAdapter) Close() error {
-	return nil
-}
-
-func (m *MockGRPCAdapter) GetProtocolMetrics() map[string]interface{} {
-	return map[string]interface{}{"mock": true}
-}
-
-func (m *MockGRPCAdapter) HealthCheck(ctx context.Context) error {
-	return nil
-}
-
-func (m *MockGRPCAdapter) GetProtocolName() string {
-	return "grpc"
-}
-
-func (m *MockGRPCAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
-	return nil
-}
-
-// createConfigWrapper 创建Config接口包装器
-func (h *GRPCCommandHandler) createConfigWrapper(config map[string]interface{}) interfaces.Config {
-	return &GRPCConfigWrapper{data: config}
-}
-
-// GRPCConfigWrapper Config接口包装器
-type GRPCConfigWrapper struct {
-	data map[string]interface{}
-}
-
-func (c *GRPCConfigWrapper) GetProtocol() string {
-	if protocol, ok := c.data["protocol"].(string); ok {
-		return protocol
-	}
-	return "grpc"
-}
-
-func (c *GRPCConfigWrapper) GetConnection() interfaces.ConnectionConfig {
-	return nil // gRPC不需要复杂的连接配置
-}
-
-func (c *GRPCConfigWrapper) GetBenchmark() interfaces.BenchmarkConfig {
-	return nil // gRPC不需要复杂的基准测试配置
-}
-
-func (c *GRPCConfigWrapper) Validate() error {
-	return nil // 简化验证
-}
-
-func (c *GRPCConfigWrapper) Clone() interfaces.Config {
-	newData := make(map[string]interface{})
-	for k, v := range c.data {
-		newData[k] = v
-	}
-	return &GRPCConfigWrapper{data: newData}
-}
-
-// GetData 获取原始数据
-func (c *GRPCConfigWrapper) GetData() map[string]interface{} {
-	return c.data
-}
-

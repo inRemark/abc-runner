@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,13 +8,13 @@ import (
 	"reflect"
 	"strings"
 
-	"abc-runner/app/adapters/http"
-	"abc-runner/app/adapters/kafka"
-	"abc-runner/app/adapters/redis"
 	"abc-runner/app/adapters/grpc"
 	"abc-runner/app/adapters/tcp"
 	"abc-runner/app/adapters/udp"
 	"abc-runner/app/adapters/websocket"
+	"abc-runner/app/adapters/redis"
+	"abc-runner/app/adapters/http"
+	"abc-runner/app/adapters/kafka"
 	"abc-runner/app/commands"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -24,13 +23,16 @@ import (
 // AutoDIBuilder 自动装配构建器
 type AutoDIBuilder struct {
 	components map[string]interface{}
-	factories  map[string]AdapterFactory
-}
-
-// AdapterFactory 适配器工厂接口
-type AdapterFactory interface {
-	CreateAdapter() interfaces.ProtocolAdapter
-	GetProtocolName() string
+	// 使用接口分离模式存储各协议工厂
+	grpcFactory      interfaces.GRPCAdapterFactory
+	tcpFactory       interfaces.TCPAdapterFactory
+	udpFactory       interfaces.UDPAdapterFactory
+	websocketFactory interfaces.WebSocketAdapterFactory
+	redisFactory     interfaces.RedisAdapterFactory
+	httpFactory      interfaces.HttpAdapterFactory
+	kafkaFactory     interfaces.KafkaAdapterFactory
+	// 保留通用查找接口，向下兼容
+	factories        map[string]interface{}
 }
 
 // Component 组件信息
@@ -45,7 +47,7 @@ type Component struct {
 func NewAutoDIBuilder() *AutoDIBuilder {
 	return &AutoDIBuilder{
 		components: make(map[string]interface{}),
-		factories:  make(map[string]AdapterFactory),
+		factories:  make(map[string]interface{}),
 	}
 }
 
@@ -90,7 +92,7 @@ func (builder *AutoDIBuilder) setupMetricsCollector() error {
 	return nil
 }
 
-// discoverProtocolAdapters 发现协议适配器
+// discoverProtocolAdapters 发现协议适配器 - 实现所有协议的接口分离模式
 func (builder *AutoDIBuilder) discoverProtocolAdapters() error {
 	log.Println("Discovering protocol adapters...")
 	
@@ -102,78 +104,113 @@ func (builder *AutoDIBuilder) discoverProtocolAdapters() error {
 	}
 	log.Printf("Using project root: %s", projectRoot)
 	
-	// 基于约定注册已知的协议适配器
-	protocols := []struct {
-		name        string
-		factory     AdapterFactory
-	}{
-		{"redis", &RedisAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"http", &HttpAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"kafka", &KafkaAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"tcp", &TCPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"udp", &UDPAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"grpc", &GRPCAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-		{"websocket", &WebSocketAdapterFactory{metricsCollector: builder.getMetricsCollector()}},
-	}
+	// 获取指标收集器
+	metricsCollector := builder.getMetricsCollector()
 	
-	for _, protocol := range protocols {
-		// 检查协议目录是否存在
-		protocolPath := filepath.Join(projectRoot, "app", "adapters", protocol.name)
-		if _, err := os.Stat(protocolPath); err == nil {
-			builder.factories[protocol.name] = protocol.factory
-			builder.components[protocol.name+"_factory"] = protocol.factory
-			log.Printf("✅ Discovered protocol: %s (path: %s)", protocol.name, protocolPath)
-		} else {
-			log.Printf("⚠️  Protocol directory not found: %s", protocolPath)
-			// 即使目录不存在，也注册协议（对于简化实现）
-			builder.factories[protocol.name] = protocol.factory
-			builder.components[protocol.name+"_factory"] = protocol.factory
-			log.Printf("✅ Registered protocol without directory check: %s", protocol.name)
-		}
-	}
+	// 使用接口分离模式注册所有协议工厂
 	
+	// 创建并注册gRPC工厂
+	builder.grpcFactory = grpc.NewAdapterFactory(metricsCollector)
+	builder.factories["grpc"] = builder.grpcFactory
+	builder.components["grpc_factory"] = builder.grpcFactory
+	log.Printf("✅ Registered gRPC adapter factory")
+	
+	// 创建并注册TCP工厂
+	builder.tcpFactory = tcp.NewAdapterFactory(metricsCollector)
+	builder.factories["tcp"] = builder.tcpFactory
+	builder.components["tcp_factory"] = builder.tcpFactory
+	log.Printf("✅ Registered TCP adapter factory")
+	
+	// 创建并注册UDP工厂
+	builder.udpFactory = udp.NewAdapterFactory(metricsCollector)
+	builder.factories["udp"] = builder.udpFactory
+	builder.components["udp_factory"] = builder.udpFactory
+	log.Printf("✅ Registered UDP adapter factory")
+	
+	// 创建并注册WebSocket工厂
+	builder.websocketFactory = websocket.NewAdapterFactory(metricsCollector)
+	builder.factories["websocket"] = builder.websocketFactory
+	builder.components["websocket_factory"] = builder.websocketFactory
+	log.Printf("✅ Registered WebSocket adapter factory")
+	
+	// 创建并注册Redis工厂
+	builder.redisFactory = redis.NewAdapterFactory(metricsCollector)
+	builder.factories["redis"] = builder.redisFactory
+	builder.components["redis_factory"] = builder.redisFactory
+	log.Printf("✅ Registered Redis adapter factory")
+	
+	// 创建并注册HTTP工厂
+	builder.httpFactory = http.NewAdapterFactory(metricsCollector)
+	builder.factories["http"] = builder.httpFactory
+	builder.components["http_factory"] = builder.httpFactory
+	log.Printf("✅ Registered HTTP adapter factory")
+	
+	// 创建并注册Kafka工厂
+	builder.kafkaFactory = kafka.NewAdapterFactory(metricsCollector)
+	builder.factories["kafka"] = builder.kafkaFactory
+	builder.components["kafka_factory"] = builder.kafkaFactory
+	log.Printf("✅ Registered Kafka adapter factory")
+	
+	log.Printf("🎉 All protocol factories registered successfully!")
 	return nil
 }
 
-// registerCommandHandlers 注册命令处理器
+// registerCommandHandlers 注册命令处理器 - 支持所有协议
 func (builder *AutoDIBuilder) registerCommandHandlers() error {
 	log.Println("Registering command handlers...")
 	
-	// 为每个发现的协议创建命令处理器
-	for protocolName, factory := range builder.factories {
-		handlerName := protocolName + "_handler"
-		
-		// 使用具体的命令处理器创建函数
-		switch protocolName {
-		case "redis":
-			handler := commands.NewRedisCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "http":
-			handler := commands.NewHttpCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "kafka":
-			handler := commands.NewKafkaCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "tcp":
-			handler := commands.NewTCPCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "udp":
-			handler := commands.NewUDPCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "grpc":
-			handler := commands.NewGRPCCommandHandler(factory)
-			builder.components[handlerName] = handler
-		case "websocket":
-			handler := commands.NewWebSocketCommandHandler(factory)
-			builder.components[handlerName] = handler
-		default:
-			log.Printf("⚠️  Unknown protocol: %s", protocolName)
-			continue
-		}
-		
-		log.Printf("✅ Registered command handler: %s", handlerName)
+	// 为所有已实现的协议创建命令处理器
+	
+	// gRPC 命令处理器
+	if builder.grpcFactory != nil {
+		handler := commands.NewGRPCCommandHandler(builder.grpcFactory)
+		builder.components["grpc_handler"] = handler
+		log.Printf("✅ Registered command handler: grpc_handler")
 	}
 	
+	// TCP 命令处理器
+	if builder.tcpFactory != nil {
+		handler := commands.NewTCPCommandHandler(builder.tcpFactory)
+		builder.components["tcp_handler"] = handler
+		log.Printf("✅ Registered command handler: tcp_handler")
+	}
+	
+	// UDP 命令处理器
+	if builder.udpFactory != nil {
+		handler := commands.NewUDPCommandHandler(builder.udpFactory)
+		builder.components["udp_handler"] = handler
+		log.Printf("✅ Registered command handler: udp_handler")
+	}
+	
+	// WebSocket 命令处理器
+	if builder.websocketFactory != nil {
+		handler := commands.NewWebSocketCommandHandler(builder.websocketFactory)
+		builder.components["websocket_handler"] = handler
+		log.Printf("✅ Registered command handler: websocket_handler")
+	}
+	
+	// Redis 命令处理器
+	if builder.redisFactory != nil {
+		handler := commands.NewRedisCommandHandler(builder.redisFactory)
+		builder.components["redis_handler"] = handler
+		log.Printf("✅ Registered command handler: redis_handler")
+	}
+	
+	// HTTP 命令处理器
+	if builder.httpFactory != nil {
+		handler := commands.NewHttpCommandHandler(builder.httpFactory)
+		builder.components["http_handler"] = handler
+		log.Printf("✅ Registered command handler: http_handler")
+	}
+	
+	// Kafka 命令处理器
+	if builder.kafkaFactory != nil {
+		handler := commands.NewKafkaCommandHandler(builder.kafkaFactory)
+		builder.components["kafka_handler"] = handler
+		log.Printf("✅ Registered command handler: kafka_handler")
+	}
+	
+	log.Printf("🎉 All command handlers registered successfully!")
 	return nil
 }
 
@@ -191,68 +228,28 @@ func (builder *AutoDIBuilder) GetComponent(name string) (interface{}, bool) {
 	return component, exists
 }
 
-// GetFactory 获取工厂
-func (builder *AutoDIBuilder) GetFactory(protocol string) (AdapterFactory, bool) {
+// GetFactory 获取工厂 - 支持接口分离模式
+func (builder *AutoDIBuilder) GetFactory(protocol string) (interface{}, bool) {
 	factory, exists := builder.factories[protocol]
 	return factory, exists
 }
 
-// GetAllFactories 获取所有工厂
-func (builder *AutoDIBuilder) GetAllFactories() map[string]AdapterFactory {
+// GetGRPCFactory 获取gRPC工厂
+func (builder *AutoDIBuilder) GetGRPCFactory() (interfaces.GRPCAdapterFactory, bool) {
+	if builder.grpcFactory != nil {
+		return builder.grpcFactory, true
+	}
+	return nil, false
+}
+
+// GetAllFactories 获取所有工厂 - 返回接口列表
+func (builder *AutoDIBuilder) GetAllFactories() map[string]interface{} {
 	return builder.factories
 }
 
 // AddComponent 添加组件
 func (builder *AutoDIBuilder) AddComponent(name string, component interface{}) {
 	builder.components[name] = component
-}
-
-// RedisAdapterFactory Redis适配器工厂
-type RedisAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *RedisAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 直接创建Redis适配器
-	adapter := redis.NewRedisAdapter(f.metricsCollector)
-	
-	// 使用适配器模式包装返回的适配器，使其实现新接口
-	return &RedisAdapterWrapper{
-		baseAdapter:      adapter,
-		metricsCollector: f.metricsCollector,
-	}
-}
-
-func (f *RedisAdapterFactory) GetProtocolName() string {
-	return "redis"
-}
-
-// HttpAdapterFactory HTTP适配器工厂
-type HttpAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *HttpAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建兼容性包装器 - 暂时返回nil，需要先修复HTTP适配器
-	return nil
-}
-
-func (f *HttpAdapterFactory) GetProtocolName() string {
-	return "http"
-}
-
-// KafkaAdapterFactory Kafka适配器工厂
-type KafkaAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *KafkaAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建兼容性包装器 - 暂时返回nil，需要先修复Kafka适配器
-	return nil
-}
-
-func (f *KafkaAdapterFactory) GetProtocolName() string {
-	return "kafka"
 }
 
 // ScanAdapterDirectories 扫描适配器目录
@@ -284,7 +281,7 @@ func ScanAdapterDirectories(basePath string) ([]string, error) {
 
 // IsValidProtocolName 检查是否是有效的协议名称
 func IsValidProtocolName(name string) bool {
-	validProtocols := []string{"redis", "http", "https", "kafka", "grpc", "tcp", "udp"}
+	validProtocols := []string{"redis", "http", "https", "kafka", "grpc", "tcp", "udp", "websocket"}
 	
 	name = strings.ToLower(name)
 	for _, valid := range validProtocols {
@@ -355,178 +352,13 @@ func findProjectRoot() (string, error) {
 
 // checkProjectMarkers 检查项目标识文件
 func checkProjectMarkers(dir string) bool {
-	markers := []string{"go.mod", "main.go", "app", "Makefile"}
+	markers := []string{"go.mod", "main.go", "Makefile", ".git"}
 	
 	for _, marker := range markers {
-		markerPath := filepath.Join(dir, marker)
-		if _, err := os.Stat(markerPath); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
 			return true
 		}
 	}
 	
 	return false
-}
-
-// 协议适配器包装器，用于统一新旧接口
-
-// RedisAdapterWrapper Redis适配器包装器
-type RedisAdapterWrapper struct {
-	baseAdapter      *redis.RedisAdapter
-	metricsCollector interfaces.MetricsCollector[map[string]interface{}]
-}
-
-func (w *RedisAdapterWrapper) Connect(ctx context.Context, config interfaces.Config) error {
-	return w.baseAdapter.Connect(ctx, config)
-}
-
-func (w *RedisAdapterWrapper) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return w.baseAdapter.Execute(ctx, operation)
-}
-
-func (w *RedisAdapterWrapper) Close() error {
-	return w.baseAdapter.Close()
-}
-
-func (w *RedisAdapterWrapper) GetProtocolMetrics() map[string]interface{} {
-	return w.baseAdapter.GetProtocolMetrics()
-}
-
-func (w *RedisAdapterWrapper) HealthCheck(ctx context.Context) error {
-	return w.baseAdapter.HealthCheck(ctx)
-}
-
-func (w *RedisAdapterWrapper) GetProtocolName() string {
-	return w.baseAdapter.GetProtocolName()
-}
-
-func (w *RedisAdapterWrapper) GetMetricsCollector() interfaces.DefaultMetricsCollector {
-	return w.metricsCollector
-}
-
-// HttpAdapterWrapper HTTP适配器包装器
-type HttpAdapterWrapper struct {
-	baseAdapter      *http.HttpAdapter
-	metricsCollector interfaces.MetricsCollector[map[string]interface{}]
-}
-
-func (w *HttpAdapterWrapper) Connect(ctx context.Context, config interfaces.Config) error {
-	return w.baseAdapter.Connect(ctx, config)
-}
-
-func (w *HttpAdapterWrapper) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return w.baseAdapter.Execute(ctx, operation)
-}
-
-func (w *HttpAdapterWrapper) Close() error {
-	return w.baseAdapter.Close()
-}
-
-func (w *HttpAdapterWrapper) GetProtocolMetrics() map[string]interface{} {
-	return w.baseAdapter.GetProtocolMetrics()
-}
-
-func (w *HttpAdapterWrapper) HealthCheck(ctx context.Context) error {
-	return w.baseAdapter.HealthCheck(ctx)
-}
-
-func (w *HttpAdapterWrapper) GetProtocolName() string {
-	return w.baseAdapter.GetProtocolName()
-}
-
-func (w *HttpAdapterWrapper) GetMetricsCollector() interfaces.MetricsCollector[map[string]interface{}] {
-	return w.metricsCollector
-}
-
-// KafkaAdapterWrapper Kafka适配器包装器
-type KafkaAdapterWrapper struct {
-	baseAdapter      *kafka.KafkaAdapter
-	metricsCollector interfaces.MetricsCollector[map[string]interface{}]
-}
-
-func (w *KafkaAdapterWrapper) Connect(ctx context.Context, config interfaces.Config) error {
-	return w.baseAdapter.Connect(ctx, config)
-}
-
-func (w *KafkaAdapterWrapper) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return w.baseAdapter.Execute(ctx, operation)
-}
-
-func (w *KafkaAdapterWrapper) Close() error {
-	return w.baseAdapter.Close()
-}
-
-func (w *KafkaAdapterWrapper) GetProtocolMetrics() map[string]interface{} {
-	return w.baseAdapter.GetProtocolMetrics()
-}
-
-func (w *KafkaAdapterWrapper) HealthCheck(ctx context.Context) error {
-	return w.baseAdapter.HealthCheck(ctx)
-}
-
-func (w *KafkaAdapterWrapper) GetProtocolName() string {
-	return w.baseAdapter.GetProtocolName()
-}
-
-func (w *KafkaAdapterWrapper) GetMetricsCollector() interfaces.MetricsCollector[map[string]interface{}] {
-	return w.metricsCollector
-}
-
-// TCPAdapterFactory TCP适配器工厂
-type TCPAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *TCPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建TCP适配器实例
-	tcpAdapter := tcp.NewTCPAdapter(f.metricsCollector)
-	return tcpAdapter
-}
-
-func (f *TCPAdapterFactory) GetProtocolName() string {
-	return "tcp"
-}
-
-// UDPAdapterFactory UDP适配器工厂
-type UDPAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *UDPAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建UDP适配器实例
-	udpAdapter := udp.NewUDPAdapter(f.metricsCollector)
-	return udpAdapter
-}
-
-func (f *UDPAdapterFactory) GetProtocolName() string {
-	return "udp"
-}
-
-// GRPCAdapterFactory gRPC适配器工厂
-type GRPCAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *GRPCAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建gRPC适配器实例
-	grpcAdapter := grpc.NewGRPCAdapter(f.metricsCollector)
-	return grpcAdapter
-}
-
-func (f *GRPCAdapterFactory) GetProtocolName() string {
-	return "grpc"
-}
-
-// WebSocketAdapterFactory WebSocket适配器工厂
-type WebSocketAdapterFactory struct {
-	metricsCollector interfaces.DefaultMetricsCollector
-}
-
-func (f *WebSocketAdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	// 创建WebSocket适配器实例
-	websocketAdapter := websocket.NewWebSocketAdapter(f.metricsCollector)
-	return websocketAdapter
-}
-
-func (f *WebSocketAdapterFactory) GetProtocolName() string {
-	return "websocket"
 }

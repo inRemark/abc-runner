@@ -62,14 +62,14 @@ func NewDefaultTCPConfig() *TCPConfig {
 		Protocol: "tcp",
 		Connection: ConnectionConfig{
 			Address:         "localhost",
-			Port:            8080,
+			Port:            9090, // 设计文档要求的默认端口
 			Timeout:         30 * time.Second,
 			KeepAlive:       true,
 			KeepAlivePeriod: 30 * time.Second,
 			Pool: PoolConfig{
 				PoolSize:          10,
-				MinIdle:           1,
-				MaxIdle:           5,
+				MinIdle:           2, // 设计文档要求的最小空闲连接
+				MaxIdle:           8, // 设计文档要求的最大空闲连接
 				IdleTimeout:       300 * time.Second,
 				ConnectionTimeout: 30 * time.Second,
 			},

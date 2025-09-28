@@ -18,6 +18,12 @@ type ConnectionPool struct {
 	config      *config.TCPConfig
 	activeCount int64
 	address     string
+	
+	// 性能统计
+	createdCount    int64 // 已创建连接数
+	validationCount int64 // 验证次数
+	validationFails int64 // 验证失败次数
+	getTimeouts     int64 // 获取连接超时次数
 }
 
 // NewConnectionPool 创建新的连接池
@@ -73,6 +79,7 @@ func (p *ConnectionPool) createConnection() (net.Conn, error) {
 	}
 
 	atomic.AddInt64(&p.activeCount, 1)
+	atomic.AddInt64(&p.createdCount, 1)
 	return conn, nil
 }
 
@@ -172,17 +179,36 @@ func (p *ConnectionPool) ReturnConnection(conn net.Conn) {
 
 // isConnectionValid 检查连接是否有效
 func (p *ConnectionPool) isConnectionValid(conn net.Conn) bool {
+	atomic.AddInt64(&p.validationCount, 1)
+	
 	if conn == nil {
+		atomic.AddInt64(&p.validationFails, 1)
 		return false
 	}
 
 	// 设置短超时进行连接测试
-	if err := conn.SetDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+	originalDeadline := time.Now().Add(100 * time.Millisecond)
+	if err := conn.SetDeadline(originalDeadline); err != nil {
+		atomic.AddInt64(&p.validationFails, 1)
+		return false
+	}
+
+	// 尝试写入0字节来测试连接（更轻量级的检查）
+	_, err := conn.Write([]byte{})
+	if err != nil {
+		// 如果错误是超时，连接可能仍然有效
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			// 重置deadline并返回有效
+			conn.SetDeadline(time.Time{})
+			return true
+		}
+		atomic.AddInt64(&p.validationFails, 1)
 		return false
 	}
 
 	// 重置deadline
 	if err := conn.SetDeadline(time.Time{}); err != nil {
+		atomic.AddInt64(&p.validationFails, 1)
 		return false
 	}
 
@@ -238,5 +264,21 @@ func (p *ConnectionPool) Stats() map[string]interface{} {
 		"min_idle":             p.config.Connection.Pool.MinIdle,
 		"max_idle":             p.config.Connection.Pool.MaxIdle,
 		"closed":               p.closed,
+		"created_count":        atomic.LoadInt64(&p.createdCount),
+		"validation_count":     atomic.LoadInt64(&p.validationCount),
+		"validation_fails":     atomic.LoadInt64(&p.validationFails),
+		"get_timeouts":         atomic.LoadInt64(&p.getTimeouts),
+		"validation_success_rate": p.getValidationSuccessRate(),
 	}
+}
+
+// getValidationSuccessRate 获取验证成功率
+func (p *ConnectionPool) getValidationSuccessRate() float64 {
+	totalValidations := atomic.LoadInt64(&p.validationCount)
+	if totalValidations == 0 {
+		return 100.0
+	}
+	failedValidations := atomic.LoadInt64(&p.validationFails)
+	successRate := float64(totalValidations-failedValidations) / float64(totalValidations) * 100.0
+	return successRate
 }

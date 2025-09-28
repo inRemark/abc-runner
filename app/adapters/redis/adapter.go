@@ -611,3 +611,43 @@ func (r *RedisAdapter) executeHMGet(ctx context.Context, operation interfaces.Op
 func (r *RedisAdapter) executeHGetAll(ctx context.Context, operation interfaces.Operation) (map[string]string, error) {
 	return r.client.HGetAll(ctx, operation.Key).Result()
 }
+
+// === 架构兼容性方法，为未来 operations 系统集成做准备 ===
+
+// GetSupportedOperations 获取支持的操作类型（架构兼容性）
+func (r *RedisAdapter) GetSupportedOperations() []string {
+	return []string{
+		"get", "set", "del", "hget", "hset", "pub", "set_get_random",
+		"incr", "decr", "lpush", "rpush", "lpop", "rpop",
+		"sadd", "smembers", "srem", "sismember",
+		"zadd", "zrem", "zrange", "zrank", "zscore",
+		"hmset", "hmget", "hgetall", "hdel",
+	}
+}
+
+// ValidateOperation 验证操作是否受支持（架构兼容性）
+func (r *RedisAdapter) ValidateOperation(operationType string) error {
+	supportedOps := r.GetSupportedOperations()
+	for _, op := range supportedOps {
+		if op == operationType {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported operation type: %s", operationType)
+}
+
+// GetOperationMetadata 获取操作元数据（架构兼容性）
+func (r *RedisAdapter) GetOperationMetadata(operationType string) map[string]interface{} {
+	metadata := map[string]interface{}{
+		"protocol": "redis",
+		"adapter_type": "redis_adapter",
+		"operation_type": operationType,
+		"is_read": r.isReadOperation(operationType),
+	}
+	
+	if r.config != nil {
+		metadata["redis_mode"] = r.config.GetMode()
+	}
+	
+	return metadata
+}

@@ -9,41 +9,31 @@ import (
 	"sync"
 	"time"
 
-	// 暂时注释gRPC依赖，避免编译错误
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 )
 
 // GRPCAdapter gRPC协议适配器
 type GRPCAdapter struct {
 	config           *config.GRPCConfig
-	connections      map[string]*GRPCConnection
+	connectionPool   *ConnectionPool
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
+	
+	// 统计信息
 	totalCalls       int64
 	successfulCalls  int64
 	failedCalls      int64
 	totalLatency     time.Duration
-}
-
-// GRPCConnection gRPC连接包装器 (模拟版本)
-type GRPCConnection struct {
-	// conn     *grpc.ClientConn // 暂时注释
-	address  string
-	lastUsed time.Time
-	mu       sync.RWMutex
+	startTime        time.Time
 }
 
 // NewGRPCAdapter 创建新的gRPC适配器
 func NewGRPCAdapter(metricsCollector interfaces.DefaultMetricsCollector) *GRPCAdapter {
 	return &GRPCAdapter{
-		connections:      make(map[string]*GRPCConnection),
 		metricsCollector: metricsCollector,
 		isConnected:      false,
+		startTime:        time.Now(),
 	}
 }
 
@@ -66,13 +56,15 @@ func (adapter *GRPCAdapter) Connect(ctx context.Context, cfg interfaces.Config) 
 	}
 
 	// 创建连接池
-	if err := adapter.createConnectionPool(ctx); err != nil {
-		return fmt.Errorf("failed to create connection pool: %w", err)
+	adapter.connectionPool = NewConnectionPool(adapter.config)
+	if err := adapter.connectionPool.Initialize(ctx); err != nil {
+		return fmt.Errorf("failed to initialize connection pool: %w", err)
 	}
 
 	adapter.isConnected = true
-	log.Printf("Successfully connected to gRPC server: %s:%d",
-		adapter.config.Connection.Address, adapter.config.Connection.Port)
+	log.Printf("Successfully connected to gRPC server: %s:%d with %d connections",
+		adapter.config.Connection.Address, adapter.config.Connection.Port,
+		adapter.config.Connection.Pool.PoolSize)
 
 	return nil
 }
@@ -115,26 +107,27 @@ func (adapter *GRPCAdapter) Execute(ctx context.Context, operation interfaces.Op
 
 // executeUnaryCall 执行一元调用
 func (adapter *GRPCAdapter) executeUnaryCall(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	conn, err := adapter.getConnection()
+	// 获取连接
+	connWrapper, err := adapter.connectionPool.GetConnection()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+	
+	conn := connWrapper.GetConn()
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
 	}
 
-	// 模拟一元调用（实际使用时需要根据具体的proto定义）
-	log.Printf("Executing unary call: %s.%s",
+	// 模拟一元调用执行
+	log.Printf("Executing unary call: %s.%s with connection",
 		adapter.config.GRPCSpecific.ServiceName,
 		adapter.config.GRPCSpecific.MethodName)
 
 	// 添加认证metadata
 	ctx = adapter.addAuthMetadata(ctx)
 
-	// 这里应该调用实际的gRPC方法
-	// 由于没有具体的proto定义，我们模拟一个调用
 	startTime := time.Now()
-
-	// 模拟调用延迟
-	time.Sleep(10 * time.Millisecond)
-
+	time.Sleep(10 * time.Millisecond) // 模拟调用延迟
 	duration := time.Since(startTime)
 
 	return &interfaces.OperationResult{
@@ -152,9 +145,15 @@ func (adapter *GRPCAdapter) executeUnaryCall(ctx context.Context, operation inte
 
 // executeServerStream 执行服务器流调用
 func (adapter *GRPCAdapter) executeServerStream(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	conn, err := adapter.getConnection()
+	// 获取连接
+	connWrapper, err := adapter.connectionPool.GetConnection()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+	
+	conn := connWrapper.GetConn()
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
 	}
 
 	log.Printf("Executing server stream call: %s.%s",
@@ -187,9 +186,15 @@ func (adapter *GRPCAdapter) executeServerStream(ctx context.Context, operation i
 
 // executeClientStream 执行客户端流调用
 func (adapter *GRPCAdapter) executeClientStream(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	conn, err := adapter.getConnection()
+	// 获取连接
+	connWrapper, err := adapter.connectionPool.GetConnection()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+	
+	conn := connWrapper.GetConn()
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
 	}
 
 	log.Printf("Executing client stream call: %s.%s",
@@ -222,9 +227,15 @@ func (adapter *GRPCAdapter) executeClientStream(ctx context.Context, operation i
 
 // executeBidirectionalStream 执行双向流调用
 func (adapter *GRPCAdapter) executeBidirectionalStream(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	conn, err := adapter.getConnection()
+	// 获取连接
+	connWrapper, err := adapter.connectionPool.GetConnection()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+	
+	conn := connWrapper.GetConn()
+	if conn == nil {
+		return nil, fmt.Errorf("connection is nil")
 	}
 
 	log.Printf("Executing bidirectional stream call: %s.%s",
@@ -264,17 +275,14 @@ func (adapter *GRPCAdapter) Close() error {
 		return nil
 	}
 
-	// 关闭所有连接
-	for address, conn := range adapter.connections {
-		if conn.conn != nil {
-			conn.conn.Close()
-			log.Printf("Closed gRPC connection to %s", address)
+	// 关闭连接池
+	if adapter.connectionPool != nil {
+		if err := adapter.connectionPool.Close(); err != nil {
+			log.Printf("Error closing connection pool: %v", err)
 		}
 	}
 
-	adapter.connections = make(map[string]*GRPCConnection)
 	adapter.isConnected = false
-
 	log.Println("gRPC adapter closed")
 	return nil
 }
@@ -286,7 +294,7 @@ func (adapter *GRPCAdapter) GetProtocolMetrics() map[string]interface{} {
 
 	var avgLatency float64
 	if adapter.totalCalls > 0 {
-		avgLatency = float64(adapter.totalLatency.Nanoseconds()) / float64(adapter.totalCalls) / 1e6 // Convert to milliseconds
+		avgLatency = float64(adapter.totalLatency.Nanoseconds()) / float64(adapter.totalCalls) / 1e6
 	}
 
 	successRate := float64(0)
@@ -294,17 +302,25 @@ func (adapter *GRPCAdapter) GetProtocolMetrics() map[string]interface{} {
 		successRate = float64(adapter.successfulCalls) / float64(adapter.totalCalls) * 100
 	}
 
-	return map[string]interface{}{
+	metrics := map[string]interface{}{
 		"protocol":         "grpc",
 		"total_calls":      adapter.totalCalls,
 		"successful_calls": adapter.successfulCalls,
 		"failed_calls":     adapter.failedCalls,
 		"success_rate":     successRate,
 		"avg_latency_ms":   avgLatency,
-		"connections":      len(adapter.connections),
+		"uptime":           time.Since(adapter.startTime),
 		"service_name":     adapter.config.GRPCSpecific.ServiceName,
 		"method_name":      adapter.config.GRPCSpecific.MethodName,
 	}
+
+	// 添加连接池指标
+	if adapter.connectionPool != nil {
+		poolStats := adapter.connectionPool.GetStats()
+		metrics["connection_pool"] = poolStats
+	}
+
+	return metrics
 }
 
 // HealthCheck 健康检查
@@ -313,13 +329,18 @@ func (adapter *GRPCAdapter) HealthCheck(ctx context.Context) error {
 		return fmt.Errorf("adapter not connected")
 	}
 
-	// 检查至少一个连接是否可用
-	for address, conn := range adapter.connections {
-		if conn.conn != nil {
-			// 简单的状态检查
-			state := conn.conn.GetState()
-			log.Printf("Connection %s state: %v", address, state)
-		}
+	if adapter.connectionPool == nil {
+		return fmt.Errorf("connection pool not initialized")
+	}
+
+	// 尝试获取一个连接来验证健康状态
+	connWrapper, err := adapter.connectionPool.GetConnection()
+	if err != nil {
+		return fmt.Errorf("failed to get healthy connection: %w", err)
+	}
+
+	if !connWrapper.IsHealthy() {
+		return fmt.Errorf("connection is not healthy")
 	}
 
 	return nil
@@ -339,115 +360,14 @@ func (adapter *GRPCAdapter) GetMetricsCollector() interfaces.DefaultMetricsColle
 
 // parseConfig 解析配置
 func (adapter *GRPCAdapter) parseConfig(cfg interfaces.Config) (*config.GRPCConfig, error) {
+	// 如果传入的是gRPC配置类型，直接使用
+	if gCfg, ok := cfg.(*config.GRPCConfig); ok {
+		return gCfg, nil
+	}
+	
+	// 使用默认配置
 	grpcConfig := config.NewDefaultGRPCConfig()
-
-	if address, ok := cfg["address"].(string); ok {
-		grpcConfig.Connection.Address = address
-	}
-	if port, ok := cfg["port"].(int); ok {
-		grpcConfig.Connection.Port = port
-	}
-	if timeout, ok := cfg["timeout"].(time.Duration); ok {
-		grpcConfig.Connection.Timeout = timeout
-	}
-	if serviceName, ok := cfg["service_name"].(string); ok {
-		grpcConfig.GRPCSpecific.ServiceName = serviceName
-	}
-	if methodName, ok := cfg["method_name"].(string); ok {
-		grpcConfig.GRPCSpecific.MethodName = methodName
-	}
-	if testCase, ok := cfg["test_case"].(string); ok {
-		grpcConfig.BenchMark.TestCase = testCase
-	}
-	if parallels, ok := cfg["parallels"].(int); ok {
-		grpcConfig.BenchMark.Parallels = parallels
-		grpcConfig.Connection.Pool.PoolSize = parallels
-	}
-	if total, ok := cfg["total"].(int); ok {
-		grpcConfig.BenchMark.Total = total
-	}
-
 	return grpcConfig, nil
-}
-
-// createConnectionPool 创建连接池
-func (adapter *GRPCAdapter) createConnectionPool(ctx context.Context) error {
-	poolSize := adapter.config.Connection.Pool.PoolSize
-	address := fmt.Sprintf("%s:%d", adapter.config.Connection.Address, adapter.config.Connection.Port)
-
-	for i := 0; i < poolSize; i++ {
-		conn, err := adapter.createConnection(ctx, address)
-		if err != nil {
-			return fmt.Errorf("failed to create connection %d: %w", i, err)
-		}
-
-		connectionKey := fmt.Sprintf("%s_%d", address, i)
-		adapter.connections[connectionKey] = &GRPCConnection{
-			conn:     conn,
-			address:  address,
-			lastUsed: time.Now(),
-		}
-	}
-
-	log.Printf("Created gRPC connection pool with %d connections", poolSize)
-	return nil
-}
-
-// createConnection 创建gRPC连接
-func (adapter *GRPCAdapter) createConnection(ctx context.Context, address string) (*grpc.ClientConn, error) {
-	var opts []grpc.DialOption
-
-	// TLS配置
-	if adapter.config.GRPCSpecific.TLS.Enabled {
-		var creds credentials.TransportCredentials
-		if adapter.config.GRPCSpecific.TLS.InsecureSkipVerify {
-			creds = credentials.NewTLS(nil)
-		} else {
-			creds = insecure.NewCredentials()
-		}
-		opts = append(opts, grpc.WithTransportCredentials(creds))
-	} else {
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	}
-
-	// Keep-alive配置
-	if adapter.config.Connection.KeepAlive {
-		kacp := keepalive.ClientParameters{
-			Time:                adapter.config.Connection.KeepAlivePeriod,
-			Timeout:             10 * time.Second,
-			PermitWithoutStream: true,
-		}
-		opts = append(opts, grpc.WithKeepaliveParams(kacp))
-	}
-
-	// 负载均衡
-	opts = append(opts, grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"loadBalancingConfig": [{"%s":{}}]}`,
-		adapter.config.GRPCSpecific.LoadBalancing)))
-
-	// 创建连接
-	conn, err := grpc.DialContext(ctx, address, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial gRPC server: %w", err)
-	}
-
-	return conn, nil
-}
-
-// getConnection 获取可用连接
-func (adapter *GRPCAdapter) getConnection() (*grpc.ClientConn, error) {
-	adapter.mu.RLock()
-	defer adapter.mu.RUnlock()
-
-	// 简单的轮询策略
-	for _, conn := range adapter.connections {
-		conn.mu.Lock()
-		conn.lastUsed = time.Now()
-		result := conn.conn
-		conn.mu.Unlock()
-		return result, nil
-	}
-
-	return nil, fmt.Errorf("no available connections")
 }
 
 // addAuthMetadata 添加认证metadata
@@ -465,7 +385,6 @@ func (adapter *GRPCAdapter) addAuthMetadata(ctx context.Context) context.Context
 		}
 	case "basic":
 		if adapter.config.GRPCSpecific.Auth.Username != "" && adapter.config.GRPCSpecific.Auth.Password != "" {
-			// 实际应用中应该进行Base64编码
 			md.Set("authorization", fmt.Sprintf("Basic %s:%s",
 				adapter.config.GRPCSpecific.Auth.Username,
 				adapter.config.GRPCSpecific.Auth.Password))
@@ -496,11 +415,11 @@ func (adapter *GRPCAdapter) recordMetrics(operationType string, duration time.Du
 
 	// 记录到指标收集器
 	if adapter.metricsCollector != nil {
-		adapter.metricsCollector.RecordLatency(operationType, duration)
-		if success {
-			adapter.metricsCollector.IncrementCounter("grpc_successful_calls")
-		} else {
-			adapter.metricsCollector.IncrementCounter("grpc_failed_calls")
+		result := &interfaces.OperationResult{
+			Success:  success,
+			Duration: duration,
+			IsRead:   false, // gRPC调用一般被视为写操作
 		}
+		adapter.metricsCollector.Record(result)
 	}
 }

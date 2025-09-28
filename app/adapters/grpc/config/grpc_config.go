@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 )
 
@@ -45,6 +46,8 @@ type BenchmarkConfig struct {
 	RandomKeys   int           `yaml:"random_keys" json:"random_keys"`
 	TestCase     string        `yaml:"test_case" json:"test_case"`
 	Duration     time.Duration `yaml:"duration" json:"duration"`
+	Timeout      time.Duration `yaml:"timeout" json:"timeout"`
+	RampUp       time.Duration `yaml:"ramp_up" json:"ramp_up"`
 }
 
 // GRPCSpecificConfig gRPC特定配置
@@ -114,6 +117,8 @@ func NewDefaultGRPCConfig() *GRPCConfig {
 			RandomKeys:  1000,
 			TestCase:    "unary_call",
 			Duration:    60 * time.Second,
+			Timeout:     30 * time.Second,
+			RampUp:      5 * time.Second,
 		},
 		GRPCSpecific: GRPCSpecificConfig{
 			ServiceName:    "TestService",
@@ -197,6 +202,15 @@ func (c *GRPCConfig) Validate() error {
 	
 	if c.GRPCSpecific.MethodName == "" {
 		return fmt.Errorf("method name cannot be empty")
+	}
+	
+	// 验证ExecutionEngine相关配置
+	if c.BenchMark.Timeout <= 0 {
+		return fmt.Errorf("timeout must be greater than 0")
+	}
+	
+	if c.BenchMark.RampUp < 0 {
+		return fmt.Errorf("ramp up duration cannot be negative")
 	}
 	
 	// 验证负载均衡策略
@@ -307,3 +321,21 @@ func (b *BenchmarkConfig) GetRandomKeys() int {
 func (b *BenchmarkConfig) GetTestCase() string {
 	return b.TestCase
 }
+
+// GetDuration 实现execution.BenchmarkConfig接口
+func (b *BenchmarkConfig) GetDuration() time.Duration {
+	return b.Duration
+}
+
+// GetTimeout 实现execution.BenchmarkConfig接口
+func (b *BenchmarkConfig) GetTimeout() time.Duration {
+	return b.Timeout
+}
+
+// GetRampUp 实现execution.BenchmarkConfig接口
+func (b *BenchmarkConfig) GetRampUp() time.Duration {
+	return b.RampUp
+}
+
+// 确保BenchmarkConfig实现了execution.BenchmarkConfig接口
+var _ execution.BenchmarkConfig = (*BenchmarkConfig)(nil)

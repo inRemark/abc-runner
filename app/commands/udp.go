@@ -70,7 +70,7 @@ func (u *UDPCommandHandler) Execute(ctx context.Context, args []string) error {
 		fmt.Printf("⚠️  Connection setup failed for %s:%d: %v\n", config.Connection.Address, config.Connection.Port, err)
 		fmt.Printf("🔍 Possible causes: Target unreachable, port blocked, or configuration error\n")
 	} else {
-		fmt.Printf("✅ Successfully configured UDP connection to %s:%d (%s mode)\n", 
+		fmt.Printf("✅ Successfully configured UDP connection to %s:%d (%s mode)\n",
 			config.Connection.Address, config.Connection.Port, config.UDPSpecific.PacketMode)
 	}
 	defer adapter.Close()
@@ -79,7 +79,7 @@ func (u *UDPCommandHandler) Execute(ctx context.Context, args []string) error {
 	fmt.Printf("🚀 Starting UDP performance test...\n")
 	fmt.Printf("Target: %s:%d\n", config.Connection.Address, config.Connection.Port)
 	fmt.Printf("Test Case: %s, Packet Mode: %s\n", config.BenchMark.TestCase, config.UDPSpecific.PacketMode)
-	fmt.Printf("Packets: %d, Concurrency: %d, Packet Size: %d bytes\n", 
+	fmt.Printf("Packets: %d, Concurrency: %d, Packet Size: %d bytes\n",
 		config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.DataSize)
 
 	if config.UDPSpecific.PacketMode == "multicast" {
@@ -257,7 +257,7 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 	engine := execution.NewExecutionEngine(adapter, collector, factory)
 
 	// 执行测试
-	fmt.Printf("📊 Sending %d packets with %d concurrent workers...\n", 
+	fmt.Printf("📊 Sending %d packets with %d concurrent workers...\n",
 		config.BenchMark.Total, config.BenchMark.Parallels)
 
 	startTime := time.Now()
@@ -269,7 +269,7 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 	}
 
 	fmt.Printf("✅ Test completed in %v\n", duration)
-	fmt.Printf("📈 Processed %d packets (%d successful, %d failed)\n", 
+	fmt.Printf("📈 Processed %d packets (%d successful, %d failed)\n",
 		result.CompletedJobs, result.SuccessJobs, result.FailedJobs)
 
 	return nil
@@ -278,12 +278,12 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 // runSimulationTest 运行模拟测试
 func (u *UDPCommandHandler) runSimulationTest(config *udpConfig.UDPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("🎭 Running UDP simulation test...\n")
-	
+
 	// 模拟数据包发送
 	for i := 0; i < config.BenchMark.Total; i++ {
 		// 模拟网络延迟
 		time.Sleep(time.Microsecond * time.Duration(100+i%500))
-		
+
 		// 创建模拟结果
 		result := &interfaces.OperationResult{
 			Success:  true,
@@ -292,25 +292,25 @@ func (u *UDPCommandHandler) runSimulationTest(config *udpConfig.UDPConfig, colle
 			Error:    nil,
 			Value:    u.generatePacketData(config.BenchMark.DataSize, i),
 			Metadata: map[string]interface{}{
-				"simulated":     true,
-				"test_case":     config.BenchMark.TestCase,
-				"packet_size":   config.BenchMark.DataSize,
-				"packet_id":     i,
-				"packet_mode":   config.UDPSpecific.PacketMode,
+				"simulated":      true,
+				"test_case":      config.BenchMark.TestCase,
+				"packet_size":    config.BenchMark.DataSize,
+				"packet_id":      i,
+				"packet_mode":    config.UDPSpecific.PacketMode,
 				"loss_simulated": false,
 			},
 		}
-		
+
 		// 模拟UDP丢包（约5%的丢包率）
 		if i%20 == 0 {
 			result.Success = false
 			result.Error = fmt.Errorf("simulated packet loss for packet %d", i)
 			result.Metadata["loss_simulated"] = true
 		}
-		
+
 		collector.Record(result)
 	}
-	
+
 	fmt.Printf("✅ Simulation completed with %d packets\n", config.BenchMark.Total)
 	return nil
 }
@@ -318,20 +318,20 @@ func (u *UDPCommandHandler) runSimulationTest(config *udpConfig.UDPConfig, colle
 // generateReport 生成报告
 func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	snapshot := collector.Snapshot()
-	
+
 	fmt.Printf("\n📊 UDP Performance Test Results:\n")
 	fmt.Printf("=====================================\n")
-	
+
 	// 核心指标
 	core := snapshot.Core
 	fmt.Printf("Total Packets: %d\n", core.Operations.Total)
-	fmt.Printf("Successful: %d (%.2f%%)\n", core.Operations.Success, 
+	fmt.Printf("Successful: %d (%.2f%%)\n", core.Operations.Success,
 		float64(core.Operations.Success)/float64(core.Operations.Total)*100)
 	fmt.Printf("Failed/Lost: %d (%.2f%%)\n", core.Operations.Failed,
 		float64(core.Operations.Failed)/float64(core.Operations.Total)*100)
 	fmt.Printf("Sent Packets: %d\n", core.Operations.Write)
 	fmt.Printf("Received Packets: %d\n", core.Operations.Read)
-	
+
 	// 延迟指标（UDP应该有很低的延迟）
 	fmt.Printf("\nLatency Metrics:\n")
 	fmt.Printf("  Average: %v\n", core.Latency.Average)
@@ -341,25 +341,25 @@ func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  P90: %v\n", core.Latency.P90)
 	fmt.Printf("  P95: %v\n", core.Latency.P95)
 	fmt.Printf("  P99: %v\n", core.Latency.P99)
-	
+
 	// 吞吐量指标
 	fmt.Printf("\nThroughput Metrics:\n")
 	fmt.Printf("  Packets Per Second: %.2f\n", core.Throughput.RPS)
 	fmt.Printf("  Send PPS: %.2f\n", core.Throughput.WriteRPS)
 	fmt.Printf("  Receive PPS: %.2f\n", core.Throughput.ReadRPS)
-	
+
 	// UDP特定指标
 	fmt.Printf("\nUDP Specific Metrics:\n")
 	for key, value := range snapshot.Protocol {
 		fmt.Printf("  %s: %v\n", key, value)
 	}
-	
+
 	// 系统指标
 	fmt.Printf("\nSystem Metrics:\n")
 	fmt.Printf("  Memory Usage: %d MB\n", snapshot.System.MemoryUsage.InUse/1024/1024)
 	fmt.Printf("  Goroutines: %d\n", snapshot.System.GoroutineCount)
 	fmt.Printf("  GC Count: %d\n", snapshot.System.GCStats.NumGC)
-	
+
 	fmt.Printf("\nTest Duration: %v\n", core.Duration)
 	fmt.Printf("=====================================\n")
 
@@ -373,16 +373,16 @@ func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 // generatePacketData 生成数据包数据
 func (u *UDPCommandHandler) generatePacketData(size, packetId int) []byte {
 	data := make([]byte, size)
-	
+
 	// 前8字节作为包ID和序列号
 	for i := 0; i < 8 && i < size; i++ {
 		data[i] = byte((packetId >> (8 * (7 - i))) & 0xFF)
 	}
-	
+
 	// 其余字节为模式数据
 	for i := 8; i < size; i++ {
 		data[i] = byte(i % 256)
 	}
-	
+
 	return data
 }

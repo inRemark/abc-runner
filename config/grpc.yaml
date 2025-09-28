@@ -1,4 +1,4 @@
-# gRPC协议配置文件
+# gRPC协议配置文件 - 针对ExecutionEngine优化
 grpc:
   # 连接配置
   connection:
@@ -8,20 +8,22 @@ grpc:
     keep_alive: true          # 启用Keep-Alive
     keep_alive_period: "30s"  # Keep-Alive周期
     
-    # 连接池配置
+    # 连接池配置 - 针对ExecutionEngine优化
     pool:
-      pool_size: 10           # 连接池大小
-      min_idle: 1             # 最小空闲连接数
-      max_idle: 5             # 最大空闲连接数
+      pool_size: 20           # 连接池大小 (建议为并发数的2倍)
+      min_idle: 2             # 最小空闲连接数
+      max_idle: 10            # 最大空闲连接数
       idle_timeout: "300s"    # 空闲连接超时时间
       connection_timeout: "30s" # 创建连接超时时间
 
-  # 基准测试配置
+  # 基准测试配置 - ExecutionEngine集成
   benchmark:
-    total: 1000               # 总RPC调用数
-    parallels: 10             # 并发客户端数
+    total: 5000               # 总RPC调用数
+    parallels: 20             # 并发客户端数
     data_size: 1024           # 请求数据大小（字节）
-    duration: "60s"           # 测试持续时间
+    duration: "120s"          # 测试持续时间
+    timeout: "30s"            # 单次操作超时
+    ramp_up: "10s"            # 渐进加载时间
     read_percent: 80          # 读操作百分比
     random_keys: 1000         # 随机键数量
     test_case: "unary_call"   # 测试用例：unary_call, server_stream, client_stream, bidirectional_stream
@@ -61,7 +63,13 @@ grpc:
       timeout: true              # 启用超时拦截器
 
 # 测试用例说明：
-# - unary_call: 一元RPC调用测试
-# - server_stream: 服务端流测试
-# - client_stream: 客户端流测试
-# - bidirectional_stream: 双向流测试
+# - unary_call: 一元RPC调用测试 - 适合低延迟场景
+# - server_stream: 服务端流测试 - 适合数据推送场景
+# - client_stream: 客户端流测试 - 适合批量上传场景
+# - bidirectional_stream: 双向流测试 - 适合实时交互场景
+
+# ExecutionEngine 性能优化建议：
+# 1. MaxWorkers 建议设置为 parallels * 3
+# 2. JobBufferSize 建议设置为 parallels * 10
+# 3. ResultBufferSize 建议设置为 parallels * 10
+# 4. RampUp 策略避免服务端瞬时压力

@@ -1,0 +1,43 @@
+### GET: Retrieve an item by ID
+GET http://localhost:80/api/item?id=99
+Accept: application/json
+
+### POST: Create a new item
+POST http://localhost:80/api/item
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "New Item",
+  "description": "A sample item."
+}
+
+### PUT: Update an existing item
+PUT http://localhost:80/api/item?id=99
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Updated Item",
+  "description": "Updated description."
+}
+
+### PATCH: Partially update an item
+PATCH http://localhost:80/api/item?id=99
+Content-Type: application/json
+Accept: application/json
+
+{
+  "description": "Partially updated description."
+}
+
+### DELETE: Remove an item
+DELETE http://localhost:80/api/item?id=99
+Accept: application/json
+
+### POST: Upload a file
+POST http://localhost:80/api/item/upload
+Content-Type: multipart/form-data
+Accept: application/json
+
+file=@/path/to/example.txt

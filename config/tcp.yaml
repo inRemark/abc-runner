@@ -3,7 +3,7 @@ tcp:
   # 连接配置
   connection:
     address: "localhost"       # 服务器地址
-    port: 8080                # 服务器端口
+    port: 9090                # 服务器端口（设计文档要求的默认端口）
     timeout: "30s"            # 连接超时时间
     keep_alive: true          # 启用TCP Keep-Alive
     keep_alive_period: "30s"  # Keep-Alive周期
@@ -11,8 +11,8 @@ tcp:
     # 连接池配置
     pool:
       pool_size: 10           # 连接池大小
-      min_idle: 1             # 最小空闲连接数
-      max_idle: 5             # 最大空闲连接数
+      min_idle: 2             # 最小空闲连接数（设计文档优化值）
+      max_idle: 8             # 最大空闲连接数（设计文档优化值）
       idle_timeout: "300s"    # 空闲连接超时时间
       connection_timeout: "30s" # 创建连接超时时间
 
@@ -39,3 +39,10 @@ tcp:
 # - send_only: 仅发送数据，不等待响应
 # - receive_only: 仅接收数据流
 # - bidirectional: 双向数据传输测试
+
+# 设计文档优化配置说明：
+# - 默认端口改为9090（服务器测试场景）
+# - 连接池最小空闲连接数设为2（预连接优化）
+# - 连接池最大空闲连接数设为8（避免资源浪费）
+# - 支持四种专门的TCP测试场景
+# - 优化了缓冲区大小和TCP选项
