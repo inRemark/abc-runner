@@ -39,3 +39,5 @@ kafka
 redis
 test_reporting
 test-reports
+servers/bin/
+servers/http-server
