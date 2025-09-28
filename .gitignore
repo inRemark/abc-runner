@@ -26,7 +26,8 @@ releases/*
 abc-runner
 test_output_*.json
 backup-refactor-archive
-
+servers/bin/
+servers/http-server
 app/core/di/di.md
 .backup
 *.backup

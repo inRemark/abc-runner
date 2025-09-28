@@ -6,7 +6,7 @@
 
 ### 目录结构
 
-```
+```bash
 servers/
 ├── README.md                   # 本文档
 ├── cmd/                        # 服务端可执行程序
@@ -53,24 +53,28 @@ servers/
 ## 支持的协议
 
 ### HTTP服务端
+
 - 支持 GET/POST/PUT/DELETE 等常用HTTP方法
 - 支持 JSON/XML/文本响应格式
 - 可配置响应延迟和状态码
 - 支持负载模拟
 
 ### TCP服务端
+
 - 支持多连接并发处理
 - 提供回显服务功能
 - 支持单向/双向通信模式
 - 支持长连接 Keep-Alive
 
 ### UDP服务端
+
 - 支持单播/组播/广播响应
 - 支持数据包验证
 - 可配置丢包率模拟
 - 支持最大数据包大小限制
 
 ### gRPC服务端
+
 - 支持一元调用、服务端流、客户端流、双向流
 - 支持TLS安全传输
 - 支持Token认证
@@ -79,12 +83,14 @@ servers/
 ## 快速开始
 
 ### 启动所有服务端
+
 ```bash
 cd servers
 ./scripts/start-all.sh
 ```
 
 ### 启动单个服务端
+
 ```bash
 # HTTP服务端
 ./cmd/http-server/http-server --config config/servers/http-server.yaml
@@ -100,6 +106,7 @@ cd servers
 ```
 
 ### 健康检查
+
 ```bash
 ./scripts/health-check.sh
 ```
@@ -107,6 +114,7 @@ cd servers
 ## 配置说明
 
 每个服务端都有独立的配置文件，支持以下配置类别：
+
 - 网络配置（监听地址、端口）
 - 协议配置（协议特定参数）
 - 性能配置（并发数、缓冲区大小）
@@ -118,6 +126,7 @@ cd servers
 ## 测试集成
 
 这些服务端模块作为 abc-runner 的测试目标，为以下测试场景提供支持：
+
 - 协议适配器功能测试
 - 性能压力测试
 - 网络连接测试
@@ -127,6 +136,7 @@ cd servers
 ## 监控和日志
 
 所有服务端提供统一的监控和日志接口：
+
 - 健康检查端点
 - 运行状态指标
 - 结构化日志输出
