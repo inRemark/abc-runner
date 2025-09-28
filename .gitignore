@@ -25,6 +25,7 @@ reports/*
 releases/*
 abc-runner
 test_output_*.json
+backup-refactor-archive
 
 app/core/di/di.md
 .backup
