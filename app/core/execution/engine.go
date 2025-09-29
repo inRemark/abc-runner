@@ -21,9 +21,9 @@ type BenchmarkConfig interface {
 
 // Job 表示一个待执行的任务
 type Job struct {
-	ID        int                    // 任务ID
-	Operation interfaces.Operation  // 操作定义
-	Context   context.Context       // 执行上下文
+	ID        int                  // 任务ID
+	Operation interfaces.Operation // 操作定义
+	Context   context.Context      // 执行上下文
 }
 
 // ExecutionResult 执行结果
@@ -44,24 +44,24 @@ type OperationFactory interface {
 
 // ExecutionEngine 通用执行引擎
 type ExecutionEngine struct {
-	adapter          interfaces.ProtocolAdapter       // 协议适配器
+	adapter          interfaces.ProtocolAdapter         // 协议适配器
 	metricsCollector interfaces.DefaultMetricsCollector // 指标收集器
 	operationFactory OperationFactory                   // 操作工厂
-	
+
 	// 状态管理
-	isRunning        int32 // 原子操作标记
-	mutex            sync.RWMutex
-	
+	isRunning int32 // 原子操作标记
+	mutex     sync.RWMutex
+
 	// 监控数据
-	totalJobs        int64 // 总任务数
-	completedJobs    int64 // 完成任务数  
-	successJobs      int64 // 成功任务数
-	failedJobs       int64 // 失败任务数
-	
+	totalJobs     int64 // 总任务数
+	completedJobs int64 // 完成任务数
+	successJobs   int64 // 成功任务数
+	failedJobs    int64 // 失败任务数
+
 	// 配置
-	maxWorkers       int           // 最大工作协程数
-	jobBufferSize    int           // 任务缓冲区大小
-	resultBufferSize int           // 结果缓冲区大小
+	maxWorkers       int // 最大工作协程数
+	jobBufferSize    int // 任务缓冲区大小
+	resultBufferSize int // 结果缓冲区大小
 }
 
 // NewExecutionEngine 创建新的执行引擎
@@ -116,7 +116,7 @@ func (e *ExecutionEngine) RunBenchmark(ctx context.Context, config BenchmarkConf
 	atomic.StoreInt64(&e.failedJobs, 0)
 
 	startTime := time.Now()
-	
+
 	// 确定工作协程数
 	workerCount := config.GetParallels()
 	if workerCount <= 0 {
@@ -129,21 +129,21 @@ func (e *ExecutionEngine) RunBenchmark(ctx context.Context, config BenchmarkConf
 	// 创建通道
 	jobChan := make(chan Job, e.jobBufferSize)
 	resultChan := make(chan *interfaces.OperationResult, e.resultBufferSize)
-	
+
 	// 创建工作协程组
 	var workerWG sync.WaitGroup
-	
+
 	// 启动工作协程
 	for i := 0; i < workerCount; i++ {
 		workerWG.Add(1)
 		go e.worker(ctx, &workerWG, jobChan, resultChan)
 	}
-	
+
 	// 启动结果收集协程
 	var resultWG sync.WaitGroup
 	resultWG.Add(1)
 	go e.resultCollector(&resultWG, resultChan)
-	
+
 	// 创建任务生成上下文（支持超时和持续时间）
 	jobCtx := ctx
 	if duration := config.GetDuration(); duration > 0 {
@@ -151,28 +151,28 @@ func (e *ExecutionEngine) RunBenchmark(ctx context.Context, config BenchmarkConf
 		jobCtx, cancel = context.WithTimeout(ctx, duration)
 		defer cancel()
 	}
-	
+
 	// 渐进加载
 	if rampUp := config.GetRampUp(); rampUp > 0 {
 		e.generateJobsWithRampUp(jobCtx, config, jobChan)
 	} else {
 		e.generateJobs(jobCtx, config, jobChan)
 	}
-	
+
 	// 关闭任务通道
 	close(jobChan)
-	
+
 	// 等待所有工作协程完成
 	workerWG.Wait()
-	
+
 	// 关闭结果通道
 	close(resultChan)
-	
+
 	// 等待结果收集完成
 	resultWG.Wait()
-	
+
 	endTime := time.Now()
-	
+
 	// 构建执行结果
 	result := &ExecutionResult{
 		TotalJobs:     atomic.LoadInt64(&e.totalJobs),
@@ -183,31 +183,31 @@ func (e *ExecutionEngine) RunBenchmark(ctx context.Context, config BenchmarkConf
 		StartTime:     startTime,
 		EndTime:       endTime,
 	}
-	
+
 	return result, nil
 }
 
 // worker 工作协程
 func (e *ExecutionEngine) worker(ctx context.Context, wg *sync.WaitGroup, jobChan <-chan Job, resultChan chan<- *interfaces.OperationResult) {
 	defer wg.Done()
-	
+
 	for {
 		select {
 		case job, ok := <-jobChan:
 			if !ok {
 				return // 任务通道已关闭
 			}
-			
+
 			// 执行任务
 			result := e.executeJob(job)
-			
+
 			// 发送结果
 			select {
 			case resultChan <- result:
 			case <-ctx.Done():
 				return
 			}
-			
+
 			// 更新完成计数
 			atomic.AddInt64(&e.completedJobs, 1)
 			if result.Success {
@@ -215,7 +215,7 @@ func (e *ExecutionEngine) worker(ctx context.Context, wg *sync.WaitGroup, jobCha
 			} else {
 				atomic.AddInt64(&e.failedJobs, 1)
 			}
-			
+
 		case <-ctx.Done():
 			return
 		}
@@ -226,13 +226,13 @@ func (e *ExecutionEngine) worker(ctx context.Context, wg *sync.WaitGroup, jobCha
 func (e *ExecutionEngine) executeJob(job Job) *interfaces.OperationResult {
 	// 测量执行时间
 	startTime := time.Now()
-	
+
 	// 使用适配器执行操作
 	result, err := e.adapter.Execute(job.Context, job.Operation)
-	
+
 	// 计算执行时间
 	duration := time.Since(startTime)
-	
+
 	if err != nil {
 		// 如果适配器返回错误，创建失败结果
 		return &interfaces.OperationResult{
@@ -242,7 +242,7 @@ func (e *ExecutionEngine) executeJob(job Job) *interfaces.OperationResult {
 			IsRead:   false, // 默认为写操作，具体可以从operation中获取
 		}
 	}
-	
+
 	if result == nil {
 		// 如果结果为空，创建默认失败结果
 		return &interfaces.OperationResult{
@@ -252,20 +252,20 @@ func (e *ExecutionEngine) executeJob(job Job) *interfaces.OperationResult {
 			IsRead:   false,
 		}
 	}
-	
+
 	// 确保结果中有正确的执行时间
 	// 如果适配器返回的结果中没有或时间为0，使用我们测量的时间
 	if result.Duration == 0 {
 		result.Duration = duration
 	}
-	
+
 	return result
 }
 
 // resultCollector 结果收集协程
 func (e *ExecutionEngine) resultCollector(wg *sync.WaitGroup, resultChan <-chan *interfaces.OperationResult) {
 	defer wg.Done()
-	
+
 	for result := range resultChan {
 		// 记录到指标收集器
 		if e.metricsCollector != nil {
@@ -278,7 +278,7 @@ func (e *ExecutionEngine) resultCollector(wg *sync.WaitGroup, resultChan <-chan 
 func (e *ExecutionEngine) generateJobs(ctx context.Context, config BenchmarkConfig, jobChan chan<- Job) {
 	total := config.GetTotal()
 	atomic.StoreInt64(&e.totalJobs, int64(total))
-	
+
 	for i := 0; i < total; i++ {
 		select {
 		case <-ctx.Done():
@@ -286,14 +286,14 @@ func (e *ExecutionEngine) generateJobs(ctx context.Context, config BenchmarkConf
 		default:
 			// 创建操作
 			operation := e.operationFactory.CreateOperation(i, config)
-			
+
 			// 创建任务
 			job := Job{
 				ID:        i,
 				Operation: operation,
 				Context:   ctx,
 			}
-			
+
 			// 发送任务
 			select {
 			case jobChan <- job:
@@ -309,16 +309,16 @@ func (e *ExecutionEngine) generateJobsWithRampUp(ctx context.Context, config Ben
 	total := config.GetTotal()
 	rampUp := config.GetRampUp()
 	atomic.StoreInt64(&e.totalJobs, int64(total))
-	
+
 	// 计算渐进间隔
 	interval := rampUp / time.Duration(total)
 	if interval < time.Microsecond {
 		interval = time.Microsecond // 最小间隔
 	}
-	
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	
+
 	for i := 0; i < total; i++ {
 		select {
 		case <-ctx.Done():
@@ -326,14 +326,14 @@ func (e *ExecutionEngine) generateJobsWithRampUp(ctx context.Context, config Ben
 		case <-ticker.C:
 			// 创建操作
 			operation := e.operationFactory.CreateOperation(i, config)
-			
+
 			// 创建任务
 			job := Job{
 				ID:        i,
 				Operation: operation,
 				Context:   ctx,
 			}
-			
+
 			// 发送任务
 			select {
 			case jobChan <- job:

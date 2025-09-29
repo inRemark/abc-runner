@@ -10,20 +10,20 @@ import (
 
 // TCPConfig TCP协议配置
 type TCPConfig struct {
-	Protocol       string            `yaml:"protocol" json:"protocol"`
-	Connection     ConnectionConfig  `yaml:"connection" json:"connection"`
-	BenchMark      BenchmarkConfig   `yaml:"benchmark" json:"benchmark"`
-	TCPSpecific    TCPSpecificConfig `yaml:"tcp_specific" json:"tcp_specific"`
+	Protocol    string            `yaml:"protocol" json:"protocol"`
+	Connection  ConnectionConfig  `yaml:"connection" json:"connection"`
+	BenchMark   BenchmarkConfig   `yaml:"benchmark" json:"benchmark"`
+	TCPSpecific TCPSpecificConfig `yaml:"tcp_specific" json:"tcp_specific"`
 }
 
 // ConnectionConfig 连接配置
 type ConnectionConfig struct {
-	Address           string        `yaml:"address" json:"address"`
-	Port              int           `yaml:"port" json:"port"`
-	Timeout           time.Duration `yaml:"timeout" json:"timeout"`
-	KeepAlive         bool          `yaml:"keep_alive" json:"keep_alive"`
-	KeepAlivePeriod   time.Duration `yaml:"keep_alive_period" json:"keep_alive_period"`
-	Pool              PoolConfig    `yaml:"pool" json:"pool"`
+	Address         string        `yaml:"address" json:"address"`
+	Port            int           `yaml:"port" json:"port"`
+	Timeout         time.Duration `yaml:"timeout" json:"timeout"`
+	KeepAlive       bool          `yaml:"keep_alive" json:"keep_alive"`
+	KeepAlivePeriod time.Duration `yaml:"keep_alive_period" json:"keep_alive_period"`
+	Pool            PoolConfig    `yaml:"pool" json:"pool"`
 }
 
 // PoolConfig 连接池配置
@@ -37,14 +37,14 @@ type PoolConfig struct {
 
 // BenchmarkConfig 基准测试配置
 type BenchmarkConfig struct {
-	Total        int           `yaml:"total" json:"total"`
-	Parallels    int           `yaml:"parallels" json:"parallels"`
-	DataSize     int           `yaml:"data_size" json:"data_size"`
-	TTL          time.Duration `yaml:"ttl" json:"ttl"`
-	ReadPercent  int           `yaml:"read_percent" json:"read_percent"`
-	RandomKeys   int           `yaml:"random_keys" json:"random_keys"`
-	TestCase     string        `yaml:"test_case" json:"test_case"`
-	Duration     time.Duration `yaml:"duration" json:"duration"`
+	Total       int           `yaml:"total" json:"total"`
+	Parallels   int           `yaml:"parallels" json:"parallels"`
+	DataSize    int           `yaml:"data_size" json:"data_size"`
+	TTL         time.Duration `yaml:"ttl" json:"ttl"`
+	ReadPercent int           `yaml:"read_percent" json:"read_percent"`
+	RandomKeys  int           `yaml:"random_keys" json:"random_keys"`
+	TestCase    string        `yaml:"test_case" json:"test_case"`
+	Duration    time.Duration `yaml:"duration" json:"duration"`
 }
 
 // TCPSpecificConfig TCP特定配置
@@ -113,23 +113,23 @@ func (c *TCPConfig) Validate() error {
 	if c.Connection.Address == "" {
 		return fmt.Errorf("connection address cannot be empty")
 	}
-	
+
 	if c.Connection.Port <= 0 || c.Connection.Port > 65535 {
 		return fmt.Errorf("invalid port number: %d", c.Connection.Port)
 	}
-	
+
 	if c.BenchMark.Total <= 0 {
 		return fmt.Errorf("total operations must be greater than 0")
 	}
-	
+
 	if c.BenchMark.Parallels <= 0 {
 		return fmt.Errorf("parallel connections must be greater than 0")
 	}
-	
+
 	if c.BenchMark.DataSize <= 0 {
 		return fmt.Errorf("data size must be greater than 0")
 	}
-	
+
 	// 验证测试用例
 	validTestCases := []string{"echo_test", "send_only", "receive_only", "bidirectional"}
 	valid := false
@@ -140,10 +140,10 @@ func (c *TCPConfig) Validate() error {
 		}
 	}
 	if !valid {
-		return fmt.Errorf("invalid test case: %s, valid options: %s", 
+		return fmt.Errorf("invalid test case: %s, valid options: %s",
 			c.BenchMark.TestCase, strings.Join(validTestCases, ", "))
 	}
-	
+
 	return nil
 }
 

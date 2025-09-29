@@ -16,6 +16,7 @@ __debug_bin
 gopath/
 
 .DS_Store
+.backup
 .qoder
 vendor
 logs
@@ -23,23 +24,6 @@ bin/*
 build/*
 reports/*
 releases/*
-abc-runner
-test_output_*.json
 backup-refactor-archive
 servers/bin/
-servers/http-server
 app/core/di/di.md
-.backup
-*.backup
-**/*.backup
-test-binary
-abc-runner-v3
-benchmark
-http
-kafka
-redis
-test_reporting
-test-reports
-servers/bin/
-servers/http-server
-test-build
