@@ -8,6 +8,7 @@ import (
 
 	"abc-runner/app/adapters/http"
 	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/adapters/http/operations"
 	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -224,7 +225,7 @@ func (h *HttpCommandHandler) runConcurrentTest(ctx context.Context, adapter inte
 	benchmarkConfig := http.NewBenchmarkConfigAdapter(&config.Benchmark)
 
 	// 创建操作工厂
-	operationFactory := http.NewOperationFactory(config)
+	operationFactory := operations.NewHttpOperationFactory(config)
 
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)

@@ -6,379 +6,130 @@ import (
 	"sync"
 	"time"
 
-	redisconfig "abc-runner/app/adapters/redis/config"
-	"abc-runner/app/core/base"
+	redisConfig "abc-runner/app/adapters/redis/config"
+	"abc-runner/app/adapters/redis/connection"
+	operation "abc-runner/app/adapters/redis/operations"
 	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/utils"
 
 	"github.com/go-redis/redis/v8"
 )
 
-// RedisAdapter Redis协议适配器
+// RedisAdapter Redis协议适配器 - 基于operations.go工厂模式
 type RedisAdapter struct {
-	*base.BaseAdapter
-	client           redis.Cmdable
-	clusterClient    *redis.ClusterClient
-	standaloneClient *redis.Client
-	mode             string
-	config           *redisconfig.RedisConfig
-	mutex            sync.RWMutex
+	// 核心组件
+	connectionPool    *connection.RedisConnectionPool
+	operationRegistry *utils.OperationRegistry
+	client            redis.Cmdable
+	config            *redisConfig.RedisConfig
+
+	// 指标收集器
+	metricsCollector interfaces.DefaultMetricsCollector
+
+	// 状态管理
+	isConnected bool
+	mutex       sync.RWMutex
+
+	// 统计信息
+	totalOperations   int64
+	successOperations int64
+	failedOperations  int64
+	startTime         time.Time
 }
 
-// NewRedisAdapter 创建 Redis适配器 - 纯新架构
+// NewRedisAdapter 创建Redis适配器 - 新架构
 func NewRedisAdapter(metricsCollector interfaces.DefaultMetricsCollector) *RedisAdapter {
-	adapter := &RedisAdapter{
-		BaseAdapter: base.NewBaseAdapter("redis", metricsCollector),
+	if metricsCollector == nil {
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
-	return adapter
+
+	return &RedisAdapter{
+		metricsCollector: metricsCollector,
+		startTime:        time.Now(),
+	}
 }
 
 // Connect 初始化连接
-func (r *RedisAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
-	// 提取Redis配置
-	var redisConfig *redisconfig.RedisConfig
-	if cfg, ok := cfg.(*redisconfig.RedisConfig); ok {
-		redisConfig = cfg
-	} else {
-		// 如果不是Redis配置，返回错误
-		return fmt.Errorf("invalid config type: expected *redisconfig.RedisConfig, got %T", cfg)
+func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	// 类型断言配置
+	redisConfig, ok := config.(*redisConfig.RedisConfig)
+	if !ok {
+		return fmt.Errorf("invalid config type for Redis adapter: expected *redisConfig.RedisConfig, got %T", config)
 	}
 
-	if err := r.ValidateConfig(cfg); err != nil {
+	// 验证配置
+	if err := redisConfig.Validate(); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 
 	r.config = redisConfig
-	r.mode = redisConfig.GetMode()
 
-	var client redis.Cmdable
-	var err error
-
-	switch r.mode {
-	case "standalone":
-		client, err = r.createStandaloneClient(redisConfig)
-	case "sentinel":
-		client, err = r.createSentinelClient(redisConfig)
-	case "cluster":
-		client, err = r.createClusterClient(redisConfig)
-	default:
-		return fmt.Errorf("unsupported Redis mode: %s", r.mode)
+	// 创建连接池
+	pool, err := connection.NewRedisConnectionPool(redisConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create Redis connection pool: %w", err)
 	}
 
-	if err != nil {
-		return fmt.Errorf("failed to create Redis client: %w", err)
+	r.connectionPool = pool
+
+	// 创建操作注册表并注册所有Redis操作
+	r.operationRegistry = utils.NewOperationRegistry()
+	operation.RegisterRedisOperations(r.operationRegistry)
+
+	// 获取客户端
+	client := pool.GetClient()
+	if client == nil {
+		return fmt.Errorf("failed to get Redis client from pool")
 	}
 
 	r.client = client
 
-	// 测试连接
+	// 执行健康检查
 	if err := r.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("connection health check failed: %w", err)
+		return fmt.Errorf("initial health check failed: %w", err)
 	}
 
-	r.SetConnected(true)
-	r.SetConfig(cfg)
-
+	r.isConnected = true
 	return nil
 }
 
-// Execute 执行操作
+// Execute 执行操作 - 使用operations.go工厂模式
 func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !r.IsConnected() {
 		return nil, fmt.Errorf("Redis adapter is not connected")
 	}
 
-	start := time.Now()
-	result := &interfaces.OperationResult{
-		IsRead: r.isReadOperation(operation.Type),
+	// 统计操作数
+	r.incrementTotalOperations()
+
+	// 验证操作是否支持
+	if err := r.ValidateOperation(operation.Type); err != nil {
+		r.incrementFailedOperations()
+		return &interfaces.OperationResult{
+			Success: false,
+			Error:   err,
+		}, err
 	}
 
-	switch operation.Type {
-	case "get":
-		value, err := r.executeGet(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
+	// 直接使用Redis客户端执行操作
+	result, err := r.executeRedisOperation(ctx, operation)
 
-	case "set":
-		err := r.executeSet(ctx, operation)
-		result.Error = err
-		result.Success = err == nil
-
-	case "del":
-		count, err := r.executeDelete(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "hget":
-		value, err := r.executeHGet(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
-
-	case "hset":
-		err := r.executeHSet(ctx, operation)
-		result.Error = err
-		result.Success = err == nil
-
-	case "pub":
-		err := r.executePublish(ctx, operation)
-		result.Error = err
-		result.Success = err == nil
-
-	case "set_get_random":
-		err := r.executeSetGetRandom(ctx, operation)
-		result.Error = err
-		result.Success = err == nil
-
-	// 新增的操作
-	case "incr":
-		value, err := r.executeIncr(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
-
-	case "decr":
-		value, err := r.executeDecr(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
-
-	case "lpush":
-		count, err := r.executeLPush(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "rpush":
-		count, err := r.executeRPush(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "lpop":
-		value, err := r.executeLPop(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
-
-	case "rpop":
-		value, err := r.executeRPop(ctx, operation)
-		result.Value = value
-		result.Error = err
-		result.Success = err == nil
-
-	case "sadd":
-		count, err := r.executeSAdd(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "smembers":
-		members, err := r.executeSMembers(ctx, operation)
-		result.Value = members
-		result.Error = err
-		result.Success = err == nil
-
-	case "srem":
-		count, err := r.executeSRem(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "sismember":
-		isMember, err := r.executeSIsMember(ctx, operation)
-		result.Value = isMember
-		result.Error = err
-		result.Success = err == nil
-
-	case "zadd":
-		count, err := r.executeZAdd(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "zrem":
-		count, err := r.executeZRem(ctx, operation)
-		result.Value = count
-		result.Error = err
-		result.Success = err == nil
-
-	case "zrange":
-		members, err := r.executeZRange(ctx, operation)
-		result.Value = members
-		result.Error = err
-		result.Success = err == nil
-
-	case "zrank":
-		rank, err := r.executeZRank(ctx, operation)
-		result.Value = rank
-		result.Error = err
-		result.Success = err == nil
-
-	case "hmset":
-		err := r.executeHMSet(ctx, operation)
-		result.Error = err
-		result.Success = err == nil
-
-	case "hmget":
-		values, err := r.executeHMGet(ctx, operation)
-		result.Value = values
-		result.Error = err
-		result.Success = err == nil
-
-	case "hgetall":
-		values, err := r.executeHGetAll(ctx, operation)
-		result.Value = values
-		result.Error = err
-		result.Success = err == nil
-
-	default:
-		return nil, fmt.Errorf("unsupported operation type: %s", operation.Type)
-	}
-
-	result.Duration = time.Since(start)
-
-	// 更新协议指标
-	r.updateOperationMetrics(operation.Type, result.Success, result.Duration)
-
-	// 记录操作到指标收集器
-	if metricsCollector := r.GetMetricsCollector(); metricsCollector != nil {
-		metricsCollector.Record(result)
-	}
-
-	return result, nil
-}
-
-// executeGet 执行GET操作
-func (r *RedisAdapter) executeGet(ctx context.Context, operation interfaces.Operation) (string, error) {
-	value, err := r.client.Get(ctx, operation.Key).Result()
-	if err == redis.Nil {
-		return "", nil // 键不存在，返回空字符串而不是错误
-	}
-	return value, err
-}
-
-// executeSet 执行SET操作
-func (r *RedisAdapter) executeSet(ctx context.Context, operation interfaces.Operation) error {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.Set(ctx, operation.Key, value, operation.TTL).Err()
-}
-
-// executeDelete 执行DELETE操作
-func (r *RedisAdapter) executeDelete(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	return r.client.Del(ctx, operation.Key).Result()
-}
-
-// executeHGet 执行HGET操作
-func (r *RedisAdapter) executeHGet(ctx context.Context, operation interfaces.Operation) (string, error) {
-	field, ok := operation.Params["field"].(string)
-	if !ok {
-		return "", fmt.Errorf("field parameter is required for HGET operation")
-	}
-
-	value, err := r.client.HGet(ctx, operation.Key, field).Result()
-	if err == redis.Nil {
-		return "", nil
-	}
-	return value, err
-}
-
-// executeHSet 执行HSET操作
-func (r *RedisAdapter) executeHSet(ctx context.Context, operation interfaces.Operation) error {
-	field, ok := operation.Params["field"].(string)
-	if !ok {
-		return fmt.Errorf("field parameter is required for HSET operation")
-	}
-
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.HSet(ctx, operation.Key, field, value).Err()
-}
-
-// executePublish 执行PUBLISH操作
-func (r *RedisAdapter) executePublish(ctx context.Context, operation interfaces.Operation) error {
-	channel, ok := operation.Params["channel"].(string)
-	if !ok {
-		channel = "my_channel" // 默认频道
-	}
-
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.Publish(ctx, channel, value).Err()
-}
-
-// executeSetGetRandom 执行混合读写操作
-func (r *RedisAdapter) executeSetGetRandom(ctx context.Context, operation interfaces.Operation) error {
-	readPercent, _ := operation.Params["read_percent"].(int)
-	if readPercent <= 0 {
-		readPercent = 50
-	}
-
-	// 基于时间生成随机数
-	if time.Now().UnixNano()%100 < int64(readPercent) {
-		// 执行读操作
-		_, err := r.executeGet(ctx, operation)
-		return err
+	// 更新统计信息
+	if err != nil || (result != nil && !result.Success) {
+		r.incrementFailedOperations()
 	} else {
-		// 执行写操作
-		return r.executeSet(ctx, operation)
+		r.incrementSuccessOperations()
 	}
-}
 
-// createStandaloneClient 创建单机客户端
-func (r *RedisAdapter) createStandaloneClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
-	standalone := config.GetStandaloneConfig()
+	// 记录到指标收集器
+	if result != nil && r.metricsCollector != nil {
+		r.metricsCollector.Record(result)
+	}
 
-	client := redis.NewClient(&redis.Options{
-		Addr:         standalone.Addr,
-		Password:     standalone.Password,
-		DB:           standalone.Db,
-		PoolSize:     config.Pool.GetPoolSize(),
-		MinIdleConns: config.Pool.GetMinIdle(),
-		MaxRetries:   3,
-		DialTimeout:  config.Pool.GetConnectionTimeout(),
-		IdleTimeout:  config.Pool.GetIdleTimeout(),
-	})
-
-	r.standaloneClient = client
-	return client, nil
-}
-
-// createSentinelClient 创建哨兵客户端
-func (r *RedisAdapter) createSentinelClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
-	sentinel := config.GetSentinelConfig()
-
-	client := redis.NewFailoverClient(&redis.FailoverOptions{
-		MasterName:    sentinel.MasterName,
-		SentinelAddrs: sentinel.Addrs,
-		Password:      sentinel.Password,
-		DB:            sentinel.Db,
-		PoolSize:      config.Pool.GetPoolSize(),
-		MinIdleConns:  config.Pool.GetMinIdle(),
-		MaxRetries:    3,
-		DialTimeout:   config.Pool.GetConnectionTimeout(),
-		IdleTimeout:   config.Pool.GetIdleTimeout(),
-	})
-
-	r.standaloneClient = client
-	return client, nil
-}
-
-// createClusterClient 创建集群客户端
-func (r *RedisAdapter) createClusterClient(config *redisconfig.RedisConfig) (redis.Cmdable, error) {
-	cluster := config.GetClusterConfig()
-
-	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        cluster.Addrs,
-		Password:     cluster.Password,
-		PoolSize:     config.Pool.GetPoolSize(),
-		MinIdleConns: config.Pool.GetMinIdle(),
-		MaxRetries:   3,
-		DialTimeout:  config.Pool.GetConnectionTimeout(),
-		IdleTimeout:  config.Pool.GetIdleTimeout(),
-	})
-
-	r.clusterClient = client
-	return client, nil
+	return result, err
 }
 
 // Close 关闭连接
@@ -386,246 +137,507 @@ func (r *RedisAdapter) Close() error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	var err error
-
-	if r.standaloneClient != nil {
-		err = r.standaloneClient.Close()
-		r.standaloneClient = nil
-	}
-
-	if r.clusterClient != nil {
-		if closeErr := r.clusterClient.Close(); closeErr != nil && err == nil {
-			err = closeErr
+	if r.connectionPool != nil {
+		if err := r.connectionPool.Close(); err != nil {
+			return fmt.Errorf("failed to close Redis connection pool: %w", err)
 		}
-		r.clusterClient = nil
+		r.connectionPool = nil
 	}
 
 	r.client = nil
-	r.SetConnected(false)
+	r.isConnected = false
 
-	return err
+	return nil
 }
 
-// HealthCheck 健康检查
-func (r *RedisAdapter) HealthCheck(ctx context.Context) error {
-	if r.client == nil {
-		return fmt.Errorf("Redis client is not initialized")
+// executeRedisOperation 执行具体的Redis操作
+func (r *RedisAdapter) executeRedisOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+	startTime := time.Now()
+	result := &interfaces.OperationResult{
+		IsRead: r.isReadOperation(operation.Type),
 	}
 
-	_, err := r.client.Ping(ctx).Result()
-	return err
+	var err error
+	switch operation.Type {
+	case "get":
+		result.Value, err = r.executeGet(ctx, operation)
+	case "set":
+		err = r.executeSet(ctx, operation)
+	case "del":
+		result.Value, err = r.executeDelete(ctx, operation)
+	case "incr":
+		result.Value, err = r.executeIncr(ctx, operation)
+	case "decr":
+		result.Value, err = r.executeDecr(ctx, operation)
+	case "hget":
+		result.Value, err = r.executeHGet(ctx, operation)
+	case "hset":
+		err = r.executeHSet(ctx, operation)
+	case "hgetall":
+		result.Value, err = r.executeHGetAll(ctx, operation)
+	case "lpush":
+		result.Value, err = r.executeLPush(ctx, operation)
+	case "rpush":
+		result.Value, err = r.executeRPush(ctx, operation)
+	case "lpop":
+		result.Value, err = r.executeLPop(ctx, operation)
+	case "rpop":
+		result.Value, err = r.executeRPop(ctx, operation)
+	case "sadd":
+		result.Value, err = r.executeSAdd(ctx, operation)
+	case "smembers":
+		result.Value, err = r.executeSMembers(ctx, operation)
+	case "srem":
+		result.Value, err = r.executeSRem(ctx, operation)
+	case "sismember":
+		result.Value, err = r.executeSIsMember(ctx, operation)
+	case "zadd":
+		result.Value, err = r.executeZAdd(ctx, operation)
+	case "zrange":
+		result.Value, err = r.executeZRange(ctx, operation)
+	case "zrem":
+		result.Value, err = r.executeZRem(ctx, operation)
+	case "zrank":
+		result.Value, err = r.executeZRank(ctx, operation)
+	case "publish":
+		result.Value, err = r.executePublish(ctx, operation)
+	case "subscribe":
+		result.Value, err = r.executeSubscribe(ctx, operation)
+	default:
+		err = fmt.Errorf("unsupported operation type: %s", operation.Type)
+	}
+
+	result.Duration = time.Since(startTime)
+	result.Success = err == nil
+	result.Error = err
+
+	// 设置结果元数据
+	result.Metadata = map[string]interface{}{
+		"operation_type": operation.Type,
+		"key":            operation.Key,
+		"duration_ms":    result.Duration.Milliseconds(),
+	}
+
+	return result, nil
+}
+
+// Redis操作实现方法
+func (r *RedisAdapter) executeGet(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	value, err := r.client.Get(ctx, operation.Key).Result()
+	if err == redis.Nil {
+		return nil, nil // Key不存在返回nil而不是错误
+	}
+	return value, err
+}
+
+func (r *RedisAdapter) executeSet(ctx context.Context, operation interfaces.Operation) error {
+	valueStr := fmt.Sprintf("%v", operation.Value)
+	ttl := operation.TTL
+	if ttl <= 0 {
+		ttl = 0 // 永不过期
+	}
+	return r.client.Set(ctx, operation.Key, valueStr, ttl).Err()
+}
+
+func (r *RedisAdapter) executeDelete(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	count, err := r.client.Del(ctx, operation.Key).Result()
+	return count, err
+}
+
+func (r *RedisAdapter) executeIncr(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	value, err := r.client.Incr(ctx, operation.Key).Result()
+	return value, err
+}
+
+func (r *RedisAdapter) executeDecr(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	value, err := r.client.Decr(ctx, operation.Key).Result()
+	return value, err
+}
+
+func (r *RedisAdapter) executeHSet(ctx context.Context, operation interfaces.Operation) error {
+	if hashValue, ok := operation.Value.(map[string]interface{}); ok {
+		return r.client.HMSet(ctx, operation.Key, hashValue).Err()
+	}
+	return fmt.Errorf("invalid hash value format")
+}
+
+func (r *RedisAdapter) executeHGet(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	field := "field1" // 默认字段
+	if fieldParam, exists := operation.Params["field"]; exists {
+		if fieldStr, ok := fieldParam.(string); ok {
+			field = fieldStr
+		}
+	}
+
+	value, err := r.client.HGet(ctx, operation.Key, field).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	return value, err
+}
+
+func (r *RedisAdapter) executeHGetAll(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	values, err := r.client.HGetAll(ctx, operation.Key).Result()
+	return values, err
+}
+
+func (r *RedisAdapter) executeLPush(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	if listValue, ok := operation.Value.([]string); ok {
+		interfaces := make([]interface{}, len(listValue))
+		for i, v := range listValue {
+			interfaces[i] = v
+		}
+		count, err := r.client.LPush(ctx, operation.Key, interfaces...).Result()
+		return count, err
+	}
+	return nil, fmt.Errorf("invalid list value format")
+}
+
+func (r *RedisAdapter) executeRPush(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	if listValue, ok := operation.Value.([]string); ok {
+		interfaces := make([]interface{}, len(listValue))
+		for i, v := range listValue {
+			interfaces[i] = v
+		}
+		count, err := r.client.RPush(ctx, operation.Key, interfaces...).Result()
+		return count, err
+	}
+	return nil, fmt.Errorf("invalid list value format")
+}
+
+func (r *RedisAdapter) executeLPop(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	value, err := r.client.LPop(ctx, operation.Key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	return value, err
+}
+
+func (r *RedisAdapter) executeRPop(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	value, err := r.client.RPop(ctx, operation.Key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	return value, err
+}
+
+func (r *RedisAdapter) executeSAdd(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	if setValue, ok := operation.Value.([]string); ok {
+		interfaces := make([]interface{}, len(setValue))
+		for i, v := range setValue {
+			interfaces[i] = v
+		}
+		count, err := r.client.SAdd(ctx, operation.Key, interfaces...).Result()
+		return count, err
+	}
+	return nil, fmt.Errorf("invalid set value format")
+}
+
+func (r *RedisAdapter) executeSMembers(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	members, err := r.client.SMembers(ctx, operation.Key).Result()
+	return members, err
+}
+
+func (r *RedisAdapter) executeSRem(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	member := "default_member"
+	if memberParam, exists := operation.Params["member"]; exists {
+		if memberStr, ok := memberParam.(string); ok {
+			member = memberStr
+		}
+	}
+
+	count, err := r.client.SRem(ctx, operation.Key, member).Result()
+	return count, err
+}
+
+func (r *RedisAdapter) executeSIsMember(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	member := "default_member"
+	if memberParam, exists := operation.Params["member"]; exists {
+		if memberStr, ok := memberParam.(string); ok {
+			member = memberStr
+		}
+	}
+
+	isMember, err := r.client.SIsMember(ctx, operation.Key, member).Result()
+	return isMember, err
+}
+
+func (r *RedisAdapter) executeZAdd(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	if zsetValue, ok := operation.Value.(map[string]interface{}); ok {
+		if members, exists := zsetValue["members"]; exists {
+			if scores, exists := zsetValue["scores"]; exists {
+				if memberList, ok := members.([]string); ok {
+					if scoreList, ok := scores.([]float64); ok {
+						if len(memberList) == len(scoreList) {
+							var zValues []*redis.Z
+							for i := 0; i < len(memberList); i++ {
+								zValues = append(zValues, &redis.Z{
+									Score:  scoreList[i],
+									Member: memberList[i],
+								})
+							}
+							count, err := r.client.ZAdd(ctx, operation.Key, zValues...).Result()
+							return count, err
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf("invalid zset value format")
+}
+
+func (r *RedisAdapter) executeZRange(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	start := int64(0)
+	stop := int64(9)
+
+	if startParam, exists := operation.Params["start"]; exists {
+		if startInt, ok := startParam.(int); ok {
+			start = int64(startInt)
+		}
+	}
+
+	if stopParam, exists := operation.Params["stop"]; exists {
+		if stopInt, ok := stopParam.(int); ok {
+			stop = int64(stopInt)
+		}
+	}
+
+	members, err := r.client.ZRange(ctx, operation.Key, start, stop).Result()
+	return members, err
+}
+
+func (r *RedisAdapter) executeZRem(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	member := "default_member"
+	if memberParam, exists := operation.Params["member"]; exists {
+		if memberStr, ok := memberParam.(string); ok {
+			member = memberStr
+		}
+	}
+
+	count, err := r.client.ZRem(ctx, operation.Key, member).Result()
+	return count, err
+}
+
+func (r *RedisAdapter) executeZRank(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	member := "default_member"
+	if memberParam, exists := operation.Params["member"]; exists {
+		if memberStr, ok := memberParam.(string); ok {
+			member = memberStr
+		}
+	}
+
+	rank, err := r.client.ZRank(ctx, operation.Key, member).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	return rank, err
+}
+
+func (r *RedisAdapter) executePublish(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	message := fmt.Sprintf("%v", operation.Value)
+	count, err := r.client.Publish(ctx, operation.Key, message).Result()
+	return count, err
+}
+
+func (r *RedisAdapter) executeSubscribe(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
+	return map[string]interface{}{
+		"channel": operation.Key,
+		"status":  "subscribed",
+		"message": "subscription simulated (limited by redis.Cmdable interface)",
+	}, nil
 }
 
 // isReadOperation 判断是否为读操作
 func (r *RedisAdapter) isReadOperation(operationType string) bool {
-	readOps := []string{"get", "hget", "hgetall", "lrange", "smembers", "zrange", "exists", "ttl"}
-	for _, op := range readOps {
-		if op == operationType {
+	readOps := []string{
+		"get", "hget", "hgetall", "lpop", "rpop", "smembers", "sismember",
+		"zrange", "zrank", "subscribe",
+	}
+
+	for _, readOp := range readOps {
+		if readOp == operationType {
 			return true
 		}
 	}
 	return false
 }
 
-// updateOperationMetrics 更新操作指标
-func (r *RedisAdapter) updateOperationMetrics(operationType string, success bool, duration time.Duration) {
-	r.UpdateMetric("last_operation_type", operationType)
-	r.UpdateMetric("last_operation_success", success)
-	r.UpdateMetric("last_operation_duration", duration.Nanoseconds())
-
-	// 更新连接池状态
-	if r.standaloneClient != nil {
-		poolStats := r.standaloneClient.PoolStats()
-		r.UpdateMetric("pool_hits", poolStats.Hits)
-		r.UpdateMetric("pool_misses", poolStats.Misses)
-		r.UpdateMetric("pool_timeouts", poolStats.Timeouts)
-		r.UpdateMetric("pool_total_conns", poolStats.TotalConns)
-		r.UpdateMetric("pool_idle_conns", poolStats.IdleConns)
-		r.UpdateMetric("pool_stale_conns", poolStats.StaleConns)
+// HealthCheck 健康检查
+func (r *RedisAdapter) HealthCheck(ctx context.Context) error {
+	if r.connectionPool == nil {
+		return fmt.Errorf("connection pool not initialized")
 	}
 
-	if r.clusterClient != nil {
-		poolStats := r.clusterClient.PoolStats()
-		r.UpdateMetric("cluster_pool_hits", poolStats.Hits)
-		r.UpdateMetric("cluster_pool_misses", poolStats.Misses)
-		r.UpdateMetric("cluster_pool_timeouts", poolStats.Timeouts)
-		r.UpdateMetric("cluster_pool_total_conns", poolStats.TotalConns)
-		r.UpdateMetric("cluster_pool_idle_conns", poolStats.IdleConns)
-		r.UpdateMetric("cluster_pool_stale_conns", poolStats.StaleConns)
-	}
+	return r.connectionPool.Ping(ctx)
 }
 
-// GetClient 获取Redis客户端（用于高级操作）
-func (r *RedisAdapter) GetClient() redis.Cmdable {
-	return r.client
-}
-
-// GetMode 获取连接模式
-func (r *RedisAdapter) GetMode() string {
-	return r.mode
-}
-
-// Subscribe 订阅频道（用于Sub操作）
-func (r *RedisAdapter) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
-	if r.clusterClient != nil {
-		return r.clusterClient.Subscribe(ctx, channels...)
-	}
-	if r.standaloneClient != nil {
-		return r.standaloneClient.Subscribe(ctx, channels...)
-	}
-	return nil
+// GetProtocolName 获取协议名称
+func (r *RedisAdapter) GetProtocolName() string {
+	return "redis"
 }
 
 // GetMetricsCollector 获取指标收集器
 func (r *RedisAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector {
-	// 返回 nil 表示使用 BaseAdapter 的旧接口
-	return nil
+	return r.metricsCollector
 }
 
+// GetProtocolMetrics 获取Redis特定指标
+func (r *RedisAdapter) GetProtocolMetrics() map[string]interface{} {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 
-// executeIncr 执行INCR操作
-func (r *RedisAdapter) executeIncr(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	return r.client.Incr(ctx, operation.Key).Result()
-}
-
-// executeDecr 执行DECR操作
-func (r *RedisAdapter) executeDecr(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	return r.client.Decr(ctx, operation.Key).Result()
-}
-
-// executeLPush 执行LPUSH操作
-func (r *RedisAdapter) executeLPush(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.LPush(ctx, operation.Key, value).Result()
-}
-
-// executeRPush 执行RPUSH操作
-func (r *RedisAdapter) executeRPush(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.RPush(ctx, operation.Key, value).Result()
-}
-
-// executeLPop 执行LPOP操作
-func (r *RedisAdapter) executeLPop(ctx context.Context, operation interfaces.Operation) (string, error) {
-	return r.client.LPop(ctx, operation.Key).Result()
-}
-
-// executeRPop 执行RPOP操作
-func (r *RedisAdapter) executeRPop(ctx context.Context, operation interfaces.Operation) (string, error) {
-	return r.client.RPop(ctx, operation.Key).Result()
-}
-
-// executeSAdd 执行SADD操作
-func (r *RedisAdapter) executeSAdd(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.SAdd(ctx, operation.Key, value).Result()
-}
-
-// executeSMembers 执行SMEMBERS操作
-func (r *RedisAdapter) executeSMembers(ctx context.Context, operation interfaces.Operation) ([]string, error) {
-	return r.client.SMembers(ctx, operation.Key).Result()
-}
-
-// executeSRem 执行SREM操作
-func (r *RedisAdapter) executeSRem(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.SRem(ctx, operation.Key, value).Result()
-}
-
-// executeSIsMember 执行SISMEMBER操作
-func (r *RedisAdapter) executeSIsMember(ctx context.Context, operation interfaces.Operation) (bool, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.SIsMember(ctx, operation.Key, value).Result()
-}
-
-// executeZAdd 执行ZADD操作
-func (r *RedisAdapter) executeZAdd(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	score, _ := operation.Params["score"].(float64)
-
-	// 如果没有提供分数，使用当前时间戳
-	if score == 0 {
-		score = float64(time.Now().UnixNano() % 1000)
+	metrics := map[string]interface{}{
+		"protocol":           "redis",
+		"mode":               r.getMode(),
+		"is_connected":       r.isConnected,
+		"total_operations":   r.totalOperations,
+		"success_operations": r.successOperations,
+		"failed_operations":  r.failedOperations,
+		"uptime_seconds":     time.Since(r.startTime).Seconds(),
 	}
 
-	return r.client.ZAdd(ctx, operation.Key, &redis.Z{Score: score, Member: value}).Result()
-}
+	// 添加连接池统计信息
+	if r.connectionPool != nil {
+		poolStats := r.connectionPool.GetStats()
+		metrics["connection_pool"] = poolStats
+	}
 
-// executeZRem 执行ZREM操作
-func (r *RedisAdapter) executeZRem(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.ZRem(ctx, operation.Key, value).Result()
-}
-
-// executeZRange 执行ZRANGE操作
-func (r *RedisAdapter) executeZRange(ctx context.Context, operation interfaces.Operation) ([]string, error) {
-	return r.client.ZRange(ctx, operation.Key, 0, -1).Result()
-}
-
-// executeZRank 执行ZRANK操作
-func (r *RedisAdapter) executeZRank(ctx context.Context, operation interfaces.Operation) (int64, error) {
-	value := fmt.Sprintf("%v", operation.Value)
-	return r.client.ZRank(ctx, operation.Key, value).Result()
-}
-
-// executeHMSet 执行HMSET操作
-func (r *RedisAdapter) executeHMSet(ctx context.Context, operation interfaces.Operation) error {
-	fields, ok := operation.Params["fields"].([]string)
-	if !ok {
-		// 如果没有提供多个字段，使用单个字段
-		field, _ := operation.Params["field"].(string)
-		if field == "" {
-			field = "field1"
+	// 添加配置信息
+	if r.config != nil {
+		metrics["config"] = map[string]interface{}{
+			"mode":               r.config.GetMode(),
+			"pool_size":          r.config.Pool.PoolSize,
+			"connection_timeout": r.config.Pool.ConnectionTimeout.String(),
 		}
-		value := fmt.Sprintf("%v", operation.Value)
-		return r.client.HMSet(ctx, operation.Key, map[string]interface{}{field: value}).Err()
 	}
 
-	// 处理多个字段
-	fieldValues := make(map[string]interface{})
-	value := fmt.Sprintf("%v", operation.Value)
-	for _, field := range fields {
-		fieldValues[field] = value
+	return metrics
+}
+
+// IsConnected 检查连接状态
+func (r *RedisAdapter) IsConnected() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.isConnected
+}
+
+// GetConfig 获取Redis配置
+func (r *RedisAdapter) GetConfig() *redisConfig.RedisConfig {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.config
+}
+
+// GetConnectionPool 获取连接池
+func (r *RedisAdapter) GetConnectionPool() *connection.RedisConnectionPool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.connectionPool
+}
+
+// GetOperationRegistry 获取操作注册表
+func (r *RedisAdapter) GetOperationRegistry() *utils.OperationRegistry {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.operationRegistry
+}
+
+// CreateOperationFromFactory 使用operations.go工厂创建操作
+func (r *RedisAdapter) CreateOperationFromFactory(operationType string, params map[string]interface{}) (interfaces.Operation, error) {
+	if r.operationRegistry == nil {
+		return interfaces.Operation{}, fmt.Errorf("operation registry not initialized")
 	}
 
-	return r.client.HMSet(ctx, operation.Key, fieldValues).Err()
+	return r.operationRegistry.CreateOperation(operationType, params)
 }
 
-// executeHMGet 执行HMGET操作
-func (r *RedisAdapter) executeHMGet(ctx context.Context, operation interfaces.Operation) ([]interface{}, error) {
-	fields, ok := operation.Params["fields"].([]string)
-	if !ok {
-		// 如果没有提供多个字段，使用单个字段
-		field, _ := operation.Params["field"].(string)
-		if field == "" {
-			field = "field1"
-		}
-		return r.client.HMGet(ctx, operation.Key, field).Result()
+// ValidateOperationParams 验证操作参数
+func (r *RedisAdapter) ValidateOperationParams(operationType string, params map[string]interface{}) error {
+	if r.operationRegistry == nil {
+		return fmt.Errorf("operation registry not initialized")
 	}
 
-	// 处理多个字段
-	return r.client.HMGet(ctx, operation.Key, fields...).Result()
+	return r.operationRegistry.ValidateOperation(operationType, params)
 }
 
-// executeHGetAll 执行HGETALL操作
-func (r *RedisAdapter) executeHGetAll(ctx context.Context, operation interfaces.Operation) (map[string]string, error) {
-	return r.client.HGetAll(ctx, operation.Key).Result()
+// GetSupportedOperationTypes 获取支持的操作类型（来自operations.go）
+func (r *RedisAdapter) GetSupportedOperationTypes() []string {
+	if r.operationRegistry == nil {
+		return []string{}
+	}
+
+	return r.operationRegistry.GetSupportedOperations()
 }
 
-// === 架构兼容性方法，为未来 operations 系统集成做准备 ===
+// Redis特定便捷方法
 
-// GetSupportedOperations 获取支持的操作类型（架构兼容性）
+// ExecuteRedisCommand 执行Redis命令（便捷方法）
+func (r *RedisAdapter) ExecuteRedisCommand(ctx context.Context, commandType, key string, value interface{}, params map[string]interface{}) (*interfaces.OperationResult, error) {
+	operation := interfaces.Operation{
+		Type:   commandType,
+		Key:    key,
+		Value:  value,
+		Params: params,
+		Metadata: map[string]string{
+			"adapter": "redis",
+		},
+	}
+
+	return r.Execute(ctx, operation)
+}
+
+// Get Redis GET操作
+func (r *RedisAdapter) Get(ctx context.Context, key string) (*interfaces.OperationResult, error) {
+	return r.ExecuteRedisCommand(ctx, "get", key, nil, nil)
+}
+
+// Set Redis SET操作
+func (r *RedisAdapter) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) (*interfaces.OperationResult, error) {
+	operation := interfaces.Operation{
+		Type:  "set",
+		Key:   key,
+		Value: value,
+		TTL:   ttl,
+		Metadata: map[string]string{
+			"adapter": "redis",
+		},
+	}
+
+	return r.Execute(ctx, operation)
+}
+
+// Del Redis DEL操作
+func (r *RedisAdapter) Del(ctx context.Context, key string) (*interfaces.OperationResult, error) {
+	return r.ExecuteRedisCommand(ctx, "del", key, nil, nil)
+}
+
+// HSet Redis HSET操作
+func (r *RedisAdapter) HSet(ctx context.Context, key string, fields map[string]interface{}) (*interfaces.OperationResult, error) {
+	return r.ExecuteRedisCommand(ctx, "hset", key, fields, nil)
+}
+
+// HGet Redis HGET操作
+func (r *RedisAdapter) HGet(ctx context.Context, key, field string) (*interfaces.OperationResult, error) {
+	params := map[string]interface{}{
+		"field": field,
+	}
+	return r.ExecuteRedisCommand(ctx, "hget", key, nil, params)
+}
+
+// GetSupportedOperations 获取支持的操作列表
 func (r *RedisAdapter) GetSupportedOperations() []string {
 	return []string{
-		"get", "set", "del", "hget", "hset", "pub", "set_get_random",
-		"incr", "decr", "lpush", "rpush", "lpop", "rpop",
+		"get", "set", "del", "incr", "decr",
+		"hget", "hset", "hgetall",
+		"lpush", "rpush", "lpop", "rpop",
 		"sadd", "smembers", "srem", "sismember",
-		"zadd", "zrem", "zrange", "zrank", "zscore",
-		"hmset", "hmget", "hgetall", "hdel",
+		"zadd", "zrange", "zrem", "zrank",
+		"publish", "subscribe",
 	}
 }
 
-// ValidateOperation 验证操作是否受支持（架构兼容性）
+// ValidateOperation 验证操作是否受支持
 func (r *RedisAdapter) ValidateOperation(operationType string) error {
 	supportedOps := r.GetSupportedOperations()
 	for _, op := range supportedOps {
@@ -633,21 +645,54 @@ func (r *RedisAdapter) ValidateOperation(operationType string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("unsupported operation type: %s", operationType)
+	return fmt.Errorf("unsupported Redis operation: %s", operationType)
 }
 
-// GetOperationMetadata 获取操作元数据（架构兼容性）
-func (r *RedisAdapter) GetOperationMetadata(operationType string) map[string]interface{} {
-	metadata := map[string]interface{}{
-		"protocol": "redis",
-		"adapter_type": "redis_adapter",
-		"operation_type": operationType,
-		"is_read": r.isReadOperation(operationType),
-	}
-	
+// 内部方法
+
+func (r *RedisAdapter) getMode() string {
 	if r.config != nil {
-		metadata["redis_mode"] = r.config.GetMode()
+		return r.config.GetMode()
 	}
-	
-	return metadata
+	return "unknown"
 }
+
+func (r *RedisAdapter) incrementTotalOperations() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.totalOperations++
+}
+
+func (r *RedisAdapter) incrementSuccessOperations() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.successOperations++
+}
+
+func (r *RedisAdapter) incrementFailedOperations() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.failedOperations++
+}
+
+// GetOperationStats 获取操作统计信息
+func (r *RedisAdapter) GetOperationStats() map[string]interface{} {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var successRate float64
+	if r.totalOperations > 0 {
+		successRate = float64(r.successOperations) / float64(r.totalOperations) * 100
+	}
+
+	return map[string]interface{}{
+		"total_operations":   r.totalOperations,
+		"success_operations": r.successOperations,
+		"failed_operations":  r.failedOperations,
+		"success_rate":       successRate,
+		"uptime":             time.Since(r.startTime),
+	}
+}
+
+// 确保实现了ProtocolAdapter接口
+var _ interfaces.ProtocolAdapter = (*RedisAdapter)(nil)

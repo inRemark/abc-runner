@@ -21,11 +21,11 @@ import (
 type HttpClient struct {
 	client *http.Client
 	config *httpConfig.HttpAdapterConfig
-	pool   *ConnectionPool
+	pool   *HTTPConnectionPool
 }
 
 // NewHttpClient 创建HTTP客户端
-func NewHttpClient(client *http.Client, config *httpConfig.HttpAdapterConfig, pool *ConnectionPool) *HttpClient {
+func NewHttpClient(client *http.Client, config *httpConfig.HttpAdapterConfig, pool *HTTPConnectionPool) *HttpClient {
 	return &HttpClient{
 		client: client,
 		config: config,

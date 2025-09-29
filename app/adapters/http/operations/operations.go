@@ -12,14 +12,14 @@ import (
 
 // HttpOperations HTTP操作执行器
 type HttpOperations struct {
-	pool             *connection.ConnectionPool
+	pool             *connection.HTTPConnectionPool
 	config           *httpConfig.HttpAdapterConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewHttpOperations 创建HTTP操作执行器
 func NewHttpOperations(
-	pool *connection.ConnectionPool,
+	pool *connection.HTTPConnectionPool,
 	config *httpConfig.HttpAdapterConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
 ) *HttpOperations {
@@ -55,7 +55,7 @@ func (h *HttpOperations) ExecuteOperation(ctx context.Context, operation interfa
 			Error:    fmt.Errorf("failed to get HTTP client from pool"),
 		}, fmt.Errorf("failed to get HTTP client from pool")
 	}
-	defer h.pool.ReturnClient(client)
+	// HTTPConnectionPool不需要显式返回客户端
 
 	// 创建HTTP客户端封装
 	httpClient := connection.NewHttpClient(client, h.config, h.pool)

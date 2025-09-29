@@ -252,8 +252,8 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 	}
 
 	// 创建执行引擎
-	factory := NewSimpleOperationFactory(config.BenchMark.TestCase, config.BenchMark.DataSize)
-	benchConfig := NewSimpleBenchmarkConfig(config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.Duration)
+	factory := udp.NewSimpleOperationFactory(config.BenchMark.TestCase, config.BenchMark.DataSize)
+	benchConfig := udp.NewSimpleBenchmarkConfig(config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.Duration)
 	engine := execution.NewExecutionEngine(adapter, collector, factory)
 
 	// 执行测试

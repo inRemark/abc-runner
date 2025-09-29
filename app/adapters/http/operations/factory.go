@@ -2,340 +2,322 @@ package operations
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
-	"strings"
 	"time"
-	
-	"abc-runner/app/core/interfaces"
+
 	httpConfig "abc-runner/app/adapters/http/config"
+	"abc-runner/app/core/execution"
+	"abc-runner/app/core/interfaces"
 )
 
 // HttpOperationFactory HTTP操作工厂
 type HttpOperationFactory struct {
-	config      *httpConfig.HttpAdapterConfig
-	weightedReqs []weightedRequest
-	totalWeight  int
-	rand         *rand.Rand
-}
-
-// weightedRequest 加权请求配置
-type weightedRequest struct {
-	config     httpConfig.HttpRequestConfig
-	weight     int
-	startRange int
-	endRange   int
+	config   *httpConfig.HttpAdapterConfig
+	testCase string
+	dataSize int
 }
 
 // NewHttpOperationFactory 创建HTTP操作工厂
 func NewHttpOperationFactory(config *httpConfig.HttpAdapterConfig) *HttpOperationFactory {
-	factory := &HttpOperationFactory{
-		config: config,
-		rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
+	return &HttpOperationFactory{
+		config:   config,
+		testCase: config.Benchmark.TestCase,
+		dataSize: config.Benchmark.DataSize,
 	}
-	
-	factory.initializeWeightedRequests()
-	return factory
 }
 
-// initializeWeightedRequests 初始化加权请求
-func (f *HttpOperationFactory) initializeWeightedRequests() {
-	f.weightedReqs = make([]weightedRequest, 0, len(f.config.Requests))
-	f.totalWeight = 0
+// CreateOperation 创建HTTP操作
+func (f *HttpOperationFactory) CreateOperation(jobID int, config execution.BenchmarkConfig) interfaces.Operation {
+	// 生成操作键（URL路径）
+	path := f.generatePath(jobID)
 	
-	for _, reqConfig := range f.config.Requests {
-		weight := reqConfig.Weight
-		if weight <= 0 {
-			weight = 1 // 默认权重为1
+	// 生成操作值（请求体）
+	value := f.generateRequestBody(jobID)
+	
+	// 创建操作特定参数
+	params := map[string]interface{}{
+		"job_id":       jobID,
+		"data_size":    f.dataSize,
+		"test_case":    f.testCase,
+		"read_percent": f.config.Benchmark.ReadPercent,
+		"base_url":     f.config.Connection.BaseURL,
+		"timeout":      f.config.Connection.Timeout.Seconds(),
+		"headers":      f.generateHeaders(jobID),
+	}
+	
+	// 创建操作元数据
+	metadata := map[string]string{
+		"operation_type": f.testCase,
+		"protocol":       "http",
+		"job_id":         strconv.Itoa(jobID),
+		"user_agent":     "abc-runner-http-client", // 默认值，因为配置中没有UserAgent字段
+	}
+	
+	// 根据测试用例确定具体操作类型
+	operationType := f.determineOperationType(jobID)
+	
+	return interfaces.Operation{
+		Type:     operationType,
+		Key:      path,
+		Value:    value,
+		Params:   params,
+		TTL:      f.config.Benchmark.TTL,
+		Metadata: metadata,
+	}
+}
+
+// determineOperationType 根据测试用例和任务ID确定操作类型
+func (f *HttpOperationFactory) determineOperationType(jobID int) string {
+	switch f.testCase {
+	case "get_post_mixed":
+		// 根据读写比例决定操作类型
+		if jobID%100 < f.config.Benchmark.ReadPercent {
+			return "http_get"
+		}
+		return "http_post"
+	
+	case "get_only":
+		return "http_get"
+		
+	case "post_only":
+		return "http_post"
+		
+	case "put_only":
+		return "http_put"
+		
+	case "delete_only":
+		return "http_delete"
+		
+	case "patch_only":
+		return "http_patch"
+		
+	case "head_only":
+		return "http_head"
+		
+	case "options_only":
+		return "http_options"
+		
+	case "crud_operations":
+		// CRUD操作循环
+		switch jobID % 4 {
+		case 0:
+			return "http_post"   // Create
+		case 1:
+			return "http_get"    // Read
+		case 2:
+			return "http_put"    // Update
+		case 3:
+			return "http_delete" // Delete
 		}
 		
-		startRange := f.totalWeight
-		f.totalWeight += weight
-		endRange := f.totalWeight - 1
+	case "rest_api_test":
+		// RESTful API测试
+		switch jobID % 6 {
+		case 0:
+			return "http_get"
+		case 1:
+			return "http_post"
+		case 2:
+			return "http_put"
+		case 3:
+			return "http_patch"
+		case 4:
+			return "http_delete"
+		case 5:
+			return "http_head"
+		}
 		
-		f.weightedReqs = append(f.weightedReqs, weightedRequest{
-			config:     reqConfig,
-			weight:     weight,
-			startRange: startRange,
-			endRange:   endRange,
-		})
-	}
-}
-
-// CreateOperation 创建操作
-func (f *HttpOperationFactory) CreateOperation(params map[string]interface{}) (interfaces.Operation, error) {
-	// 选择请求配置
-	reqConfig, err := f.selectRequestConfig(params)
-	if err != nil {
-		return interfaces.Operation{}, fmt.Errorf("failed to select request config: %w", err)
-	}
-	
-	// 处理模板变量
-	processedConfig, err := f.processTemplate(reqConfig, params)
-	if err != nil {
-		return interfaces.Operation{}, fmt.Errorf("failed to process template: %w", err)
-	}
-	
-	// 创建操作
-	operation := interfaces.Operation{
-		Type:  f.getOperationType(processedConfig.Method),
-		Key:   f.generateOperationKey(processedConfig, params),
-		Value: processedConfig.Body,
-		Params: map[string]interface{}{
-			"method":       processedConfig.Method,
-			"path":         processedConfig.Path,
-			"headers":      processedConfig.Headers,
-			"content_type": processedConfig.ContentType,
-			"upload":       processedConfig.Upload,
-			"raw_config":   processedConfig,
-		},
-		Metadata: map[string]string{
-			"operation_factory": "http",
-			"request_method":    processedConfig.Method,
-			"request_path":      processedConfig.Path,
-		},
-	}
-	
-	return operation, nil
-}
-
-// selectRequestConfig 选择请求配置
-func (f *HttpOperationFactory) selectRequestConfig(params map[string]interface{}) (httpConfig.HttpRequestConfig, error) {
-	// 如果指定了特定的操作类型
-	if opType, exists := params["operation_type"]; exists {
-		if opTypeStr, ok := opType.(string); ok {
-			return f.selectByOperationType(opTypeStr)
-		}
-	}
-	
-	// 如果指定了特定的方法
-	if method, exists := params["method"]; exists {
-		if methodStr, ok := method.(string); ok {
-			return f.selectByMethod(methodStr)
-		}
-	}
-	
-	// 按权重随机选择
-	return f.selectByWeight(), nil
-}
-
-// selectByOperationType 按操作类型选择
-func (f *HttpOperationFactory) selectByOperationType(opType string) (httpConfig.HttpRequestConfig, error) {
-	method := f.operationTypeToMethod(opType)
-	return f.selectByMethod(method)
-}
-
-// selectByMethod 按方法选择
-func (f *HttpOperationFactory) selectByMethod(method string) (httpConfig.HttpRequestConfig, error) {
-	for _, wreq := range f.weightedReqs {
-		if strings.EqualFold(wreq.config.Method, method) {
-			return wreq.config, nil
-		}
-	}
-	
-	return httpConfig.HttpRequestConfig{}, fmt.Errorf("no request config found for method: %s", method)
-}
-
-// selectByWeight 按权重选择
-func (f *HttpOperationFactory) selectByWeight() httpConfig.HttpRequestConfig {
-	if len(f.weightedReqs) == 0 {
-		return httpConfig.HttpRequestConfig{}
-	}
-	
-	if len(f.weightedReqs) == 1 {
-		return f.weightedReqs[0].config
-	}
-	
-	randomValue := f.rand.Intn(f.totalWeight)
-	
-	for _, wreq := range f.weightedReqs {
-		if randomValue >= wreq.startRange && randomValue <= wreq.endRange {
-			return wreq.config
-		}
-	}
-	
-	// 默认返回第一个
-	return f.weightedReqs[0].config
-}
-
-// processTemplate 处理模板变量
-func (f *HttpOperationFactory) processTemplate(config httpConfig.HttpRequestConfig, params map[string]interface{}) (httpConfig.HttpRequestConfig, error) {
-	processed := config
-	
-	// 处理路径中的模板变量
-	processed.Path = f.replaceTemplateVariables(config.Path, params)
-	
-	// 处理头部中的模板变量
-	if config.Headers != nil {
-		processed.Headers = make(map[string]string)
-		for key, value := range config.Headers {
-			processed.Headers[key] = f.replaceTemplateVariables(value, params)
-		}
-	}
-	
-	// 处理请求体中的模板变量
-	if config.Body != nil {
-		processed.Body = f.processBodyTemplate(config.Body, params)
-	}
-	
-	return processed, nil
-}
-
-// replaceTemplateVariables 替换模板变量
-func (f *HttpOperationFactory) replaceTemplateVariables(template string, params map[string]interface{}) string {
-	result := template
-	
-	// 替换参数变量
-	for key, value := range params {
-		placeholder := fmt.Sprintf("{{%s}}", key)
-		replacement := fmt.Sprintf("%v", value)
-		result = strings.ReplaceAll(result, placeholder, replacement)
-	}
-	
-	// 替换随机变量
-	result = f.replaceRandomVariables(result)
-	
-	return result
-}
-
-// replaceRandomVariables 替换随机变量
-func (f *HttpOperationFactory) replaceRandomVariables(template string) string {
-	result := template
-	
-	// 生成随机ID
-	result = strings.ReplaceAll(result, "{{random.id}}", strconv.Itoa(f.rand.Intn(10000)+1))
-	
-	// 生成随机名称
-	result = strings.ReplaceAll(result, "{{random.name}}", f.generateRandomName())
-	
-	// 生成随机邮箱
-	result = strings.ReplaceAll(result, "{{random.email}}", f.generateRandomEmail())
-	
-	// 生成随机状态
-	result = strings.ReplaceAll(result, "{{random.status}}", f.generateRandomStatus())
-	
-	// 生成随机标题
-	result = strings.ReplaceAll(result, "{{random.title}}", f.generateRandomTitle())
-	
-	// 生成随机描述
-	result = strings.ReplaceAll(result, "{{random.description}}", f.generateRandomDescription())
-	
-	return result
-}
-
-// processBodyTemplate 处理请求体模板
-func (f *HttpOperationFactory) processBodyTemplate(body interface{}, params map[string]interface{}) interface{} {
-	switch v := body.(type) {
-	case string:
-		return f.replaceTemplateVariables(v, params)
-	case map[string]interface{}:
-		result := make(map[string]interface{})
-		for key, value := range v {
-			result[key] = f.processBodyTemplate(value, params)
-		}
-		return result
-	case []interface{}:
-		result := make([]interface{}, len(v))
-		for i, value := range v {
-			result[i] = f.processBodyTemplate(value, params)
-		}
-		return result
 	default:
-		return body
-	}
-}
-
-// generateOperationKey 生成操作键
-func (f *HttpOperationFactory) generateOperationKey(config httpConfig.HttpRequestConfig, params map[string]interface{}) string {
-	// 基于方法和路径生成键
-	key := fmt.Sprintf("%s:%s", config.Method, config.Path)
-	
-	// 如果有索引参数，加入键中
-	if index, exists := params["index"]; exists {
-		key = fmt.Sprintf("%s:%v", key, index)
+		return "http_get" // 默认操作
 	}
 	
-	return key
+	return "http_get"
 }
 
-// getOperationType 获取操作类型
-func (f *HttpOperationFactory) getOperationType(method string) string {
-	return fmt.Sprintf("http_%s", strings.ToLower(method))
-}
-
-// operationTypeToMethod 操作类型转方法
-func (f *HttpOperationFactory) operationTypeToMethod(opType string) string {
-	if strings.HasPrefix(opType, "http_") {
-		return strings.ToUpper(strings.TrimPrefix(opType, "http_"))
+// generatePath 生成请求路径
+func (f *HttpOperationFactory) generatePath(jobID int) string {
+	switch f.testCase {
+	case "get_post_mixed", "get_only":
+		if f.config.Benchmark.RandomKeys > 0 {
+			resourceID := jobID % f.config.Benchmark.RandomKeys
+			return fmt.Sprintf("/api/v1/resources/%d", resourceID)
+		}
+		return fmt.Sprintf("/api/v1/resources/%d", jobID)
+		
+	case "post_only":
+		return "/api/v1/resources"
+		
+	case "put_only", "patch_only":
+		return fmt.Sprintf("/api/v1/resources/%d", jobID)
+		
+	case "delete_only":
+		return fmt.Sprintf("/api/v1/resources/%d", jobID)
+		
+	case "head_only":
+		return fmt.Sprintf("/api/v1/resources/%d", jobID)
+		
+	case "options_only":
+		return "/api/v1/resources"
+		
+	case "crud_operations", "rest_api_test":
+		switch jobID % 4 {
+		case 0, 1: // POST, GET
+			return "/api/v1/items"
+		case 2, 3: // PUT, DELETE
+			return fmt.Sprintf("/api/v1/items/%d", jobID)
+		}
+		
+	default:
+		return fmt.Sprintf("/api/test/%d", jobID)
 	}
-	return strings.ToUpper(opType)
+	
+	return "/api/test"
 }
 
-// GetOperationType 获取操作类型（实现OperationFactory接口）
+// generateRequestBody 生成请求体
+func (f *HttpOperationFactory) generateRequestBody(jobID int) interface{} {
+	switch f.testCase {
+	case "get_only", "delete_only", "head_only", "options_only":
+		return nil // 这些方法通常不需要请求体
+		
+	case "post_only", "put_only", "patch_only":
+		return f.generateJSONBody(jobID)
+		
+	case "get_post_mixed":
+		// POST请求需要请求体
+		return f.generateJSONBody(jobID)
+		
+	case "crud_operations", "rest_api_test":
+		// CREATE和UPDATE操作需要请求体
+		opType := jobID % 4
+		if opType == 0 || opType == 2 { // POST或PUT
+			return f.generateJSONBody(jobID)
+		}
+		return nil
+		
+	default:
+		return f.generateJSONBody(jobID)
+	}
+}
+
+// generateJSONBody 生成JSON请求体
+func (f *HttpOperationFactory) generateJSONBody(jobID int) map[string]interface{} {
+	body := map[string]interface{}{
+		"id":        jobID,
+		"name":      fmt.Sprintf("test_item_%d", jobID),
+		"timestamp": time.Now().Unix(),
+		"job_id":    jobID,
+	}
+	
+	// 根据数据大小生成额外的数据
+	if f.dataSize > 0 {
+		// 生成指定大小的数据字段
+		dataContent := make([]byte, f.dataSize)
+		pattern := fmt.Sprintf("HTTP_DATA_%d_", jobID)
+		patternBytes := []byte(pattern)
+		
+		for i := 0; i < f.dataSize; i++ {
+			dataContent[i] = patternBytes[i%len(patternBytes)]
+		}
+		
+		body["data"] = string(dataContent)
+	}
+	
+	// 添加更多字段以模拟真实场景
+	body["description"] = fmt.Sprintf("Description for item %d", jobID)
+	body["category"] = fmt.Sprintf("category_%d", jobID%10)
+	body["status"] = "active"
+	body["version"] = 1
+	
+	return body
+}
+
+// generateHeaders 生成请求头
+func (f *HttpOperationFactory) generateHeaders(jobID int) map[string]string {
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"Accept":       "application/json",
+		"User-Agent":   "abc-runner-http-client", // 默认值
+	}
+	
+	// 根据测试用例添加特定头部
+	switch f.testCase {
+	case "post_only", "put_only", "patch_only":
+		headers["X-API-Version"] = "v1"
+		headers["X-Client-Type"] = "performance-test"
+		
+	case "get_only":
+		headers["Cache-Control"] = "no-cache"
+		
+	case "rest_api_test":
+		headers["X-Test-Type"] = "rest-api"
+		headers["X-Job-ID"] = strconv.Itoa(jobID)
+	}
+	
+	return headers
+}
+
+// GetOperationType 获取操作类型
 func (f *HttpOperationFactory) GetOperationType() string {
-	return "http"
+	return f.testCase
 }
 
-// ValidateParams 验证参数（实现OperationFactory接口）
-func (f *HttpOperationFactory) ValidateParams(params map[string]interface{}) error {
-	// 基本参数验证
-	if len(f.config.Requests) == 0 {
-		return fmt.Errorf("no request configurations available")
+// GetConfig 获取配置信息
+func (f *HttpOperationFactory) GetConfig() *httpConfig.HttpAdapterConfig {
+	return f.config
+}
+
+// GetSupportedOperations 获取支持的操作类型
+func (f *HttpOperationFactory) GetSupportedOperations() []string {
+	return []string{
+		"get_post_mixed", "get_only", "post_only", "put_only", "delete_only",
+		"patch_only", "head_only", "options_only", "crud_operations", "rest_api_test",
 	}
-	
-	// 如果指定了method，验证是否支持
-	if method, exists := params["method"]; exists {
-		if methodStr, ok := method.(string); ok {
-			if !f.isMethodSupported(methodStr) {
-				return fmt.Errorf("unsupported method: %s", methodStr)
-			}
+}
+
+// GetSupportedHTTPMethods 获取支持的HTTP方法
+func (f *HttpOperationFactory) GetSupportedHTTPMethods() []string {
+	return []string{
+		"http_get", "http_post", "http_put", "http_delete",
+		"http_patch", "http_head", "http_options",
+	}
+}
+
+// ValidateTestCase 验证测试用例是否支持
+func (f *HttpOperationFactory) ValidateTestCase(testCase string) error {
+	supportedCases := f.GetSupportedOperations()
+	for _, supported := range supportedCases {
+		if testCase == supported {
+			return nil
 		}
 	}
-	
-	return nil
+	return fmt.Errorf("unsupported test case: %s, supported: %v", testCase, supportedCases)
 }
 
-// isMethodSupported 检查方法是否支持
-func (f *HttpOperationFactory) isMethodSupported(method string) bool {
-	for _, wreq := range f.weightedReqs {
-		if strings.EqualFold(wreq.config.Method, method) {
+// GetOperationMetadata 获取操作元数据
+func (f *HttpOperationFactory) GetOperationMetadata(operationType string) map[string]interface{} {
+	metadata := map[string]interface{}{
+		"protocol":     "http",
+		"operation":    operationType,
+		"test_case":    f.testCase,
+		"is_read":      f.isReadOperation(operationType),
+		"base_url":     f.config.Connection.BaseURL,
+		"timeout":      f.config.Connection.Timeout.String(),
+	}
+	
+	return metadata
+}
+
+// isReadOperation 判断是否为读操作
+func (f *HttpOperationFactory) isReadOperation(operationType string) bool {
+	readOps := []string{"http_get", "http_head", "http_options"}
+	for _, readOp := range readOps {
+		if readOp == operationType {
 			return true
 		}
 	}
 	return false
 }
 
-// 随机数据生成方法
-
-func (f *HttpOperationFactory) generateRandomName() string {
-	names := []string{"Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona", "George", "Helen"}
-	return names[f.rand.Intn(len(names))]
-}
-
-func (f *HttpOperationFactory) generateRandomEmail() string {
-	domains := []string{"example.com", "test.com", "demo.org"}
-	name := f.generateRandomName()
-	domain := domains[f.rand.Intn(len(domains))]
-	return fmt.Sprintf("%s@%s", strings.ToLower(name), domain)
-}
-
-func (f *HttpOperationFactory) generateRandomStatus() string {
-	statuses := []string{"active", "inactive", "pending", "completed", "cancelled"}
-	return statuses[f.rand.Intn(len(statuses))]
-}
-
-func (f *HttpOperationFactory) generateRandomTitle() string {
-	titles := []string{"Important Document", "Test Report", "User Manual", "Project Specification", "Meeting Notes"}
-	return titles[f.rand.Intn(len(titles))]
-}
-
-func (f *HttpOperationFactory) generateRandomDescription() string {
-	descriptions := []string{
-		"This is a test description",
-		"Sample description for testing",
-		"Auto-generated content",
-		"Placeholder description text",
-		"Test data for benchmarking",
-	}
-	return descriptions[f.rand.Intn(len(descriptions))]
-}
+// 确保实现了execution.OperationFactory接口
+var _ execution.OperationFactory = (*HttpOperationFactory)(nil)

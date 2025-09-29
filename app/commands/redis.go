@@ -1,22 +1,26 @@
 package commands
+
 import (
+	"abc-runner/app/adapters/redis"
+	redisConfig "abc-runner/app/adapters/redis/config"
+	redisOperations "abc-runner/app/adapters/redis/operations"
+	"abc-runner/app/core/execution"
+	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/metrics"
+	"abc-runner/app/reporting"
 	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"abc-runner/app/adapters/redis"
-	redisConfig "abc-runner/app/adapters/redis/config"
-	"abc-runner/app/core/execution"
-	"abc-runner/app/core/interfaces"
-	"abc-runner/app/core/metrics"
-	"abc-runner/app/reporting"
 )
+
 // RedisCommandHandler Redis命令处理器
 type RedisCommandHandler struct {
 	protocolName string
 	factory      interface{} // AdapterFactory接口
 }
+
 // NewRedisCommandHandler 创建Redis命令处理器
 func NewRedisCommandHandler(factory interface{}) *RedisCommandHandler {
 	if factory == nil {
@@ -27,6 +31,7 @@ func NewRedisCommandHandler(factory interface{}) *RedisCommandHandler {
 		factory:      factory,
 	}
 }
+
 // Execute 执行Redis命令
 func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error {
 	// 检查帮助请求 - 改进逻辑避免与-h host冲突
@@ -78,6 +83,7 @@ func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error 
 	// 生成并显示报告
 	return r.generateReport(metricsCollector)
 }
+
 // GetHelp 获取帮助信息
 func (r *RedisCommandHandler) GetHelp() string {
 	return fmt.Sprintf(`Redis Performance Testing
@@ -103,6 +109,7 @@ NOTE:
   This implementation performs real Redis performance testing with metrics collection.
 `)
 }
+
 // parseArgs 解析命令行参数
 func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig, error) {
 	// 创建默认配置
@@ -166,6 +173,7 @@ func (r *RedisCommandHandler) parseArgs(args []string) (*redisConfig.RedisConfig
 	}
 	return config, nil
 }
+
 // runPerformanceTest 运行性能测试 - 使用新的ExecutionEngine
 func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
@@ -178,6 +186,7 @@ func (r *RedisCommandHandler) runPerformanceTest(ctx context.Context, adapter in
 	// 使用新的ExecutionEngine执行真实测试
 	return r.runConcurrentTest(ctx, adapter, config, collector)
 }
+
 // runSimulationTest 运行模拟测试 (保持不变，用于连接失败时的后备方案)
 func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("\n⚠️  SIMULATION MODE: Redis connection failed, using mock data\n")
@@ -214,13 +223,14 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 	time.Sleep(100 * time.Millisecond)
 	return nil
 }
+
 // runConcurrentTest 使用ExecutionEngine运行并发测试
 func (r *RedisCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running concurrent Redis performance test with ExecutionEngine...\n")
 	// 创建基准配置适配器
 	benchmarkConfig := redis.NewBenchmarkConfigAdapter(config.GetBenchmark())
 	// 创建操作工厂
-	operationFactory := redis.NewOperationFactory(config)
+	operationFactory := redisOperations.NewOperationFactory(config)
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
 	// 配置执行引擎参数
@@ -241,6 +251,7 @@ func (r *RedisCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
 	return nil
 }
+
 // generateReport 生成报告
 func (r *RedisCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 获取指标快照

@@ -11,7 +11,7 @@ import (
 	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/plain"
 	"github.com/segmentio/kafka-go/sasl/scram"
-	
+
 	"abc-runner/app/adapters/kafka/config"
 )
 
@@ -25,23 +25,23 @@ type PoolConfig struct {
 
 // ConnectionPool 连接池管理器
 type ConnectionPool struct {
-	config        *config.KafkaAdapterConfig
-	poolConfig    PoolConfig
-	
+	config     *config.KafkaAdapterConfig
+	poolConfig PoolConfig
+
 	// 生产者池
 	producerPool chan *kafka.Writer
 	producers    []*kafka.Writer
-	
+
 	// 消费者池
 	consumerPool chan *kafka.Reader
 	consumers    []*kafka.Reader
-	
+
 	// 管理客户端
 	adminConn *kafka.Conn
-	
+
 	// 同步控制
-	mutex   sync.RWMutex
-	closed  bool
+	mutex  sync.RWMutex
+	closed bool
 }
 
 // NewConnectionPool 创建连接池
@@ -54,12 +54,12 @@ func NewConnectionPool(kafkaConfig *config.KafkaAdapterConfig, poolConfig PoolCo
 		producers:    make([]*kafka.Writer, 0, poolConfig.ProducerPoolSize),
 		consumers:    make([]*kafka.Reader, 0, poolConfig.ConsumerPoolSize),
 	}
-	
+
 	// 初始化连接池
 	if err := pool.initialize(); err != nil {
 		return nil, fmt.Errorf("failed to initialize connection pool: %w", err)
 	}
-	
+
 	return pool, nil
 }
 
@@ -74,7 +74,7 @@ func (p *ConnectionPool) initialize() error {
 			return fmt.Errorf("failed to create TLS config: %w", err)
 		}
 	}
-	
+
 	// 创建SASL机制
 	var saslMechanism sasl.Mechanism
 	if p.config.Security.SASL.Enabled {
@@ -84,22 +84,22 @@ func (p *ConnectionPool) initialize() error {
 			return fmt.Errorf("failed to create SASL mechanism: %w", err)
 		}
 	}
-	
+
 	// 初始化生产者池
 	if err := p.initializeProducers(tlsConfig, saslMechanism); err != nil {
 		return fmt.Errorf("failed to initialize producers: %w", err)
 	}
-	
+
 	// 初始化消费者池
 	if err := p.initializeConsumers(tlsConfig, saslMechanism); err != nil {
 		return fmt.Errorf("failed to initialize consumers: %w", err)
 	}
-	
+
 	// 初始化管理连接
 	if err := p.initializeAdminConnection(tlsConfig, saslMechanism); err != nil {
 		return fmt.Errorf("failed to initialize admin connection: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -107,27 +107,27 @@ func (p *ConnectionPool) initialize() error {
 func (p *ConnectionPool) initializeProducers(tlsConfig *tls.Config, saslMechanism sasl.Mechanism) error {
 	for i := 0; i < p.poolConfig.ProducerPoolSize; i++ {
 		writer := &kafka.Writer{
-			Addr:                   kafka.TCP(p.config.Brokers...),
-			Topic:                  "", // Topic will be set per message
-			Balancer:               p.createBalancer(),
-			MaxAttempts:            p.config.Producer.Retries + 1,
-			BatchSize:              p.config.Producer.BatchSize,
-			BatchTimeout:           p.config.Producer.LingerMs,
-			ReadTimeout:            p.config.Producer.ReadTimeout,
-			WriteTimeout:           p.config.Producer.WriteTimeout,
-			RequiredAcks:           p.parseAcks(p.config.Producer.Acks),
-			Async:                  false,
-			Completion:             nil,
-			Compression:            p.parseCompression(p.config.Producer.Compression),
-			Logger:                 nil, // TODO: 集成日志系统
-			ErrorLogger:           nil, // TODO: 集成日志系统
-			Transport:             p.createTransport(tlsConfig, saslMechanism),
+			Addr:         kafka.TCP(p.config.Brokers...),
+			Topic:        "", // Topic will be set per message
+			Balancer:     p.createBalancer(),
+			MaxAttempts:  p.config.Producer.Retries + 1,
+			BatchSize:    p.config.Producer.BatchSize,
+			BatchTimeout: p.config.Producer.LingerMs,
+			ReadTimeout:  p.config.Producer.ReadTimeout,
+			WriteTimeout: p.config.Producer.WriteTimeout,
+			RequiredAcks: p.parseAcks(p.config.Producer.Acks),
+			Async:        false,
+			Completion:   nil,
+			Compression:  p.parseCompression(p.config.Producer.Compression),
+			Logger:       nil, // TODO: 集成日志系统
+			ErrorLogger:  nil, // TODO: 集成日志系统
+			Transport:    p.createTransport(tlsConfig, saslMechanism),
 		}
-		
+
 		p.producers = append(p.producers, writer)
 		p.producerPool <- writer
 	}
-	
+
 	return nil
 }
 
@@ -149,30 +149,30 @@ func (p *ConnectionPool) initializeConsumers(tlsConfig *tls.Config, saslMechanis
 			PartitionWatchInterval: 1 * time.Second,
 			WatchPartitionChanges:  true,
 			Logger:                 nil, // TODO: 集成日志系统
-			ErrorLogger:           nil, // TODO: 集成日志系统
+			ErrorLogger:            nil, // TODO: 集成日志系统
 			Dialer:                 p.createDialer(tlsConfig, saslMechanism),
 		})
-		
+
 		p.consumers = append(p.consumers, reader)
 		p.consumerPool <- reader
 	}
-	
+
 	return nil
 }
 
 // initializeAdminConnection 初始化管理连接
 func (p *ConnectionPool) initializeAdminConnection(tlsConfig *tls.Config, saslMechanism sasl.Mechanism) error {
 	dialer := p.createDialer(tlsConfig, saslMechanism)
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), p.poolConfig.ConnectionTimeout)
 	defer cancel()
-	
+
 	var err error
 	p.adminConn, err = dialer.DialContext(ctx, "tcp", p.config.Brokers[0])
 	if err != nil {
 		return fmt.Errorf("failed to create admin connection: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (p *ConnectionPool) createTLSConfig() (*tls.Config, error) {
 		InsecureSkipVerify: !p.config.Security.TLS.VerifySSL,
 		ServerName:         p.config.Security.TLS.ServerName,
 	}
-	
+
 	// 加载客户端证书
 	if p.config.Security.TLS.CertFile != "" && p.config.Security.TLS.KeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(p.config.Security.TLS.CertFile, p.config.Security.TLS.KeyFile)
@@ -191,12 +191,12 @@ func (p *ConnectionPool) createTLSConfig() (*tls.Config, error) {
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
-	
+
 	// 加载CA证书
 	if p.config.Security.TLS.CaFile != "" {
 		// TODO: 实现CA证书加载
 	}
-	
+
 	return tlsConfig, nil
 }
 
@@ -208,21 +208,21 @@ func (p *ConnectionPool) createSASLMechanism() (sasl.Mechanism, error) {
 			Username: p.config.Security.SASL.Username,
 			Password: p.config.Security.SASL.Password,
 		}, nil
-		
+
 	case "SCRAM-SHA-256":
 		mechanism, err := scram.Mechanism(scram.SHA256, p.config.Security.SASL.Username, p.config.Security.SASL.Password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create SCRAM-SHA-256 mechanism: %w", err)
 		}
 		return mechanism, nil
-		
+
 	case "SCRAM-SHA-512":
 		mechanism, err := scram.Mechanism(scram.SHA512, p.config.Security.SASL.Username, p.config.Security.SASL.Password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create SCRAM-SHA-512 mechanism: %w", err)
 		}
 		return mechanism, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unsupported SASL mechanism: %s", p.config.Security.SASL.Mechanism)
 	}
@@ -234,15 +234,15 @@ func (p *ConnectionPool) createDialer(tlsConfig *tls.Config, saslMechanism sasl.
 		Timeout:   p.poolConfig.ConnectionTimeout,
 		DualStack: true,
 	}
-	
+
 	if tlsConfig != nil {
 		dialer.TLS = tlsConfig
 	}
-	
+
 	if saslMechanism != nil {
 		dialer.SASLMechanism = saslMechanism
 	}
-	
+
 	return dialer
 }
 
@@ -251,7 +251,7 @@ func (p *ConnectionPool) createTransport(tlsConfig *tls.Config, saslMechanism sa
 	transport := &kafka.Transport{
 		Dial: p.createDialer(tlsConfig, saslMechanism).DialFunc,
 	}
-	
+
 	return transport
 }
 
@@ -328,7 +328,7 @@ func (p *ConnectionPool) GetProducer() (*kafka.Writer, error) {
 		return nil, fmt.Errorf("connection pool is closed")
 	}
 	p.mutex.RUnlock()
-	
+
 	select {
 	case producer := <-p.producerPool:
 		return producer, nil
@@ -345,7 +345,7 @@ func (p *ConnectionPool) ReturnProducer(producer *kafka.Writer) {
 		return
 	}
 	p.mutex.RUnlock()
-	
+
 	select {
 	case p.producerPool <- producer:
 		// 成功归还
@@ -362,7 +362,7 @@ func (p *ConnectionPool) GetConsumer() (*kafka.Reader, error) {
 		return nil, fmt.Errorf("connection pool is closed")
 	}
 	p.mutex.RUnlock()
-	
+
 	select {
 	case consumer := <-p.consumerPool:
 		return consumer, nil
@@ -379,7 +379,7 @@ func (p *ConnectionPool) ReturnConsumer(consumer *kafka.Reader) {
 		return
 	}
 	p.mutex.RUnlock()
-	
+
 	select {
 	case p.consumerPool <- consumer:
 		// 成功归还
@@ -392,11 +392,11 @@ func (p *ConnectionPool) ReturnConsumer(consumer *kafka.Reader) {
 func (p *ConnectionPool) GetAdminConnection() *kafka.Conn {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	return p.adminConn
 }
 
@@ -404,13 +404,13 @@ func (p *ConnectionPool) GetAdminConnection() *kafka.Conn {
 func (p *ConnectionPool) Close() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	
+
 	if p.closed {
 		return nil
 	}
-	
+
 	p.closed = true
-	
+
 	// 关闭所有生产者
 	close(p.producerPool)
 	for _, producer := range p.producers {
@@ -418,7 +418,7 @@ func (p *ConnectionPool) Close() error {
 			// 记录错误但继续关闭其他连接
 		}
 	}
-	
+
 	// 关闭所有消费者
 	close(p.consumerPool)
 	for _, consumer := range p.consumers {
@@ -426,14 +426,14 @@ func (p *ConnectionPool) Close() error {
 			// 记录错误但继续关闭其他连接
 		}
 	}
-	
+
 	// 关闭管理连接
 	if p.adminConn != nil {
 		if err := p.adminConn.Close(); err != nil {
 			// 记录错误
 		}
 	}
-	
+
 	return nil
 }
 
@@ -441,7 +441,7 @@ func (p *ConnectionPool) Close() error {
 func (p *ConnectionPool) Stats() map[string]interface{} {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	
+
 	return map[string]interface{}{
 		"producer_pool_size":     len(p.producerPool),
 		"producer_pool_capacity": cap(p.producerPool),

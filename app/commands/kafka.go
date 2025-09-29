@@ -222,7 +222,7 @@ func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	benchmarkConfig := kafka.NewBenchmarkConfigAdapter(&config.Benchmark)
 
 	// 创建操作工厂
-	operationFactory := kafka.NewOperationFactory(config)
+	operationFactory := &SimpleKafkaOperationFactory{config: config}
 
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
@@ -330,3 +330,55 @@ func (k *KafkaCommandHandler) generateReport(collector *metrics.BaseCollector[ma
 	// 生成并显示报告
 	return generator.Generate(report)
 }
+
+// SimpleKafkaOperationFactory 简单的Kafka操作工厂
+type SimpleKafkaOperationFactory struct {
+	config *kafkaConfig.KafkaAdapterConfig
+}
+
+// CreateOperation 创建操作
+func (f *SimpleKafkaOperationFactory) CreateOperation(jobID int, config execution.BenchmarkConfig) interfaces.Operation {
+	// 生成键
+	key := fmt.Sprintf("kafka_%s_%d", f.config.Benchmark.TestType, jobID)
+
+	// 生成测试数据
+	testData := fmt.Sprintf("kafka_test_message_%d_size_%d", jobID, f.config.Benchmark.MessageSize)
+
+	// 创建操作
+	operation := interfaces.Operation{
+		Type:  f.getOperationType(),
+		Key:   key,
+		Value: testData,
+		Params: map[string]interface{}{
+			"topic":        f.config.Benchmark.DefaultTopic,
+			"partition":    jobID % 3,
+			"message_size": f.config.Benchmark.MessageSize,
+			"job_id":       jobID,
+		},
+		Metadata: map[string]string{
+			"protocol":  "kafka",
+			"test_type": f.config.Benchmark.TestType,
+			"topic":     f.config.Benchmark.DefaultTopic,
+		},
+	}
+
+	return operation
+}
+
+// getOperationType 获取操作类型
+func (f *SimpleKafkaOperationFactory) getOperationType() string {
+	switch f.config.Benchmark.TestType {
+	case "consumer":
+		return "consume"
+	case "producer":
+		return "produce"
+	case "both":
+		// 可以根据jobID交替
+		return "produce" // 默认为produce
+	default:
+		return "produce"
+	}
+}
+
+// 确保实现了execution.OperationFactory接口
+var _ execution.OperationFactory = (*SimpleKafkaOperationFactory)(nil)

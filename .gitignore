@@ -42,3 +42,4 @@ test_reporting
 test-reports
 servers/bin/
 servers/http-server
+test-build

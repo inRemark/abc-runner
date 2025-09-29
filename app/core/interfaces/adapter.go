@@ -139,12 +139,12 @@ type CoreMetrics struct {
 
 // OperationMetrics 操作指标
 type OperationMetrics struct {
-	Total   int64   `json:"total"`         // 总操作数
-	Success int64   `json:"success"`       // 成功操作数
-	Failed  int64   `json:"failed"`        // 失败操作数
-	Read    int64   `json:"read"`          // 读操作数
-	Write   int64   `json:"write"`         // 写操作数
-	Rate    float64 `json:"success_rate"`  // 成功率 (%)
+	Total   int64   `json:"total"`        // 总操作数
+	Success int64   `json:"success"`      // 成功操作数
+	Failed  int64   `json:"failed"`       // 失败操作数
+	Read    int64   `json:"read"`         // 读操作数
+	Write   int64   `json:"write"`        // 写操作数
+	Rate    float64 `json:"success_rate"` // 成功率 (%)
 }
 
 // LatencyMetrics 延迟指标
@@ -168,19 +168,19 @@ type ThroughputMetrics struct {
 
 // SystemMetrics 系统监控指标
 type SystemMetrics struct {
-	MemoryUsage    MemoryMetrics    `json:"memory"`     // 内存使用情况
-	GCStats        GCMetrics        `json:"gc"`        // GC统计
-	GoroutineCount int              `json:"goroutines"` // 协程数量
-	CPUUsage       CPUMetrics       `json:"cpu"`       // CPU使用情况
+	MemoryUsage    MemoryMetrics `json:"memory"`     // 内存使用情况
+	GCStats        GCMetrics     `json:"gc"`         // GC统计
+	GoroutineCount int           `json:"goroutines"` // 协程数量
+	CPUUsage       CPUMetrics    `json:"cpu"`        // CPU使用情况
 }
 
 // MemoryMetrics 内存指标
 type MemoryMetrics struct {
-	Allocated   uint64 `json:"allocated"`   // 已分配内存
-	InUse       uint64 `json:"in_use"`      // 正在使用的内存
-	TotalAlloc  uint64 `json:"total_alloc"` // 总分配内存
-	Sys         uint64 `json:"sys"`         // 系统内存
-	GCReleased  uint64 `json:"gc_released"` // GC释放的内存
+	Allocated  uint64 `json:"allocated"`   // 已分配内存
+	InUse      uint64 `json:"in_use"`      // 正在使用的内存
+	TotalAlloc uint64 `json:"total_alloc"` // 总分配内存
+	Sys        uint64 `json:"sys"`         // 系统内存
+	GCReleased uint64 `json:"gc_released"` // GC释放的内存
 }
 
 // GCMetrics GC指标
