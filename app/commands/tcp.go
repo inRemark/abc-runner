@@ -8,6 +8,7 @@ import (
 
 	"abc-runner/app/adapters/tcp"
 	tcpConfig "abc-runner/app/adapters/tcp/config"
+	"abc-runner/app/adapters/tcp/operations"
 	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -77,7 +78,7 @@ func (t *TCPCommandHandler) Execute(ctx context.Context, args []string) error {
 	fmt.Printf("🚀 Starting TCP performance test...\n")
 	fmt.Printf("Target: %s:%d\n", config.Connection.Address, config.Connection.Port)
 	fmt.Printf("Test Case: %s\n", config.BenchMark.TestCase)
-	fmt.Printf("Operations: %d, Concurrency: %d, Data Size: %d bytes\n", 
+	fmt.Printf("Operations: %d, Concurrency: %d, Data Size: %d bytes\n",
 		config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.DataSize)
 
 	err = t.runPerformanceTest(ctx, adapter, config, metricsCollector)
@@ -213,24 +214,24 @@ func (t *TCPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 // runConcurrentTest 使用ExecutionEngine运行并发测试
 func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *tcpConfig.TCPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 创建基准配置适配器
-	benchmarkConfig := tcp.NewBenchmarkConfigAdapter(config.GetBenchmark())
-	
+	benchmarkConfig := tcpConfig.NewBenchmarkConfigAdapter(config.GetBenchmark())
+
 	// 创建操作工厂
-	operationFactory := tcp.NewOperationFactory(config)
-	
+	operationFactory := operations.NewOperationFactory(config)
+
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, collector, operationFactory)
-	
+
 	// 配置执行引擎参数（根据设计文档优化）
 	engine.SetMaxWorkers(200)         // 提高最大工作协程数支持TCP并发
 	engine.SetBufferSizes(2000, 2000) // 增大缓冲区减少任务调度延迟
-	
+
 	// 运行基准测试
 	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
-	
+
 	// 输出执行结果
 	fmt.Printf("✅ Concurrent TCP test completed\n")
 	fmt.Printf("   Test Case: %s\n", config.BenchMark.TestCase)
@@ -243,19 +244,19 @@ func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter inter
 		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
 		fmt.Printf("   Throughput: %.2f ops/sec\n", float64(result.CompletedJobs)/result.TotalDuration.Seconds())
 	}
-	
+
 	return nil
 }
 
 // runSimulationTest 运行模拟测试
 func (t *TCPCommandHandler) runSimulationTest(config *tcpConfig.TCPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("🎭 Running TCP simulation test...\n")
-	
+
 	// 模拟操作执行
 	for i := 0; i < config.BenchMark.Total; i++ {
 		// 模拟延迟
 		time.Sleep(time.Millisecond * time.Duration(1+i%10))
-		
+
 		// 创建模拟结果
 		result := &interfaces.OperationResult{
 			Success:  true,
@@ -264,22 +265,22 @@ func (t *TCPCommandHandler) runSimulationTest(config *tcpConfig.TCPConfig, colle
 			Error:    nil,
 			Value:    t.generateTestData(config.BenchMark.DataSize),
 			Metadata: map[string]interface{}{
-				"simulated":     true,
-				"test_case":     config.BenchMark.TestCase,
-				"data_size":     config.BenchMark.DataSize,
-				"operation_id":  i,
+				"simulated":    true,
+				"test_case":    config.BenchMark.TestCase,
+				"data_size":    config.BenchMark.DataSize,
+				"operation_id": i,
 			},
 		}
-		
+
 		// 随机添加一些失败案例
 		if i%100 == 0 {
 			result.Success = false
 			result.Error = fmt.Errorf("simulated error for operation %d", i)
 		}
-		
+
 		collector.Record(result)
 	}
-	
+
 	fmt.Printf("✅ Simulation completed with %d operations\n", config.BenchMark.Total)
 	return nil
 }
@@ -287,20 +288,20 @@ func (t *TCPCommandHandler) runSimulationTest(config *tcpConfig.TCPConfig, colle
 // generateReport 生成报告
 func (t *TCPCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	snapshot := collector.Snapshot()
-	
+
 	fmt.Printf("\n📊 TCP Performance Test Results:\n")
 	fmt.Printf("=====================================\n")
-	
+
 	// 核心指标
 	core := snapshot.Core
 	fmt.Printf("Total Operations: %d\n", core.Operations.Total)
-	fmt.Printf("Successful: %d (%.2f%%)\n", core.Operations.Success, 
+	fmt.Printf("Successful: %d (%.2f%%)\n", core.Operations.Success,
 		float64(core.Operations.Success)/float64(core.Operations.Total)*100)
 	fmt.Printf("Failed: %d (%.2f%%)\n", core.Operations.Failed,
 		float64(core.Operations.Failed)/float64(core.Operations.Total)*100)
 	fmt.Printf("Read Operations: %d\n", core.Operations.Read)
 	fmt.Printf("Write Operations: %d\n", core.Operations.Write)
-	
+
 	// 延迟指标
 	fmt.Printf("\nLatency Metrics:\n")
 	fmt.Printf("  Average: %v\n", core.Latency.Average)
@@ -310,25 +311,25 @@ func (t *TCPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  P90: %v\n", core.Latency.P90)
 	fmt.Printf("  P95: %v\n", core.Latency.P95)
 	fmt.Printf("  P99: %v\n", core.Latency.P99)
-	
+
 	// 吞吐量指标
 	fmt.Printf("\nThroughput Metrics:\n")
 	fmt.Printf("  RPS: %.2f\n", core.Throughput.RPS)
 	fmt.Printf("  Read RPS: %.2f\n", core.Throughput.ReadRPS)
 	fmt.Printf("  Write RPS: %.2f\n", core.Throughput.WriteRPS)
-	
+
 	// 协议特定指标
 	fmt.Printf("\nTCP Specific Metrics:\n")
 	for key, value := range snapshot.Protocol {
 		fmt.Printf("  %s: %v\n", key, value)
 	}
-	
+
 	// 系统指标
 	fmt.Printf("\nSystem Metrics:\n")
 	fmt.Printf("  Memory Usage: %d MB\n", snapshot.System.MemoryUsage.InUse/1024/1024)
 	fmt.Printf("  Goroutines: %d\n", snapshot.System.GoroutineCount)
 	fmt.Printf("  GC Count: %d\n", snapshot.System.GCStats.NumGC)
-	
+
 	fmt.Printf("\nTest Duration: %v\n", core.Duration)
 	fmt.Printf("=====================================\n")
 

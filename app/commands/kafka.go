@@ -219,7 +219,7 @@ func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	fmt.Printf("📊 Running concurrent Kafka performance test with ExecutionEngine...\n")
 
 	// 创建基准配置适配器
-	benchmarkConfig := kafka.NewBenchmarkConfigAdapter(&config.Benchmark)
+	benchmarkConfig := kafkaConfig.NewBenchmarkConfigAdapter(&config.Benchmark)
 
 	// 创建操作工厂
 	operationFactory := &SimpleKafkaOperationFactory{config: config}

@@ -59,7 +59,7 @@ func (h *WebSocketCommandHandler) Execute(ctx context.Context, args []string) er
 
 	// 连接到WebSocket服务器
 	fmt.Printf("🔗 Connecting to WebSocket server: %s\n", config["url"].(string))
-	
+
 	if err := adapter.Connect(ctx, h.createConfigWrapper(config)); err != nil {
 		fmt.Printf("⚠️  Connection failed to %s: %v\n", config["url"].(string), err)
 		fmt.Printf("🔍 Possible causes: WebSocket server not running, wrong URL, or network issues\n")
@@ -114,17 +114,17 @@ NOTE:
 func (h *WebSocketCommandHandler) parseArgs(args []string) (map[string]interface{}, error) {
 	// 创建默认配置
 	config := map[string]interface{}{
-		"url":                   "ws://localhost:8080/ws",
-		"test_case":            "message_exchange",
+		"url":                    "ws://localhost:8080/ws",
+		"test_case":              "message_exchange",
 		"concurrent_connections": 10,
-		"duration":             30 * time.Second,
-		"interval":             100 * time.Millisecond,
-		"message_size":         1024,
-		"message":              "",
-		"enable_compression":   false,
-		"handshake_timeout":    10 * time.Second,
-		"read_timeout":         30 * time.Second,
-		"write_timeout":        10 * time.Second,
+		"duration":               30 * time.Second,
+		"interval":               100 * time.Millisecond,
+		"message_size":           1024,
+		"message":                "",
+		"enable_compression":     false,
+		"handshake_timeout":      10 * time.Second,
+		"read_timeout":           30 * time.Second,
+		"write_timeout":          10 * time.Second,
 	}
 
 	// 解析参数
@@ -197,7 +197,7 @@ func (h *WebSocketCommandHandler) parseArgs(args []string) (map[string]interface
 func (h *WebSocketCommandHandler) runTestCase(ctx context.Context, adapter interfaces.ProtocolAdapter, testCase string, config map[string]interface{}) error {
 	fmt.Printf("🚀 Starting WebSocket %s test...\n", testCase)
 	fmt.Printf("URL: %s\n", config["url"])
-	fmt.Printf("Connections: %d, Duration: %v\n", 
+	fmt.Printf("Connections: %d, Duration: %v\n",
 		config["concurrent_connections"], config["duration"])
 
 	switch testCase {
@@ -227,9 +227,9 @@ func (h *WebSocketCommandHandler) runMessageExchangeTest(ctx context.Context, ad
 		Key:   "test_message",
 		Value: message,
 		Metadata: map[string]string{
-			"concurrent":  strconv.Itoa(concurrent),
-			"duration":    duration.String(),
-			"interval":    interval.String(),
+			"concurrent": strconv.Itoa(concurrent),
+			"duration":   duration.String(),
+			"interval":   interval.String(),
 		},
 	}
 
@@ -240,7 +240,7 @@ func (h *WebSocketCommandHandler) runMessageExchangeTest(ctx context.Context, ad
 	}
 
 	// 打印结果
-	fmt.Printf("✅ Message exchange test completed: Success=%t, Duration=%v\n", 
+	fmt.Printf("✅ Message exchange test completed: Success=%t, Duration=%v\n",
 		result.Success, result.Duration)
 	return nil
 }
@@ -265,7 +265,7 @@ func (h *WebSocketCommandHandler) runPingPongTest(ctx context.Context, adapter i
 		return fmt.Errorf("ping-pong test failed: %w", err)
 	}
 
-	fmt.Printf("✅ Ping-pong test completed: Success=%t, Duration=%v\n", 
+	fmt.Printf("✅ Ping-pong test completed: Success=%t, Duration=%v\n",
 		result.Success, result.Duration)
 	return nil
 }
@@ -289,7 +289,7 @@ func (h *WebSocketCommandHandler) runBroadcastTest(ctx context.Context, adapter 
 		return fmt.Errorf("broadcast test failed: %w", err)
 	}
 
-	fmt.Printf("✅ Broadcast test completed: Success=%t, Duration=%v\n", 
+	fmt.Printf("✅ Broadcast test completed: Success=%t, Duration=%v\n",
 		result.Success, result.Duration)
 	return nil
 }
@@ -298,7 +298,7 @@ func (h *WebSocketCommandHandler) runBroadcastTest(ctx context.Context, adapter 
 func (h *WebSocketCommandHandler) runLargeMessageTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config map[string]interface{}) error {
 	concurrent := config["concurrent_connections"].(int)
 	messageSize := config["message_size"].(int)
-	
+
 	// 生成大消息
 	largeMessage := h.generateTestMessage(messageSize)
 
@@ -307,8 +307,8 @@ func (h *WebSocketCommandHandler) runLargeMessageTest(ctx context.Context, adapt
 		Key:   "large_data",
 		Value: largeMessage,
 		Metadata: map[string]string{
-			"concurrent":    strconv.Itoa(concurrent),
-			"message_size":  strconv.Itoa(messageSize),
+			"concurrent":   strconv.Itoa(concurrent),
+			"message_size": strconv.Itoa(messageSize),
 		},
 	}
 
@@ -317,7 +317,7 @@ func (h *WebSocketCommandHandler) runLargeMessageTest(ctx context.Context, adapt
 		return fmt.Errorf("large message test failed: %w", err)
 	}
 
-	fmt.Printf("✅ Large message test completed: Success=%t, Duration=%v\n", 
+	fmt.Printf("✅ Large message test completed: Success=%t, Duration=%v\n",
 		result.Success, result.Duration)
 	return nil
 }
@@ -327,7 +327,7 @@ func (h *WebSocketCommandHandler) generateTestMessage(size int) string {
 	if size <= 0 {
 		return "test"
 	}
-	
+
 	message := make([]byte, size)
 	for i := range message {
 		message[i] = 'A' + byte(i%26)

@@ -11,10 +11,10 @@ import (
 
 // UDPConfig UDP协议配置
 type UDPConfig struct {
-	Protocol       string            `yaml:"protocol" json:"protocol"`
-	Connection     ConnectionConfig  `yaml:"connection" json:"connection"`
-	BenchMark      BenchmarkConfig   `yaml:"benchmark" json:"benchmark"`
-	UDPSpecific    UDPSpecificConfig `yaml:"udp_specific" json:"udp_specific"`
+	Protocol    string            `yaml:"protocol" json:"protocol"`
+	Connection  ConnectionConfig  `yaml:"connection" json:"connection"`
+	BenchMark   BenchmarkConfig   `yaml:"benchmark" json:"benchmark"`
+	UDPSpecific UDPSpecificConfig `yaml:"udp_specific" json:"udp_specific"`
 }
 
 // ConnectionConfig UDP连接配置
@@ -29,25 +29,25 @@ type ConnectionConfig struct {
 
 // BenchmarkConfig UDP基准测试配置
 type BenchmarkConfig struct {
-	Total        int           `yaml:"total" json:"total"`
-	Parallels    int           `yaml:"parallels" json:"parallels"`
-	DataSize     int           `yaml:"data_size" json:"data_size"`
-	TTL          time.Duration `yaml:"ttl" json:"ttl"`
-	ReadPercent  int           `yaml:"read_percent" json:"read_percent"`
-	RandomKeys   int           `yaml:"random_keys" json:"random_keys"`
-	TestCase     string        `yaml:"test_case" json:"test_case"`
-	Duration     time.Duration `yaml:"duration" json:"duration"`
-	PacketRate   int           `yaml:"packet_rate" json:"packet_rate"` // 每秒数据包发送率
+	Total       int           `yaml:"total" json:"total"`
+	Parallels   int           `yaml:"parallels" json:"parallels"`
+	DataSize    int           `yaml:"data_size" json:"data_size"`
+	TTL         time.Duration `yaml:"ttl" json:"ttl"`
+	ReadPercent int           `yaml:"read_percent" json:"read_percent"`
+	RandomKeys  int           `yaml:"random_keys" json:"random_keys"`
+	TestCase    string        `yaml:"test_case" json:"test_case"`
+	Duration    time.Duration `yaml:"duration" json:"duration"`
+	PacketRate  int           `yaml:"packet_rate" json:"packet_rate"` // 每秒数据包发送率
 }
 
 // UDPSpecificConfig UDP特定配置
 type UDPSpecificConfig struct {
-	PacketMode      string `yaml:"packet_mode" json:"packet_mode"`         // "unicast", "broadcast", "multicast"
-	Broadcast       bool   `yaml:"broadcast" json:"broadcast"`             // 启用广播
-	MulticastGroup  string `yaml:"multicast_group" json:"multicast_group"` // 组播地址
-	TTL             int    `yaml:"ttl" json:"ttl"`                         // 数据包TTL
-	LocalAddress    string `yaml:"local_address" json:"local_address"`     // 本地绑定地址
-	ReuseAddress    bool   `yaml:"reuse_address" json:"reuse_address"`     // SO_REUSEADDR
+	PacketMode      string `yaml:"packet_mode" json:"packet_mode"`           // "unicast", "broadcast", "multicast"
+	Broadcast       bool   `yaml:"broadcast" json:"broadcast"`               // 启用广播
+	MulticastGroup  string `yaml:"multicast_group" json:"multicast_group"`   // 组播地址
+	TTL             int    `yaml:"ttl" json:"ttl"`                           // 数据包TTL
+	LocalAddress    string `yaml:"local_address" json:"local_address"`       // 本地绑定地址
+	ReuseAddress    bool   `yaml:"reuse_address" json:"reuse_address"`       // SO_REUSEADDR
 	ChecksumEnabled bool   `yaml:"checksum_enabled" json:"checksum_enabled"` // 启用校验和验证
 }
 
@@ -105,23 +105,23 @@ func (c *UDPConfig) Validate() error {
 	if c.Connection.Address == "" {
 		return fmt.Errorf("connection address cannot be empty")
 	}
-	
+
 	if c.Connection.Port <= 0 || c.Connection.Port > 65535 {
 		return fmt.Errorf("invalid port number: %d", c.Connection.Port)
 	}
-	
+
 	if c.BenchMark.Total <= 0 {
 		return fmt.Errorf("total operations must be greater than 0")
 	}
-	
+
 	if c.BenchMark.Parallels <= 0 {
 		return fmt.Errorf("parallel connections must be greater than 0")
 	}
-	
+
 	if c.BenchMark.DataSize <= 0 || c.BenchMark.DataSize > 65507 { // UDP最大数据长度
 		return fmt.Errorf("data size must be between 1 and 65507 bytes")
 	}
-	
+
 	// 验证测试用例
 	validTestCases := []string{"packet_send", "packet_receive", "echo_udp", "multicast"}
 	valid := false
@@ -132,10 +132,10 @@ func (c *UDPConfig) Validate() error {
 		}
 	}
 	if !valid {
-		return fmt.Errorf("invalid test case: %s, valid options: %s", 
+		return fmt.Errorf("invalid test case: %s, valid options: %s",
 			c.BenchMark.TestCase, strings.Join(validTestCases, ", "))
 	}
-	
+
 	// 验证数据包模式
 	validModes := []string{"unicast", "broadcast", "multicast"}
 	valid = false
@@ -146,10 +146,10 @@ func (c *UDPConfig) Validate() error {
 		}
 	}
 	if !valid {
-		return fmt.Errorf("invalid packet mode: %s, valid options: %s", 
+		return fmt.Errorf("invalid packet mode: %s, valid options: %s",
 			c.UDPSpecific.PacketMode, strings.Join(validModes, ", "))
 	}
-	
+
 	// 验证组播地址
 	if c.UDPSpecific.PacketMode == "multicast" {
 		if c.UDPSpecific.MulticastGroup == "" {
@@ -159,12 +159,12 @@ func (c *UDPConfig) Validate() error {
 			return fmt.Errorf("invalid multicast address: %s", c.UDPSpecific.MulticastGroup)
 		}
 	}
-	
+
 	// 验证TTL
 	if c.UDPSpecific.TTL < 1 || c.UDPSpecific.TTL > 255 {
 		return fmt.Errorf("TTL must be between 1 and 255")
 	}
-	
+
 	return nil
 }
 
@@ -200,10 +200,10 @@ func (c *ConnectionConfig) GetTimeout() time.Duration {
 // EmptyPoolConfig 空的连接池配置（UDP不需要连接池）
 type EmptyPoolConfig struct{}
 
-func (p *EmptyPoolConfig) GetPoolSize() int           { return 0 }
-func (p *EmptyPoolConfig) GetMinIdle() int            { return 0 }
-func (p *EmptyPoolConfig) GetMaxIdle() int            { return 0 }
-func (p *EmptyPoolConfig) GetIdleTimeout() time.Duration { return 0 }
+func (p *EmptyPoolConfig) GetPoolSize() int                    { return 0 }
+func (p *EmptyPoolConfig) GetMinIdle() int                     { return 0 }
+func (p *EmptyPoolConfig) GetMaxIdle() int                     { return 0 }
+func (p *EmptyPoolConfig) GetIdleTimeout() time.Duration       { return 0 }
 func (p *EmptyPoolConfig) GetConnectionTimeout() time.Duration { return 0 }
 
 // BenchmarkConfig接口实现

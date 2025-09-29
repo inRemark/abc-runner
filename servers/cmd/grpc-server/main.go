@@ -29,39 +29,39 @@ func main() {
 		help       = flag.Bool("help", false, "Show help information")
 		version    = flag.Bool("version", false, "Show version information")
 	)
-	
+
 	flag.Parse()
-	
+
 	if *help {
 		showHelp()
 		return
 	}
-	
+
 	if *version {
 		showVersion()
 		return
 	}
-	
+
 	// 初始化日志
 	logger := logging.NewLogger(*logLevel)
 	logger.Info("Starting gRPC test server", map[string]interface{}{
 		"config_file": *configFile,
 		"log_level":   *logLevel,
 	})
-	
+
 	// 加载配置
 	serverConfig, err := loadConfig(*configFile, *host, *port)
 	if err != nil {
 		logger.Fatal("Failed to load configuration", err)
 		os.Exit(1)
 	}
-	
+
 	// 验证配置
 	if err := serverConfig.Validate(); err != nil {
 		logger.Fatal("Configuration validation failed", err)
 		os.Exit(1)
 	}
-	
+
 	logger.Info("Configuration loaded successfully", map[string]interface{}{
 		"address":                serverConfig.GetAddress(),
 		"tls":                    serverConfig.TLS.Enabled,
@@ -69,28 +69,28 @@ func main() {
 		"health_check":           serverConfig.HealthCheck.Enabled,
 		"max_concurrent_streams": serverConfig.MaxConcurrentStreams,
 	})
-	
+
 	// 创建指标收集器
 	metricsCollector := monitoring.NewMetricsCollector()
-	
+
 	// 创建gRPC服务端
 	server := grpc.NewGRPCServer(serverConfig, logger, metricsCollector)
-	
+
 	// 创建上下文
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	// 启动服务端
 	if err := server.Start(ctx); err != nil {
 		logger.Fatal("Failed to start gRPC server", err)
 		os.Exit(1)
 	}
-	
+
 	logger.Info("gRPC server started successfully", map[string]interface{}{
 		"address": serverConfig.GetAddress(),
 		"pid":     os.Getpid(),
 	})
-	
+
 	// 等待中断信号
 	waitForShutdown(ctx, cancel, server, logger)
 }
@@ -99,16 +99,16 @@ func main() {
 func loadConfig(configFile, host string, port int) (*grpc.GRPCServerConfig, error) {
 	// 使用默认配置
 	serverConfig := grpc.NewGRPCServerConfig()
-	
+
 	// 应用命令行覆盖
 	if host != "" {
 		serverConfig.BaseConfig.Host = host
 	}
-	
+
 	if port > 0 {
 		serverConfig.BaseConfig.Port = port
 	}
-	
+
 	return serverConfig, nil
 }
 
@@ -117,7 +117,7 @@ func waitForShutdown(ctx context.Context, cancel context.CancelFunc, server *grp
 	// 创建信号通道
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	// 等待信号
 	select {
 	case sig := <-sigChan:
@@ -127,21 +127,21 @@ func waitForShutdown(ctx context.Context, cancel context.CancelFunc, server *grp
 	case <-ctx.Done():
 		logger.Info("Context cancelled, shutting down")
 	}
-	
+
 	// 开始优雅关闭
 	logger.Info("Initiating graceful shutdown...")
-	
+
 	// 创建关闭超时上下文
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
-	
+
 	// 停止服务端
 	if err := server.Stop(shutdownCtx); err != nil {
 		logger.Error("Error during server shutdown", err)
 	} else {
 		logger.Info("Server shutdown completed successfully")
 	}
-	
+
 	cancel()
 }
 
@@ -225,12 +225,12 @@ func showVersion() {
 	fmt.Println("Version: 1.0.0")
 	fmt.Println("Built for: abc-runner performance testing framework")
 	fmt.Println("Protocol: gRPC over HTTP/2")
-	
+
 	// 显示构建信息（如果可用）
 	if buildDate := os.Getenv("BUILD_DATE"); buildDate != "" {
 		fmt.Printf("Build Date: %s\n", buildDate)
 	}
-	
+
 	if gitCommit := os.Getenv("GIT_COMMIT"); gitCommit != "" {
 		fmt.Printf("Git Commit: %s\n", gitCommit)
 	}

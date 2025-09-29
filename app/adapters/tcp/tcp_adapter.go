@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"abc-runner/app/adapters/tcp/config"
+	"abc-runner/app/adapters/tcp/connection"
+
 	"abc-runner/app/core/interfaces"
 )
 
 // TCPAdapter TCP协议适配器
 type TCPAdapter struct {
 	config           *config.TCPConfig
-	connectionPool   *ConnectionPool
+	connectionPool   *connection.ConnectionPool
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
@@ -47,7 +49,7 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	}
 
 	// 创建连接池
-	pool, err := NewConnectionPool(tcpConfig)
+	pool, err := connection.NewConnectionPool(tcpConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create connection pool: %w", err)
 	}

@@ -37,14 +37,14 @@ func TestNewTCPAdapter(t *testing.T) {
 
 func TestTCPConfigValidation(t *testing.T) {
 	tests := []struct {
-		name        string
+		name         string
 		modifyConfig func(*config.TCPConfig)
-		expectError bool
+		expectError  bool
 	}{
 		{
-			name:        "default config should be valid",
+			name:         "default config should be valid",
 			modifyConfig: func(c *config.TCPConfig) {},
-			expectError: false,
+			expectError:  false,
 		},
 		{
 			name: "empty address should fail",

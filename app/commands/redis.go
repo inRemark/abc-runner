@@ -228,7 +228,7 @@ func (r *RedisCommandHandler) runSimulationTest(config *redisConfig.RedisConfig,
 func (r *RedisCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *redisConfig.RedisConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running concurrent Redis performance test with ExecutionEngine...\n")
 	// 创建基准配置适配器
-	benchmarkConfig := redis.NewBenchmarkConfigAdapter(config.GetBenchmark())
+	benchmarkConfig := redisConfig.NewBenchmarkConfigAdapter(config.GetBenchmark())
 	// 创建操作工厂
 	operationFactory := redisOperations.NewOperationFactory(config)
 	// 创建执行引擎

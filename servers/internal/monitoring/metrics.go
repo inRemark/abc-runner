@@ -20,9 +20,9 @@ type MetricsCollector struct {
 	durationMutex    sync.RWMutex
 
 	// 连接指标
-	totalConnections   int64
-	activeConnections  int64
-	closedConnections  int64
+	totalConnections  int64
+	activeConnections int64
+	closedConnections int64
 
 	// 错误指标
 	errors     map[string]int64
@@ -40,27 +40,27 @@ type MetricsCollector struct {
 // NewMetricsCollector 创建指标收集器
 func NewMetricsCollector() *MetricsCollector {
 	return &MetricsCollector{
-		requestDurations:    make([]time.Duration, 0, 10000), // 预分配空间
-		errors:              make(map[string]int64),
-		protocolMetrics:     make(map[string]map[string]int64),
-		startTime:           time.Now(),
+		requestDurations: make([]time.Duration, 0, 10000), // 预分配空间
+		errors:           make(map[string]int64),
+		protocolMetrics:  make(map[string]map[string]int64),
+		startTime:        time.Now(),
 	}
 }
 
 // RecordRequest 记录请求
 func (mc *MetricsCollector) RecordRequest(protocol string, operation string, duration time.Duration, success bool) {
 	atomic.AddInt64(&mc.totalRequests, 1)
-	
+
 	if success {
 		atomic.AddInt64(&mc.successRequests, 1)
 	} else {
 		atomic.AddInt64(&mc.failedRequests, 1)
 	}
-	
+
 	// 记录持续时间
 	mc.durationMutex.Lock()
 	mc.requestDurations = append(mc.requestDurations, duration)
-	
+
 	// 限制存储的持续时间数量，避免内存泄漏
 	if len(mc.requestDurations) > 10000 {
 		// 移除最旧的一半记录
@@ -68,7 +68,7 @@ func (mc *MetricsCollector) RecordRequest(protocol string, operation string, dur
 		mc.requestDurations = mc.requestDurations[:5000]
 	}
 	mc.durationMutex.Unlock()
-	
+
 	// 记录协议特定指标
 	mc.recordProtocolMetric(protocol, operation, 1)
 }
@@ -76,7 +76,7 @@ func (mc *MetricsCollector) RecordRequest(protocol string, operation string, dur
 // RecordConnection 记录连接
 func (mc *MetricsCollector) RecordConnection(protocol string, action string) {
 	atomic.AddInt64(&mc.totalConnections, 1)
-	
+
 	switch action {
 	case "open":
 		atomic.AddInt64(&mc.activeConnections, 1)
@@ -84,7 +84,7 @@ func (mc *MetricsCollector) RecordConnection(protocol string, action string) {
 		atomic.AddInt64(&mc.activeConnections, -1)
 		atomic.AddInt64(&mc.closedConnections, 1)
 	}
-	
+
 	// 记录协议连接指标
 	mc.recordProtocolMetric(protocol, "connections_"+action, 1)
 }
@@ -92,11 +92,11 @@ func (mc *MetricsCollector) RecordConnection(protocol string, action string) {
 // RecordError 记录错误
 func (mc *MetricsCollector) RecordError(protocol string, operation string, errorType string) {
 	key := protocol + ":" + operation + ":" + errorType
-	
+
 	mc.errorMutex.Lock()
 	mc.errors[key]++
 	mc.errorMutex.Unlock()
-	
+
 	// 记录协议错误指标
 	mc.recordProtocolMetric(protocol, "errors_"+errorType, 1)
 }
@@ -105,11 +105,11 @@ func (mc *MetricsCollector) RecordError(protocol string, operation string, error
 func (mc *MetricsCollector) recordProtocolMetric(protocol string, metric string, value int64) {
 	mc.protocolMetricMutex.Lock()
 	defer mc.protocolMetricMutex.Unlock()
-	
+
 	if mc.protocolMetrics[protocol] == nil {
 		mc.protocolMetrics[protocol] = make(map[string]int64)
 	}
-	
+
 	mc.protocolMetrics[protocol][metric] += value
 }
 
@@ -117,7 +117,7 @@ func (mc *MetricsCollector) recordProtocolMetric(protocol string, metric string,
 func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
-	
+
 	// 基础指标
 	metrics := map[string]interface{}{
 		"total_requests":     atomic.LoadInt64(&mc.totalRequests),
@@ -129,14 +129,14 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 		"start_time":         mc.startTime,
 		"uptime":             time.Since(mc.startTime).String(),
 	}
-	
+
 	// 计算请求统计
 	if requestStats := mc.calculateRequestStats(); requestStats != nil {
 		for k, v := range requestStats {
 			metrics[k] = v
 		}
 	}
-	
+
 	// 错误统计
 	mc.errorMutex.RLock()
 	if len(mc.errors) > 0 {
@@ -147,7 +147,7 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 		metrics["errors"] = errorMetrics
 	}
 	mc.errorMutex.RUnlock()
-	
+
 	// 协议指标
 	mc.protocolMetricMutex.RLock()
 	if len(mc.protocolMetrics) > 0 {
@@ -161,7 +161,7 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 		metrics["protocols"] = protocolMetrics
 	}
 	mc.protocolMetricMutex.RUnlock()
-	
+
 	return metrics
 }
 
@@ -169,20 +169,20 @@ func (mc *MetricsCollector) GetMetrics() map[string]interface{} {
 func (mc *MetricsCollector) calculateRequestStats() map[string]interface{} {
 	mc.durationMutex.RLock()
 	defer mc.durationMutex.RUnlock()
-	
+
 	if len(mc.requestDurations) == 0 {
 		return nil
 	}
-	
+
 	// 复制切片以避免在计算过程中被修改
 	durations := make([]time.Duration, len(mc.requestDurations))
 	copy(durations, mc.requestDurations)
-	
+
 	// 计算基础统计
 	var total, min, max time.Duration
 	min = durations[0]
 	max = durations[0]
-	
+
 	for _, d := range durations {
 		total += d
 		if d < min {
@@ -192,29 +192,29 @@ func (mc *MetricsCollector) calculateRequestStats() map[string]interface{} {
 			max = d
 		}
 	}
-	
+
 	avg := total / time.Duration(len(durations))
-	
+
 	// 计算百分位数（需要先排序）
 	sortedDurations := make([]time.Duration, len(durations))
 	copy(sortedDurations, durations)
 	quickSort(sortedDurations, 0, len(sortedDurations)-1)
-	
+
 	p50 := percentile(sortedDurations, 50)
 	p90 := percentile(sortedDurations, 90)
 	p95 := percentile(sortedDurations, 95)
 	p99 := percentile(sortedDurations, 99)
-	
+
 	return map[string]interface{}{
 		"request_stats": map[string]interface{}{
-			"count":         len(durations),
-			"avg_duration":  avg.String(),
-			"min_duration":  min.String(),
-			"max_duration":  max.String(),
-			"p50_duration":  p50.String(),
-			"p90_duration":  p90.String(),
-			"p95_duration":  p95.String(),
-			"p99_duration":  p99.String(),
+			"count":          len(durations),
+			"avg_duration":   avg.String(),
+			"min_duration":   min.String(),
+			"max_duration":   max.String(),
+			"p50_duration":   p50.String(),
+			"p90_duration":   p90.String(),
+			"p95_duration":   p95.String(),
+			"p99_duration":   p99.String(),
 			"total_duration": total.String(),
 		},
 	}
@@ -224,26 +224,26 @@ func (mc *MetricsCollector) calculateRequestStats() map[string]interface{} {
 func (mc *MetricsCollector) Reset() {
 	mc.mutex.Lock()
 	defer mc.mutex.Unlock()
-	
+
 	atomic.StoreInt64(&mc.totalRequests, 0)
 	atomic.StoreInt64(&mc.successRequests, 0)
 	atomic.StoreInt64(&mc.failedRequests, 0)
 	atomic.StoreInt64(&mc.totalConnections, 0)
 	atomic.StoreInt64(&mc.activeConnections, 0)
 	atomic.StoreInt64(&mc.closedConnections, 0)
-	
+
 	mc.durationMutex.Lock()
 	mc.requestDurations = mc.requestDurations[:0]
 	mc.durationMutex.Unlock()
-	
+
 	mc.errorMutex.Lock()
 	mc.errors = make(map[string]int64)
 	mc.errorMutex.Unlock()
-	
+
 	mc.protocolMetricMutex.Lock()
 	mc.protocolMetrics = make(map[string]map[string]int64)
 	mc.protocolMetricMutex.Unlock()
-	
+
 	mc.startTime = time.Now()
 }
 
@@ -251,11 +251,11 @@ func (mc *MetricsCollector) Reset() {
 func (mc *MetricsCollector) GetRequestRate() float64 {
 	totalRequests := atomic.LoadInt64(&mc.totalRequests)
 	duration := time.Since(mc.startTime).Seconds()
-	
+
 	if duration > 0 {
 		return float64(totalRequests) / duration
 	}
-	
+
 	return 0
 }
 
@@ -263,11 +263,11 @@ func (mc *MetricsCollector) GetRequestRate() float64 {
 func (mc *MetricsCollector) GetSuccessRate() float64 {
 	totalRequests := atomic.LoadInt64(&mc.totalRequests)
 	successRequests := atomic.LoadInt64(&mc.successRequests)
-	
+
 	if totalRequests > 0 {
 		return float64(successRequests) / float64(totalRequests) * 100
 	}
-	
+
 	return 0
 }
 
@@ -275,11 +275,11 @@ func (mc *MetricsCollector) GetSuccessRate() float64 {
 func (mc *MetricsCollector) GetErrorRate() float64 {
 	totalRequests := atomic.LoadInt64(&mc.totalRequests)
 	failedRequests := atomic.LoadInt64(&mc.failedRequests)
-	
+
 	if totalRequests > 0 {
 		return float64(failedRequests) / float64(totalRequests) * 100
 	}
-	
+
 	return 0
 }
 
@@ -319,19 +319,19 @@ func (hc *HealthChecker) RemoveCheck(name string) {
 func (hc *HealthChecker) Check(ctx context.Context) error {
 	hc.mutex.RLock()
 	defer hc.mutex.RUnlock()
-	
+
 	// 检查服务端是否运行
 	if !hc.server.IsRunning() {
 		return fmt.Errorf("server is not running")
 	}
-	
+
 	// 执行所有健康检查
 	for name, checkFunc := range hc.checks {
 		if err := checkFunc(); err != nil {
 			return fmt.Errorf("health check '%s' failed: %w", name, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -340,18 +340,18 @@ func (hc *HealthChecker) GetStatus() interfaces.HealthStatus {
 	start := time.Now()
 	err := hc.Check(context.Background())
 	duration := time.Since(start)
-	
+
 	status := "healthy"
 	details := make(map[string]string)
-	
+
 	if err != nil {
 		status = "unhealthy"
 		details["error"] = err.Error()
 	}
-	
+
 	details["protocol"] = hc.server.GetProtocol()
 	details["address"] = hc.server.GetAddress()
-	
+
 	return interfaces.HealthStatus{
 		Status:    status,
 		Timestamp: time.Now(),
@@ -375,14 +375,14 @@ func quickSort(arr []time.Duration, low, high int) {
 func partition(arr []time.Duration, low, high int) int {
 	pivot := arr[high]
 	i := low - 1
-	
+
 	for j := low; j < high; j++ {
 		if arr[j] < pivot {
 			i++
 			arr[i], arr[j] = arr[j], arr[i]
 		}
 	}
-	
+
 	arr[i+1], arr[high] = arr[high], arr[i+1]
 	return i + 1
 }
@@ -392,23 +392,23 @@ func percentile(sortedData []time.Duration, p int) time.Duration {
 	if len(sortedData) == 0 {
 		return 0
 	}
-	
+
 	if p >= 100 {
 		return sortedData[len(sortedData)-1]
 	}
-	
+
 	if p <= 0 {
 		return sortedData[0]
 	}
-	
+
 	index := float64(p) / 100.0 * float64(len(sortedData)-1)
 	lower := int(index)
 	upper := lower + 1
-	
+
 	if upper >= len(sortedData) {
 		return sortedData[len(sortedData)-1]
 	}
-	
+
 	weight := index - float64(lower)
 	return time.Duration(float64(sortedData[lower]) + weight*float64(sortedData[upper]-sortedData[lower]))
 }

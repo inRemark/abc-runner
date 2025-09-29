@@ -10,19 +10,19 @@ import (
 
 // WebSocketConfig WebSocket协议配置
 type WebSocketConfig struct {
-	Protocol           string                 `yaml:"protocol" json:"protocol"`
-	Connection         ConnectionConfig       `yaml:"connection" json:"connection"`
-	BenchMark          BenchmarkConfig        `yaml:"benchmark" json:"benchmark"`
-	WebSocketSpecific  WebSocketSpecificConfig `yaml:"websocket_specific" json:"websocket_specific"`
+	Protocol          string                  `yaml:"protocol" json:"protocol"`
+	Connection        ConnectionConfig        `yaml:"connection" json:"connection"`
+	BenchMark         BenchmarkConfig         `yaml:"benchmark" json:"benchmark"`
+	WebSocketSpecific WebSocketSpecificConfig `yaml:"websocket_specific" json:"websocket_specific"`
 }
 
 // ConnectionConfig WebSocket连接配置
 type ConnectionConfig struct {
-	URL             string        `yaml:"url" json:"url"`
-	Timeout         time.Duration `yaml:"timeout" json:"timeout"`
-	PingInterval    time.Duration `yaml:"ping_interval" json:"ping_interval"`
-	PongTimeout     time.Duration `yaml:"pong_timeout" json:"pong_timeout"`
-	Pool            PoolConfig    `yaml:"pool" json:"pool"`
+	URL          string        `yaml:"url" json:"url"`
+	Timeout      time.Duration `yaml:"timeout" json:"timeout"`
+	PingInterval time.Duration `yaml:"ping_interval" json:"ping_interval"`
+	PongTimeout  time.Duration `yaml:"pong_timeout" json:"pong_timeout"`
+	Pool         PoolConfig    `yaml:"pool" json:"pool"`
 }
 
 // PoolConfig WebSocket连接池配置
@@ -36,44 +36,44 @@ type PoolConfig struct {
 
 // BenchmarkConfig WebSocket基准测试配置
 type BenchmarkConfig struct {
-	Total        int           `yaml:"total" json:"total"`
-	Parallels    int           `yaml:"parallels" json:"parallels"`
-	DataSize     int           `yaml:"data_size" json:"data_size"`
-	TTL          time.Duration `yaml:"ttl" json:"ttl"`
-	ReadPercent  int           `yaml:"read_percent" json:"read_percent"`
-	RandomKeys   int           `yaml:"random_keys" json:"random_keys"`
-	TestCase     string        `yaml:"test_case" json:"test_case"`
-	Duration     time.Duration `yaml:"duration" json:"duration"`
+	Total       int           `yaml:"total" json:"total"`
+	Parallels   int           `yaml:"parallels" json:"parallels"`
+	DataSize    int           `yaml:"data_size" json:"data_size"`
+	TTL         time.Duration `yaml:"ttl" json:"ttl"`
+	ReadPercent int           `yaml:"read_percent" json:"read_percent"`
+	RandomKeys  int           `yaml:"random_keys" json:"random_keys"`
+	TestCase    string        `yaml:"test_case" json:"test_case"`
+	Duration    time.Duration `yaml:"duration" json:"duration"`
 }
 
 // WebSocketSpecificConfig WebSocket特定配置
 type WebSocketSpecificConfig struct {
-	Subprotocol         string          `yaml:"subprotocol" json:"subprotocol"`
-	Compression         bool            `yaml:"compression" json:"compression"`
-	MessageType         string          `yaml:"message_type" json:"message_type"` // "text", "binary"
-	AutoReconnect       bool            `yaml:"auto_reconnect" json:"auto_reconnect"`
-	ReconnectInterval   time.Duration   `yaml:"reconnect_interval" json:"reconnect_interval"`
-	MaxReconnectAttempts int            `yaml:"max_reconnect_attempts" json:"max_reconnect_attempts"`
-	BufferSize          int             `yaml:"buffer_size" json:"buffer_size"`
-	WriteTimeout        time.Duration   `yaml:"write_timeout" json:"write_timeout"`
-	ReadTimeout         time.Duration   `yaml:"read_timeout" json:"read_timeout"`
-	Heartbeat           HeartbeatConfig `yaml:"heartbeat" json:"heartbeat"`
-	Extensions          ExtensionConfig `yaml:"extensions" json:"extensions"`
+	Subprotocol          string          `yaml:"subprotocol" json:"subprotocol"`
+	Compression          bool            `yaml:"compression" json:"compression"`
+	MessageType          string          `yaml:"message_type" json:"message_type"` // "text", "binary"
+	AutoReconnect        bool            `yaml:"auto_reconnect" json:"auto_reconnect"`
+	ReconnectInterval    time.Duration   `yaml:"reconnect_interval" json:"reconnect_interval"`
+	MaxReconnectAttempts int             `yaml:"max_reconnect_attempts" json:"max_reconnect_attempts"`
+	BufferSize           int             `yaml:"buffer_size" json:"buffer_size"`
+	WriteTimeout         time.Duration   `yaml:"write_timeout" json:"write_timeout"`
+	ReadTimeout          time.Duration   `yaml:"read_timeout" json:"read_timeout"`
+	Heartbeat            HeartbeatConfig `yaml:"heartbeat" json:"heartbeat"`
+	Extensions           ExtensionConfig `yaml:"extensions" json:"extensions"`
 }
 
 // HeartbeatConfig 心跳配置
 type HeartbeatConfig struct {
-	Enabled    bool          `yaml:"enabled" json:"enabled"`
-	Interval   time.Duration `yaml:"interval" json:"interval"`
-	Timeout    time.Duration `yaml:"timeout" json:"timeout"`
-	MaxMissed  int           `yaml:"max_missed" json:"max_missed"`
+	Enabled   bool          `yaml:"enabled" json:"enabled"`
+	Interval  time.Duration `yaml:"interval" json:"interval"`
+	Timeout   time.Duration `yaml:"timeout" json:"timeout"`
+	MaxMissed int           `yaml:"max_missed" json:"max_missed"`
 }
 
 // ExtensionConfig 扩展配置
 type ExtensionConfig struct {
-	PerMessageDeflate  bool `yaml:"per_message_deflate" json:"per_message_deflate"`
-	NoContextTakeover  bool `yaml:"no_context_takeover" json:"no_context_takeover"`
-	MaxWindowBits      int  `yaml:"max_window_bits" json:"max_window_bits"`
+	PerMessageDeflate bool `yaml:"per_message_deflate" json:"per_message_deflate"`
+	NoContextTakeover bool `yaml:"no_context_takeover" json:"no_context_takeover"`
+	MaxWindowBits     int  `yaml:"max_window_bits" json:"max_window_bits"`
 }
 
 // NewDefaultWebSocketConfig 创建默认WebSocket配置
@@ -103,15 +103,15 @@ func NewDefaultWebSocketConfig() *WebSocketConfig {
 			Duration:    60 * time.Second,
 		},
 		WebSocketSpecific: WebSocketSpecificConfig{
-			Subprotocol:         "",
-			Compression:         false,
-			MessageType:         "text",
-			AutoReconnect:       true,
-			ReconnectInterval:   5 * time.Second,
+			Subprotocol:          "",
+			Compression:          false,
+			MessageType:          "text",
+			AutoReconnect:        true,
+			ReconnectInterval:    5 * time.Second,
 			MaxReconnectAttempts: 3,
-			BufferSize:          4096,
-			WriteTimeout:        10 * time.Second,
-			ReadTimeout:         10 * time.Second,
+			BufferSize:           4096,
+			WriteTimeout:         10 * time.Second,
+			ReadTimeout:          10 * time.Second,
 			Heartbeat: HeartbeatConfig{
 				Enabled:   true,
 				Interval:  30 * time.Second,
@@ -147,24 +147,24 @@ func (c *WebSocketConfig) Validate() error {
 	if c.Connection.URL == "" {
 		return fmt.Errorf("connection URL cannot be empty")
 	}
-	
+
 	// 验证URL格式
 	if !strings.HasPrefix(c.Connection.URL, "ws://") && !strings.HasPrefix(c.Connection.URL, "wss://") {
 		return fmt.Errorf("invalid WebSocket URL: must start with ws:// or wss://")
 	}
-	
+
 	if c.BenchMark.Total <= 0 {
 		return fmt.Errorf("total operations must be greater than 0")
 	}
-	
+
 	if c.BenchMark.Parallels <= 0 {
 		return fmt.Errorf("parallel connections must be greater than 0")
 	}
-	
+
 	if c.BenchMark.DataSize <= 0 {
 		return fmt.Errorf("data size must be greater than 0")
 	}
-	
+
 	// 验证测试用例
 	validTestCases := []string{"message_exchange", "ping_pong", "broadcast", "large_message"}
 	valid := false
@@ -175,15 +175,15 @@ func (c *WebSocketConfig) Validate() error {
 		}
 	}
 	if !valid {
-		return fmt.Errorf("invalid test case: %s, valid options: %s", 
+		return fmt.Errorf("invalid test case: %s, valid options: %s",
 			c.BenchMark.TestCase, strings.Join(validTestCases, ", "))
 	}
-	
+
 	// 验证消息类型
 	if c.WebSocketSpecific.MessageType != "text" && c.WebSocketSpecific.MessageType != "binary" {
 		return fmt.Errorf("invalid message type: %s, must be 'text' or 'binary'", c.WebSocketSpecific.MessageType)
 	}
-	
+
 	return nil
 }
 

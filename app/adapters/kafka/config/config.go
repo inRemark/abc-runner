@@ -22,7 +22,7 @@ func LoadDefaultKafkaConfig() *KafkaAdapterConfig {
 			},
 		},
 		Producer: ProducerConfig{
-			Acks:         "1",                             // 设置默认acks值
+			Acks:         "1", // 设置默认acks值
 			BatchSize:    16384,
 			BatchTimeout: time.Millisecond * 100,
 			RetryMax:     3,
@@ -35,16 +35,16 @@ func LoadDefaultKafkaConfig() *KafkaAdapterConfig {
 			CommitInterval:   time.Second * 1,
 			SessionTimeout:   time.Second * 30,
 			HeartbeatTimeout: time.Second * 3,
-			FetchMinBytes:    1,                       // 设置默认值
-			FetchMaxBytes:    1024 * 1024,             // 1MB
+			FetchMinBytes:    1,           // 设置默认值
+			FetchMaxBytes:    1024 * 1024, // 1MB
 		},
 		Benchmark: KafkaBenchmarkConfig{
-			DefaultTopic: "test-topic",              // 设置默认topic
+			DefaultTopic: "test-topic", // 设置默认topic
 			Total:        1000,
 			Parallels:    3,
 			MessageSize:  1024,
 			TestType:     "produce",
-			Timeout:      30 * time.Second,           // 设置默认超时
+			Timeout:      30 * time.Second, // 设置默认超时
 		},
 		Performance: PerformanceConfig{
 			ConnectionPoolSize: 10,

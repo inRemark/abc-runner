@@ -3,7 +3,7 @@ package kafka
 import (
 	"fmt"
 	"time"
-	
+
 	"github.com/segmentio/kafka-go"
 )
 
@@ -44,9 +44,9 @@ type TopicConfig struct {
 
 // TopicInfo 主题信息
 type TopicInfo struct {
-	Name       string             `json:"name"`       // 主题名称
-	Partitions []PartitionInfo    `json:"partitions"` // 分区信息
-	Config     map[string]string  `json:"config"`     // 配置
+	Name       string            `json:"name"`       // 主题名称
+	Partitions []PartitionInfo   `json:"partitions"` // 分区信息
+	Config     map[string]string `json:"config"`     // 配置
 }
 
 // PartitionInfo 分区信息
@@ -59,12 +59,12 @@ type PartitionInfo struct {
 
 // ConsumerGroupInfo 消费者组信息
 type ConsumerGroupInfo struct {
-	GroupID      string                    `json:"group_id"`      // 组ID
-	State        string                    `json:"state"`         // 状态
-	Protocol     string                    `json:"protocol"`      // 协议
-	ProtocolType string                    `json:"protocol_type"` // 协议类型
-	Members      []ConsumerGroupMember     `json:"members"`       // 成员
-	Coordinator  ConsumerGroupCoordinator  `json:"coordinator"`   // 协调器
+	GroupID      string                   `json:"group_id"`      // 组ID
+	State        string                   `json:"state"`         // 状态
+	Protocol     string                   `json:"protocol"`      // 协议
+	ProtocolType string                   `json:"protocol_type"` // 协议类型
+	Members      []ConsumerGroupMember    `json:"members"`       // 成员
+	Coordinator  ConsumerGroupCoordinator `json:"coordinator"`   // 协调器
 }
 
 // ConsumerGroupMember 消费者组成员
@@ -86,13 +86,13 @@ type ConsumerGroupCoordinator struct {
 type Transaction interface {
 	// Commit 提交事务
 	Commit() error
-	
+
 	// Abort 回滚事务
 	Abort() error
-	
+
 	// GetTransactionID 获取事务ID
 	GetTransactionID() string
-	
+
 	// IsActive 检查事务是否活跃
 	IsActive() bool
 }
@@ -118,7 +118,7 @@ func (t *KafkaTransaction) Commit() error {
 	if !t.active {
 		return fmt.Errorf("transaction is not active")
 	}
-	
+
 	// 实际的事务提交逻辑
 	// 注意：kafka-go库目前对事务的支持有限，这里是概念性实现
 	t.active = false
@@ -130,7 +130,7 @@ func (t *KafkaTransaction) Abort() error {
 	if !t.active {
 		return fmt.Errorf("transaction is not active")
 	}
-	
+
 	// 实际的事务回滚逻辑
 	t.active = false
 	return nil
@@ -155,18 +155,18 @@ const (
 	OperationProduceBatch OperationType = "produce_batch"
 	OperationConsume      OperationType = "consume"
 	OperationConsumeBatch OperationType = "consume_batch"
-	
+
 	// 事务操作
 	OperationTransactionProduce OperationType = "transaction_produce"
 	OperationExactlyOnce        OperationType = "exactly_once"
-	
+
 	// 管理操作
-	OperationCreateTopic             OperationType = "create_topic"
-	OperationDeleteTopic             OperationType = "delete_topic"
-	OperationDescribeTopic           OperationType = "describe_topic"
-	OperationListConsumerGroups      OperationType = "list_consumer_groups"
-	OperationDescribeConsumerGroups  OperationType = "describe_consumer_groups"
-	OperationResetOffset             OperationType = "reset_offset"
+	OperationCreateTopic            OperationType = "create_topic"
+	OperationDeleteTopic            OperationType = "delete_topic"
+	OperationDescribeTopic          OperationType = "describe_topic"
+	OperationListConsumerGroups     OperationType = "list_consumer_groups"
+	OperationDescribeConsumerGroups OperationType = "describe_consumer_groups"
+	OperationResetOffset            OperationType = "reset_offset"
 )
 
 // IsReadOperation 判断是否为读操作
@@ -178,7 +178,7 @@ func (op OperationType) IsReadOperation() bool {
 		OperationListConsumerGroups,
 		OperationDescribeConsumerGroups,
 	}
-	
+
 	for _, readOp := range readOperations {
 		if op == readOp {
 			return true
@@ -202,7 +202,7 @@ func (op OperationType) IsManagementOperation() bool {
 		OperationDescribeConsumerGroups,
 		OperationResetOffset,
 	}
-	
+
 	for _, mgmtOp := range managementOperations {
 		if op == mgmtOp {
 			return true

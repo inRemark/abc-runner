@@ -11,25 +11,25 @@ import (
 // GRPCServerConfig gRPC服务端配置
 type GRPCServerConfig struct {
 	*common.BaseConfig `yaml:",inline"`
-	
+
 	// gRPC特定配置
-	MaxRecvMessageSize int           `yaml:"max_recv_message_size" json:"max_recv_message_size"`
-	MaxSendMessageSize int           `yaml:"max_send_message_size" json:"max_send_message_size"`
-	ConnectionTimeout  time.Duration `yaml:"connection_timeout" json:"connection_timeout"`
-	MaxConcurrentStreams uint32      `yaml:"max_concurrent_streams" json:"max_concurrent_streams"`
-	
+	MaxRecvMessageSize   int           `yaml:"max_recv_message_size" json:"max_recv_message_size"`
+	MaxSendMessageSize   int           `yaml:"max_send_message_size" json:"max_send_message_size"`
+	ConnectionTimeout    time.Duration `yaml:"connection_timeout" json:"connection_timeout"`
+	MaxConcurrentStreams uint32        `yaml:"max_concurrent_streams" json:"max_concurrent_streams"`
+
 	// TLS配置
 	TLS TLSConfig `yaml:"tls" json:"tls"`
-	
+
 	// 认证配置
 	Auth AuthConfig `yaml:"auth" json:"auth"`
-	
+
 	// 健康检查配置
 	HealthCheck HealthCheckConfig `yaml:"health_check" json:"health_check"`
-	
+
 	// 反射配置
 	EnableReflection bool `yaml:"enable_reflection" json:"enable_reflection"`
-	
+
 	// 日志配置
 	LogRequests bool `yaml:"log_requests" json:"log_requests"`
 }
@@ -43,9 +43,9 @@ type TLSConfig struct {
 
 // AuthConfig 认证配置
 type AuthConfig struct {
-	Enabled    bool   `yaml:"enabled" json:"enabled"`
-	AuthToken  string `yaml:"auth_token" json:"auth_token"`
-	RequireAuth bool  `yaml:"require_auth" json:"require_auth"`
+	Enabled     bool   `yaml:"enabled" json:"enabled"`
+	AuthToken   string `yaml:"auth_token" json:"auth_token"`
+	RequireAuth bool   `yaml:"require_auth" json:"require_auth"`
 }
 
 // HealthCheckConfig 健康检查配置
@@ -85,23 +85,23 @@ func (c *GRPCServerConfig) Validate() error {
 	if err := c.BaseConfig.Validate(); err != nil {
 		return fmt.Errorf("base config validation failed: %w", err)
 	}
-	
+
 	if c.MaxRecvMessageSize <= 0 {
 		return fmt.Errorf("max_recv_message_size must be positive")
 	}
-	
+
 	if c.MaxSendMessageSize <= 0 {
 		return fmt.Errorf("max_send_message_size must be positive")
 	}
-	
+
 	if c.ConnectionTimeout <= 0 {
 		return fmt.Errorf("connection_timeout must be positive")
 	}
-	
+
 	if c.MaxConcurrentStreams == 0 {
 		return fmt.Errorf("max_concurrent_streams must be positive")
 	}
-	
+
 	// 验证TLS配置
 	if c.TLS.Enabled {
 		if c.TLS.CertFile == "" {
@@ -111,7 +111,7 @@ func (c *GRPCServerConfig) Validate() error {
 			return fmt.Errorf("tls enabled but key_file is empty")
 		}
 	}
-	
+
 	return nil
 }
 

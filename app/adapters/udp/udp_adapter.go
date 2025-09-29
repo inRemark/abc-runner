@@ -20,11 +20,11 @@ type UDPAdapter struct {
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
-	
+
 	// 统计信息
-	sentPackets     int64
-	receivedPackets int64
-	lostPackets     int64
+	sentPackets      int64
+	receivedPackets  int64
+	lostPackets      int64
 	duplicatePackets int64
 }
 
@@ -79,7 +79,7 @@ func (u *UDPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 // setupUnicastConnection 设置单播连接
 func (u *UDPAdapter) setupUnicastConnection() error {
 	address := fmt.Sprintf("%s:%d", u.config.Connection.Address, u.config.Connection.Port)
-	
+
 	// 创建UDP连接
 	conn, err := net.DialTimeout("udp", address, u.config.Connection.Timeout)
 	if err != nil {
@@ -104,7 +104,7 @@ func (u *UDPAdapter) setupBroadcastConnection() error {
 
 // setupMulticastConnection 设置组播连接
 func (u *UDPAdapter) setupMulticastConnection() error {
-	groupAddr, err := net.ResolveUDPAddr("udp", 
+	groupAddr, err := net.ResolveUDPAddr("udp",
 		fmt.Sprintf("%s:%d", u.config.UDPSpecific.MulticastGroup, u.config.Connection.Port))
 	if err != nil {
 		return fmt.Errorf("failed to resolve multicast address: %w", err)
@@ -123,7 +123,7 @@ func (u *UDPAdapter) setupMulticastConnection() error {
 // Execute 执行操作
 func (u *UDPAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	result := &interfaces.OperationResult{
 		Success:  false,
 		Duration: 0,
@@ -187,10 +187,10 @@ func (u *UDPAdapter) executePacketSend(ctx context.Context, operation interfaces
 
 	// 构造测试数据
 	testData := u.buildTestData(operation)
-	
+
 	// 设置超时
 	deadline := time.Now().Add(u.config.Connection.Timeout)
-	
+
 	var n int
 	var err error
 
@@ -214,7 +214,7 @@ func (u *UDPAdapter) executePacketSend(ctx context.Context, operation interfaces
 		}
 	case "multicast":
 		if u.packetConn != nil {
-			multicastAddr, _ := net.ResolveUDPAddr("udp", 
+			multicastAddr, _ := net.ResolveUDPAddr("udp",
 				fmt.Sprintf("%s:%d", u.config.UDPSpecific.MulticastGroup, u.config.Connection.Port))
 			n, err = u.packetConn.WriteTo(testData, multicastAddr)
 		} else {
@@ -228,7 +228,7 @@ func (u *UDPAdapter) executePacketSend(ctx context.Context, operation interfaces
 	}
 
 	atomic.AddInt64(&u.sentPackets, 1)
-	
+
 	result.Success = true
 	result.Value = n
 	result.Metadata["sent_bytes"] = n
@@ -248,7 +248,7 @@ func (u *UDPAdapter) executePacketReceive(ctx context.Context, operation interfa
 
 	buffer := make([]byte, u.config.BenchMark.DataSize*2)
 	deadline := time.Now().Add(u.config.Connection.Timeout)
-	
+
 	var n int
 	var addr net.Addr
 	var err error
@@ -277,7 +277,7 @@ func (u *UDPAdapter) executePacketReceive(ctx context.Context, operation interfa
 	result.Metadata["received_bytes"] = n
 	result.Metadata["packet_mode"] = u.config.UDPSpecific.PacketMode
 	result.Metadata["packet_id"] = atomic.LoadInt64(&u.receivedPackets)
-	
+
 	if addr != nil {
 		result.Metadata["sender_address"] = addr.String()
 	}
@@ -295,7 +295,7 @@ func (u *UDPAdapter) executeEchoUDP(ctx context.Context, operation interfaces.Op
 
 	// 构造测试数据
 	testData := u.buildTestData(operation)
-	
+
 	// 发送数据
 	sendResult, err := u.executePacketSend(ctx, operation)
 	if err != nil {
@@ -309,7 +309,7 @@ func (u *UDPAdapter) executeEchoUDP(ctx context.Context, operation interfaces.Op
 		Key:    operation.Key,
 		Params: operation.Params,
 	}
-	
+
 	receiveResult, err := u.executePacketReceive(ctx, receiveOp)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to receive echo response: %w", err)
@@ -370,7 +370,7 @@ func (u *UDPAdapter) buildTestData(operation interfaces.Operation) []byte {
 
 	// 否则生成默认大小的测试数据
 	data := make([]byte, u.config.BenchMark.DataSize)
-	
+
 	// 添加包标识和序列号
 	packetId := atomic.LoadInt64(&u.sentPackets)
 	for i := range data {
@@ -382,7 +382,7 @@ func (u *UDPAdapter) buildTestData(operation interfaces.Operation) []byte {
 			data[i] = byte(i % 256)
 		}
 	}
-	
+
 	return data
 }
 
@@ -420,7 +420,7 @@ func (u *UDPAdapter) Close() error {
 func (u *UDPAdapter) GetProtocolMetrics() map[string]interface{} {
 	sentPackets := atomic.LoadInt64(&u.sentPackets)
 	receivedPackets := atomic.LoadInt64(&u.receivedPackets)
-	
+
 	lossRate := float64(0)
 	if sentPackets > 0 {
 		lossRate = float64(sentPackets-receivedPackets) / float64(sentPackets) * 100

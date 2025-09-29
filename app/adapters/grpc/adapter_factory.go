@@ -33,7 +33,7 @@ func (f *AdapterFactory) CreateGRPCAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
 		return nil
 	}
-	
+
 	adapter := NewGRPCAdapter(f.metricsCollector)
 	return adapter
 }

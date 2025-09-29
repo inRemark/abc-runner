@@ -13,7 +13,7 @@ import (
 // TCPServerConfig TCP服务端配置
 type TCPServerConfig struct {
 	*common.BaseConfig `yaml:",inline"`
-	
+
 	// TCP特定配置
 	MaxConnections    int           `yaml:"max_connections" json:"max_connections"`
 	ConnectionTimeout time.Duration `yaml:"connection_timeout" json:"connection_timeout"`
@@ -21,17 +21,17 @@ type TCPServerConfig struct {
 	WriteTimeout      time.Duration `yaml:"write_timeout" json:"write_timeout"`
 	KeepAlive         bool          `yaml:"keep_alive" json:"keep_alive"`
 	NoDelay           bool          `yaml:"no_delay" json:"no_delay"`
-	
+
 	// 缓冲区配置
-	BufferSize     int `yaml:"buffer_size" json:"buffer_size"`
-	ReadBufferSize int `yaml:"read_buffer_size" json:"read_buffer_size"`
+	BufferSize      int `yaml:"buffer_size" json:"buffer_size"`
+	ReadBufferSize  int `yaml:"read_buffer_size" json:"read_buffer_size"`
 	WriteBufferSize int `yaml:"write_buffer_size" json:"write_buffer_size"`
-	
+
 	// 行为配置
-	EchoMode        bool          `yaml:"echo_mode" json:"echo_mode"`
-	ResponseDelay   time.Duration `yaml:"response_delay" json:"response_delay"`
-	MaxMessageSize  int           `yaml:"max_message_size" json:"max_message_size"`
-	
+	EchoMode       bool          `yaml:"echo_mode" json:"echo_mode"`
+	ResponseDelay  time.Duration `yaml:"response_delay" json:"response_delay"`
+	MaxMessageSize int           `yaml:"max_message_size" json:"max_message_size"`
+
 	// 日志配置
 	LogConnections bool `yaml:"log_connections" json:"log_connections"`
 	LogMessages    bool `yaml:"log_messages" json:"log_messages"`
@@ -67,43 +67,43 @@ func (c *TCPServerConfig) Validate() error {
 	if err := c.BaseConfig.Validate(); err != nil {
 		return fmt.Errorf("base config validation failed: %w", err)
 	}
-	
+
 	if c.MaxConnections <= 0 {
 		return fmt.Errorf("max_connections must be positive")
 	}
-	
+
 	if c.ConnectionTimeout <= 0 {
 		return fmt.Errorf("connection_timeout must be positive")
 	}
-	
+
 	if c.ReadTimeout <= 0 {
 		return fmt.Errorf("read_timeout must be positive")
 	}
-	
+
 	if c.WriteTimeout <= 0 {
 		return fmt.Errorf("write_timeout must be positive")
 	}
-	
+
 	if c.BufferSize <= 0 {
 		return fmt.Errorf("buffer_size must be positive")
 	}
-	
+
 	if c.ReadBufferSize <= 0 {
 		return fmt.Errorf("read_buffer_size must be positive")
 	}
-	
+
 	if c.WriteBufferSize <= 0 {
 		return fmt.Errorf("write_buffer_size must be positive")
 	}
-	
+
 	if c.MaxMessageSize <= 0 {
 		return fmt.Errorf("max_message_size must be positive")
 	}
-	
+
 	if c.MaxMessageSize > 10*1024*1024 { // 10MB limit
 		return fmt.Errorf("max_message_size too large, maximum is 10MB")
 	}
-	
+
 	return nil
 }
 
@@ -116,14 +116,14 @@ func (c *TCPServerConfig) Clone() interfaces.ServerConfig {
 
 // ConnectionInfo 连接信息
 type ConnectionInfo struct {
-	ID         string    `json:"id"`
-	RemoteAddr string    `json:"remote_addr"`
-	LocalAddr  string    `json:"local_addr"`
-	ConnectedAt time.Time `json:"connected_at"`
-	BytesSent   int64     `json:"bytes_sent"`
-	BytesRecv   int64     `json:"bytes_recv"`
-	MessagesSent int64    `json:"messages_sent"`
-	MessagesRecv int64    `json:"messages_recv"`
+	ID           string    `json:"id"`
+	RemoteAddr   string    `json:"remote_addr"`
+	LocalAddr    string    `json:"local_addr"`
+	ConnectedAt  time.Time `json:"connected_at"`
+	BytesSent    int64     `json:"bytes_sent"`
+	BytesRecv    int64     `json:"bytes_recv"`
+	MessagesSent int64     `json:"messages_sent"`
+	MessagesRecv int64     `json:"messages_recv"`
 }
 
 // MessageInfo 消息信息
@@ -137,11 +137,11 @@ type MessageInfo struct {
 
 // ConnectionManager 连接管理器
 type ConnectionManager struct {
-	connections map[string]*Connection
+	connections    map[string]*Connection
 	maxConnections int
-	mutex       sync.RWMutex
-	logger      interfaces.Logger
-	metrics     interfaces.MetricsCollector
+	mutex          sync.RWMutex
+	logger         interfaces.Logger
+	metrics        interfaces.MetricsCollector
 }
 
 // NewConnectionManager 创建连接管理器
@@ -158,25 +158,25 @@ func NewConnectionManager(maxConnections int, logger interfaces.Logger, metrics 
 func (cm *ConnectionManager) AddConnection(conn *Connection) error {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
-	
+
 	if len(cm.connections) >= cm.maxConnections {
 		return fmt.Errorf("maximum connections reached: %d", cm.maxConnections)
 	}
-	
+
 	cm.connections[conn.ID] = conn
-	
+
 	if cm.metrics != nil {
 		cm.metrics.RecordConnection("tcp", "open")
 	}
-	
+
 	if cm.logger != nil {
 		cm.logger.Debug("Connection added", map[string]interface{}{
-			"connection_id": conn.ID,
-			"remote_addr":   conn.RemoteAddr,
+			"connection_id":     conn.ID,
+			"remote_addr":       conn.RemoteAddr,
 			"total_connections": len(cm.connections),
 		})
 	}
-	
+
 	return nil
 }
 
@@ -184,21 +184,21 @@ func (cm *ConnectionManager) AddConnection(conn *Connection) error {
 func (cm *ConnectionManager) RemoveConnection(connectionID string) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
-	
+
 	if conn, exists := cm.connections[connectionID]; exists {
 		delete(cm.connections, connectionID)
-		
+
 		if cm.metrics != nil {
 			cm.metrics.RecordConnection("tcp", "close")
 		}
-		
+
 		if cm.logger != nil {
 			cm.logger.Debug("Connection removed", map[string]interface{}{
-				"connection_id": connectionID,
-				"remote_addr":   conn.RemoteAddr,
-				"duration":      time.Since(conn.ConnectedAt).String(),
-				"bytes_sent":    conn.BytesSent,
-				"bytes_recv":    conn.BytesRecv,
+				"connection_id":         connectionID,
+				"remote_addr":           conn.RemoteAddr,
+				"duration":              time.Since(conn.ConnectedAt).String(),
+				"bytes_sent":            conn.BytesSent,
+				"bytes_recv":            conn.BytesRecv,
 				"remaining_connections": len(cm.connections),
 			})
 		}
@@ -209,7 +209,7 @@ func (cm *ConnectionManager) RemoveConnection(connectionID string) {
 func (cm *ConnectionManager) GetConnection(connectionID string) (*Connection, bool) {
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
-	
+
 	conn, exists := cm.connections[connectionID]
 	return conn, exists
 }
@@ -218,7 +218,7 @@ func (cm *ConnectionManager) GetConnection(connectionID string) (*Connection, bo
 func (cm *ConnectionManager) GetConnectionCount() int {
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
-	
+
 	return len(cm.connections)
 }
 
@@ -226,12 +226,12 @@ func (cm *ConnectionManager) GetConnectionCount() int {
 func (cm *ConnectionManager) GetAllConnections() []ConnectionInfo {
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
-	
+
 	connections := make([]ConnectionInfo, 0, len(cm.connections))
 	for _, conn := range cm.connections {
 		connections = append(connections, conn.GetInfo())
 	}
-	
+
 	return connections
 }
 
@@ -239,13 +239,13 @@ func (cm *ConnectionManager) GetAllConnections() []ConnectionInfo {
 func (cm *ConnectionManager) CloseAll() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
-	
+
 	for _, conn := range cm.connections {
 		conn.Close()
 	}
-	
+
 	cm.connections = make(map[string]*Connection)
-	
+
 	if cm.logger != nil {
 		cm.logger.Info("All connections closed")
 	}
@@ -263,10 +263,10 @@ func ValidateMessage(data []byte, maxSize int) error {
 	if len(data) == 0 {
 		return fmt.Errorf("empty message")
 	}
-	
+
 	if len(data) > maxSize {
 		return fmt.Errorf("message too large: %d bytes, maximum is %d", len(data), maxSize)
 	}
-	
+
 	return nil
 }

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"abc-runner/app/adapters/grpc"
 	"abc-runner/app/adapters/grpc/config"
+	"abc-runner/app/adapters/grpc/operations"
 	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -69,11 +69,11 @@ func (h *GRPCCommandHandler) Execute(ctx context.Context, args []string) error {
 	defer adapter.Close()
 
 	// 连接到gRPC服务器
-	fmt.Printf("🔗 Connecting to gRPC server: %s:%d\n", 
+	fmt.Printf("🔗 Connecting to gRPC server: %s:%d\n",
 		config.Connection.Address, config.Connection.Port)
-	
+
 	if err := adapter.Connect(ctx, config); err != nil {
-		fmt.Printf("⚠️  Connection failed to %s:%d: %v\n", 
+		fmt.Printf("⚠️  Connection failed to %s:%d: %v\n",
 			config.Connection.Address, config.Connection.Port, err)
 		fmt.Printf("🔍 Possible causes: gRPC server not running, wrong host/port, TLS issues, or network problems\n")
 	} else {
@@ -84,7 +84,7 @@ func (h *GRPCCommandHandler) Execute(ctx context.Context, args []string) error {
 	fmt.Printf("🚀 Starting gRPC performance test...\n")
 	fmt.Printf("Target: %s:%d\n", config.Connection.Address, config.Connection.Port)
 	fmt.Printf("Test Case: %s\n", config.BenchMark.TestCase)
-	fmt.Printf("Operations: %d, Concurrency: %d, Data Size: %d bytes\n", 
+	fmt.Printf("Operations: %d, Concurrency: %d, Data Size: %d bytes\n",
 		config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.DataSize)
 
 	err = h.runPerformanceTest(ctx, adapter, config, metricsCollector)
@@ -217,30 +217,30 @@ func (h *GRPCCommandHandler) parseArgs(args []string) (*config.GRPCConfig, error
 
 // runPerformanceTest 运行性能测试
 func (h *GRPCCommandHandler) runPerformanceTest(
-	ctx context.Context, 
-	adapter interfaces.ProtocolAdapter, 
-	config *config.GRPCConfig, 
+	ctx context.Context,
+	adapter interfaces.ProtocolAdapter,
+	config *config.GRPCConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
 ) error {
 	// 创建操作工厂
-	operationFactory := grpc.NewOperationFactory(config)
-	
+	operationFactory := operations.NewOperationFactory(config)
+
 	// 创建执行引擎
 	engine := execution.NewExecutionEngine(adapter, metricsCollector, operationFactory)
-	
+
 	// 配置执行引擎
 	engine.SetMaxWorkers(config.BenchMark.Parallels * 3) // 适度超配以提高并发性能
 	engine.SetBufferSizes(
 		config.BenchMark.Parallels*10, // job buffer
 		config.BenchMark.Parallels*10, // result buffer
 	)
-	
+
 	// 运行基准测试
 	result, err := engine.RunBenchmark(ctx, &config.BenchMark)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
-	
+
 	// 输出执行结果
 	fmt.Printf("\n📊 Execution Results:\n")
 	fmt.Printf("Total Jobs: %d\n", result.TotalJobs)
@@ -249,7 +249,7 @@ func (h *GRPCCommandHandler) runPerformanceTest(
 	fmt.Printf("Failed Jobs: %d\n", result.FailedJobs)
 	fmt.Printf("Total Duration: %v\n", result.TotalDuration)
 	fmt.Printf("Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.TotalJobs)*100)
-	
+
 	return nil
 }
 
@@ -259,7 +259,7 @@ func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultM
 	if snapshot == nil {
 		return fmt.Errorf("failed to get metrics snapshot")
 	}
-	
+
 	// 输出简单报告
 	fmt.Printf("\n📊 Performance Metrics:\n")
 	fmt.Printf("Core Metrics:\n")
@@ -272,7 +272,7 @@ func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultM
 	fmt.Printf("  P95: %v\n", snapshot.Core.Latency.P95)
 	fmt.Printf("  P99: %v\n", snapshot.Core.Latency.P99)
 	fmt.Printf("Throughput: %.2f RPS\n", snapshot.Core.Throughput.RPS)
-	
+
 	return nil
 }
 

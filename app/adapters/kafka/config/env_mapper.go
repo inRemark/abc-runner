@@ -80,7 +80,7 @@ func (k *KafkaEnvVarMapper) HasRelevantEnvVars() bool {
 func parseInt(s string) (int, error) {
 	// 移除可能的空格
 	s = strings.TrimSpace(s)
-	
+
 	// 解析整数
 	return strconv.Atoi(s)
 }

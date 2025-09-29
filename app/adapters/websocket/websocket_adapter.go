@@ -18,7 +18,7 @@ type WebSocketAdapter struct {
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
-	
+
 	// 统计信息
 	sentMessages     int64
 	receivedMessages int64
@@ -28,14 +28,14 @@ type WebSocketAdapter struct {
 
 // WebSocketConnection WebSocket连接封装
 type WebSocketConnection struct {
-	id              string
-	url             string
-	conn            interface{} // 模拟WebSocket连接，实际应使用真实WebSocket库
-	isConnected     bool
-	lastPingTime    time.Time
-	lastPongTime    time.Time
-	reconnectCount  int
-	mu              sync.RWMutex
+	id             string
+	url            string
+	conn           interface{} // 模拟WebSocket连接，实际应使用真实WebSocket库
+	isConnected    bool
+	lastPingTime   time.Time
+	lastPongTime   time.Time
+	reconnectCount int
+	mu             sync.RWMutex
 }
 
 // NewWebSocketAdapter 创建WebSocket适配器
@@ -87,10 +87,10 @@ func (w *WebSocketAdapter) createConnection(id, url string) (*WebSocketConnectio
 	// 这里应该使用真实的WebSocket库，如gorilla/websocket
 	// 目前使用模拟实现
 	conn := &WebSocketConnection{
-		id:          id,
-		url:         url,
-		conn:        nil, // 模拟连接对象
-		isConnected: false,
+		id:           id,
+		url:          url,
+		conn:         nil, // 模拟连接对象
+		isConnected:  false,
 		lastPingTime: time.Now(),
 		lastPongTime: time.Now(),
 	}
@@ -108,20 +108,20 @@ func (w *WebSocketAdapter) createConnection(id, url string) (*WebSocketConnectio
 func (w *WebSocketAdapter) simulateConnect(conn *WebSocketConnection) error {
 	// 模拟WebSocket握手
 	time.Sleep(time.Millisecond * 10) // 模拟连接延迟
-	
+
 	// 在实际实现中，这里会：
 	// 1. 建立TCP连接
 	// 2. 发送WebSocket握手请求
 	// 3. 验证握手响应
 	// 4. 配置连接选项（压缩、扩展等）
-	
+
 	return nil
 }
 
 // Execute 执行操作
 func (w *WebSocketAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
-	
+
 	result := &interfaces.OperationResult{
 		Success:  false,
 		Duration: 0,
@@ -192,7 +192,7 @@ func (w *WebSocketAdapter) executeMessageExchange(ctx context.Context, operation
 
 	// 构造消息数据
 	messageData := w.buildMessageData(operation)
-	
+
 	// 发送消息
 	err := w.sendMessage(conn, messageData)
 	if err != nil {
@@ -272,11 +272,11 @@ func (w *WebSocketAdapter) executeBroadcast(ctx context.Context, operation inter
 
 	// 构造广播数据
 	broadcastData := w.buildMessageData(operation)
-	
+
 	// 向所有连接广播
 	successCount := 0
 	totalConnections := len(w.connections)
-	
+
 	for _, conn := range w.connections {
 		if conn.isConnected {
 			err := w.sendMessage(conn, broadcastData)
@@ -347,7 +347,7 @@ func (w *WebSocketAdapter) executeLargeMessage(ctx context.Context, operation in
 func (w *WebSocketAdapter) getAvailableConnection() *WebSocketConnection {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	
+
 	for _, conn := range w.connections {
 		if conn.isConnected {
 			return conn
@@ -360,14 +360,14 @@ func (w *WebSocketAdapter) getAvailableConnection() *WebSocketConnection {
 func (w *WebSocketAdapter) sendMessage(conn *WebSocketConnection, data []byte) error {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	
+
 	if !conn.isConnected {
 		return fmt.Errorf("connection %s is not connected", conn.id)
 	}
-	
+
 	// 模拟发送延迟
 	time.Sleep(time.Microsecond * time.Duration(len(data)/100))
-	
+
 	return nil
 }
 
@@ -375,11 +375,11 @@ func (w *WebSocketAdapter) sendMessage(conn *WebSocketConnection, data []byte) e
 func (w *WebSocketAdapter) receiveMessage(conn *WebSocketConnection) ([]byte, error) {
 	conn.mu.RLock()
 	defer conn.mu.RUnlock()
-	
+
 	if !conn.isConnected {
 		return nil, fmt.Errorf("connection %s is not connected", conn.id)
 	}
-	
+
 	// 模拟接收延迟和数据
 	time.Sleep(time.Microsecond * 100)
 	return []byte("echo response"), nil
@@ -389,7 +389,7 @@ func (w *WebSocketAdapter) receiveMessage(conn *WebSocketConnection) ([]byte, er
 func (w *WebSocketAdapter) sendPing(conn *WebSocketConnection, data []byte) error {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	
+
 	conn.lastPingTime = time.Now()
 	return nil
 }
@@ -398,7 +398,7 @@ func (w *WebSocketAdapter) sendPing(conn *WebSocketConnection, data []byte) erro
 func (w *WebSocketAdapter) receivePong(conn *WebSocketConnection) ([]byte, error) {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	
+
 	conn.lastPongTime = time.Now()
 	return []byte("pong"), nil
 }
@@ -445,7 +445,7 @@ func (w *WebSocketAdapter) Close() error {
 // GetProtocolMetrics 获取协议特定指标
 func (w *WebSocketAdapter) GetProtocolMetrics() map[string]interface{} {
 	metrics := make(map[string]interface{})
-	
+
 	if w.config != nil {
 		metrics["connection_pool_size"] = w.config.Connection.Pool.PoolSize
 		metrics["message_type"] = w.config.WebSocketSpecific.MessageType
@@ -453,13 +453,13 @@ func (w *WebSocketAdapter) GetProtocolMetrics() map[string]interface{} {
 		metrics["auto_reconnect"] = w.config.WebSocketSpecific.AutoReconnect
 		metrics["heartbeat_enabled"] = w.config.WebSocketSpecific.Heartbeat.Enabled
 	}
-	
+
 	metrics["sent_messages"] = atomic.LoadInt64(&w.sentMessages)
 	metrics["received_messages"] = atomic.LoadInt64(&w.receivedMessages)
 	metrics["reconnect_count"] = atomic.LoadInt64(&w.reconnectCount)
 	metrics["heartbeat_count"] = atomic.LoadInt64(&w.heartbeatCount)
 	metrics["active_connections"] = w.getActiveConnectionCount()
-	
+
 	return metrics
 }
 
@@ -467,7 +467,7 @@ func (w *WebSocketAdapter) GetProtocolMetrics() map[string]interface{} {
 func (w *WebSocketAdapter) getActiveConnectionCount() int {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	
+
 	count := 0
 	for _, conn := range w.connections {
 		if conn.isConnected {

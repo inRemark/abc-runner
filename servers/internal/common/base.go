@@ -21,12 +21,12 @@ type BaseServer struct {
 	healthChecker    interfaces.HealthChecker
 
 	// 运行状态管理
-	running     bool
-	runningMu   sync.RWMutex
-	StartTime   time.Time // 导出字段
-	stopChan    chan struct{}
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
+	running    bool
+	runningMu  sync.RWMutex
+	StartTime  time.Time // 导出字段
+	stopChan   chan struct{}
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 
 	// 连接统计
 	activeConnections int64
@@ -37,7 +37,7 @@ type BaseServer struct {
 // NewBaseServer 创建基础服务端
 func NewBaseServer(protocol string, config interfaces.ServerConfig, logger interfaces.Logger, metricsCollector interfaces.MetricsCollector) *BaseServer {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &BaseServer{
 		protocol:         protocol,
 		host:             config.GetHost(),
@@ -82,7 +82,7 @@ func (bs *BaseServer) GetConfig() interfaces.ServerConfig {
 func (bs *BaseServer) SetRunning(running bool) {
 	bs.runningMu.Lock()
 	defer bs.runningMu.Unlock()
-	
+
 	if running && !bs.running {
 		bs.StartTime = time.Now()
 		bs.logger.Info(fmt.Sprintf("%s server started", bs.protocol), map[string]interface{}{
@@ -96,7 +96,7 @@ func (bs *BaseServer) SetRunning(running bool) {
 			"uptime":   uptime.String(),
 		})
 	}
-	
+
 	bs.running = running
 }
 
@@ -111,7 +111,7 @@ func (bs *BaseServer) IncrementActiveConnections() {
 	defer bs.connectionsMu.Unlock()
 	bs.activeConnections++
 	bs.totalConnections++
-	
+
 	if bs.metricsCollector != nil {
 		bs.metricsCollector.RecordConnection(bs.protocol, "open")
 	}
@@ -124,7 +124,7 @@ func (bs *BaseServer) DecrementActiveConnections() {
 	if bs.activeConnections > 0 {
 		bs.activeConnections--
 	}
-	
+
 	if bs.metricsCollector != nil {
 		bs.metricsCollector.RecordConnection(bs.protocol, "close")
 	}
@@ -134,7 +134,7 @@ func (bs *BaseServer) DecrementActiveConnections() {
 func (bs *BaseServer) GetConnectionStats() map[string]interface{} {
 	bs.connectionsMu.RLock()
 	defer bs.connectionsMu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"active_connections": bs.activeConnections,
 		"total_connections":  bs.totalConnections,
@@ -144,25 +144,25 @@ func (bs *BaseServer) GetConnectionStats() map[string]interface{} {
 // GetMetrics 获取服务端指标
 func (bs *BaseServer) GetMetrics() map[string]interface{} {
 	metrics := make(map[string]interface{})
-	
+
 	// 基础信息
 	metrics["protocol"] = bs.protocol
 	metrics["address"] = bs.GetFullAddress()
 	metrics["running"] = bs.IsRunning()
-	
+
 	if !bs.StartTime.IsZero() {
 		metrics["start_time"] = bs.StartTime
 		if bs.IsRunning() {
 			metrics["uptime"] = time.Since(bs.StartTime).String()
 		}
 	}
-	
+
 	// 连接统计
 	connectionStats := bs.GetConnectionStats()
 	for k, v := range connectionStats {
 		metrics[k] = v
 	}
-	
+
 	// 指标收集器数据
 	if bs.metricsCollector != nil {
 		collectorMetrics := bs.metricsCollector.GetMetrics()
@@ -170,7 +170,7 @@ func (bs *BaseServer) GetMetrics() map[string]interface{} {
 			metrics[k] = v
 		}
 	}
-	
+
 	return metrics
 }
 
@@ -179,11 +179,11 @@ func (bs *BaseServer) HealthCheck(ctx context.Context) error {
 	if !bs.IsRunning() {
 		return fmt.Errorf("%s server is not running", bs.protocol)
 	}
-	
+
 	if bs.healthChecker != nil {
 		return bs.healthChecker.Check(ctx)
 	}
-	
+
 	return nil
 }
 
@@ -285,11 +285,11 @@ func (bc *BaseConfig) Validate() error {
 	if bc.Port <= 0 || bc.Port > 65535 {
 		return fmt.Errorf("invalid port: %d, must be between 1 and 65535", bc.Port)
 	}
-	
+
 	if bc.Protocol == "" {
 		return fmt.Errorf("protocol cannot be empty")
 	}
-	
+
 	return nil
 }
 

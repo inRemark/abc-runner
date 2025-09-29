@@ -222,7 +222,7 @@ func (h *HttpCommandHandler) runConcurrentTest(ctx context.Context, adapter inte
 	fmt.Printf("📊 Running concurrent HTTP performance test with ExecutionEngine...\n")
 
 	// 创建基准配置适配器
-	benchmarkConfig := http.NewBenchmarkConfigAdapter(&config.Benchmark)
+	benchmarkConfig := httpConfig.NewBenchmarkConfigAdapter(&config.Benchmark)
 
 	// 创建操作工厂
 	operationFactory := operations.NewHttpOperationFactory(config)

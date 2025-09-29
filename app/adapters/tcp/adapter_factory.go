@@ -21,7 +21,7 @@ func (f *AdapterFactory) CreateTCPAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
 		return nil
 	}
-	
+
 	adapter := NewTCPAdapter(f.metricsCollector)
 	return adapter
 }

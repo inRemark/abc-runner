@@ -21,7 +21,7 @@ func (f *AdapterFactory) CreateUDPAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
 		return nil
 	}
-	
+
 	adapter := NewUDPAdapter(f.metricsCollector)
 	return adapter
 }

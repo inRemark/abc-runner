@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"abc-runner/app/adapters/grpc/config"
+	"abc-runner/app/adapters/grpc/connection"
 	"abc-runner/app/core/interfaces"
 	"context"
 	"fmt"
@@ -15,17 +16,17 @@ import (
 // GRPCAdapter gRPC协议适配器
 type GRPCAdapter struct {
 	config           *config.GRPCConfig
-	connectionPool   *ConnectionPool
+	connectionPool   *connection.ConnectionPool
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
-	
+
 	// 统计信息
-	totalCalls       int64
-	successfulCalls  int64
-	failedCalls      int64
-	totalLatency     time.Duration
-	startTime        time.Time
+	totalCalls      int64
+	successfulCalls int64
+	failedCalls     int64
+	totalLatency    time.Duration
+	startTime       time.Time
 }
 
 // NewGRPCAdapter 创建新的gRPC适配器
@@ -56,7 +57,7 @@ func (adapter *GRPCAdapter) Connect(ctx context.Context, cfg interfaces.Config) 
 	}
 
 	// 创建连接池
-	adapter.connectionPool = NewConnectionPool(adapter.config)
+	adapter.connectionPool = connection.NewConnectionPool(adapter.config)
 	if err := adapter.connectionPool.Initialize(ctx); err != nil {
 		return fmt.Errorf("failed to initialize connection pool: %w", err)
 	}
@@ -112,7 +113,7 @@ func (adapter *GRPCAdapter) executeUnaryCall(ctx context.Context, operation inte
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
-	
+
 	conn := connWrapper.GetConn()
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
@@ -150,7 +151,7 @@ func (adapter *GRPCAdapter) executeServerStream(ctx context.Context, operation i
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
-	
+
 	conn := connWrapper.GetConn()
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
@@ -191,7 +192,7 @@ func (adapter *GRPCAdapter) executeClientStream(ctx context.Context, operation i
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
-	
+
 	conn := connWrapper.GetConn()
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
@@ -232,7 +233,7 @@ func (adapter *GRPCAdapter) executeBidirectionalStream(ctx context.Context, oper
 	if err != nil {
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
-	
+
 	conn := connWrapper.GetConn()
 	if conn == nil {
 		return nil, fmt.Errorf("connection is nil")
@@ -364,7 +365,7 @@ func (adapter *GRPCAdapter) parseConfig(cfg interfaces.Config) (*config.GRPCConf
 	if gCfg, ok := cfg.(*config.GRPCConfig); ok {
 		return gCfg, nil
 	}
-	
+
 	// 使用默认配置
 	grpcConfig := config.NewDefaultGRPCConfig()
 	return grpcConfig, nil

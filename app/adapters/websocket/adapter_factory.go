@@ -21,7 +21,7 @@ func (f *AdapterFactory) CreateWebSocketAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
 		return nil
 	}
-	
+
 	adapter := NewWebSocketAdapter(f.metricsCollector)
 	return adapter
 }

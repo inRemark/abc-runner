@@ -9,6 +9,7 @@ import (
 
 	"abc-runner/app/adapters/udp"
 	udpConfig "abc-runner/app/adapters/udp/config"
+	"abc-runner/app/adapters/udp/operations"
 	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
@@ -252,8 +253,8 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 	}
 
 	// 创建执行引擎
-	factory := udp.NewSimpleOperationFactory(config.BenchMark.TestCase, config.BenchMark.DataSize)
-	benchConfig := udp.NewSimpleBenchmarkConfig(config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.Duration)
+	factory := operations.NewSimpleOperationFactory(config.BenchMark.TestCase, config.BenchMark.DataSize)
+	benchConfig := udpConfig.NewSimpleBenchmarkConfig(config.BenchMark.Total, config.BenchMark.Parallels, config.BenchMark.Duration)
 	engine := execution.NewExecutionEngine(adapter, collector, factory)
 
 	// 执行测试

@@ -105,7 +105,7 @@ func (l *Logger) Warn(msg string, fields ...map[string]interface{}) {
 func (l *Logger) Error(msg string, err error, fields ...map[string]interface{}) {
 	if l.level <= ErrorLevel {
 		var mergedFields map[string]interface{}
-		
+
 		if len(fields) > 0 {
 			mergedFields = make(map[string]interface{})
 			for k, v := range fields[0] {
@@ -114,11 +114,11 @@ func (l *Logger) Error(msg string, err error, fields ...map[string]interface{}) 
 		} else {
 			mergedFields = make(map[string]interface{})
 		}
-		
+
 		if err != nil {
 			mergedFields["error"] = err.Error()
 		}
-		
+
 		l.log(ErrorLevel, msg, mergedFields)
 	}
 }
@@ -126,7 +126,7 @@ func (l *Logger) Error(msg string, err error, fields ...map[string]interface{}) 
 // Fatal 记录致命错误日志
 func (l *Logger) Fatal(msg string, err error, fields ...map[string]interface{}) {
 	var mergedFields map[string]interface{}
-	
+
 	if len(fields) > 0 {
 		mergedFields = make(map[string]interface{})
 		for k, v := range fields[0] {
@@ -135,11 +135,11 @@ func (l *Logger) Fatal(msg string, err error, fields ...map[string]interface{}) 
 	} else {
 		mergedFields = make(map[string]interface{})
 	}
-	
+
 	if err != nil {
 		mergedFields["error"] = err.Error()
 	}
-	
+
 	l.log(FatalLevel, msg, mergedFields)
 	os.Exit(1)
 }
@@ -152,14 +152,14 @@ func (l *Logger) log(level LogLevel, msg string, fields ...map[string]interface{
 		Message:   msg,
 		Fields:    make(map[string]interface{}),
 	}
-	
+
 	// 合并字段
 	if len(fields) > 0 {
 		for k, v := range fields[0] {
 			logEntry.Fields[k] = v
 		}
 	}
-	
+
 	// 格式化并输出日志
 	output := l.formatLogEntry(logEntry)
 	l.logger.Print(output)
@@ -187,7 +187,7 @@ func (l *Logger) formatLogEntry(entry LogEntry) string {
 		}
 		return string(jsonData)
 	}
-	
+
 	// 简单格式
 	return fmt.Sprintf("[%s] %s %s",
 		entry.Timestamp.Format("2006-01-02 15:04:05"),
@@ -284,9 +284,9 @@ func NewFileLogger(level, filePath string) (*FileLogger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
-	
+
 	logger := NewLoggerWithOutput(level, file)
-	
+
 	return &FileLogger{
 		Logger: logger,
 		file:   file,
@@ -316,7 +316,7 @@ func NewRotatingLogger(level, filePath string, maxSize int64, maxFiles int) (*Ro
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &RotatingLogger{
 		FileLogger: fileLogger,
 		maxSize:    maxSize,
@@ -331,16 +331,16 @@ func (rl *RotatingLogger) checkRotation() error {
 	if rl.file == nil {
 		return nil
 	}
-	
+
 	stat, err := rl.file.Stat()
 	if err != nil {
 		return err
 	}
-	
+
 	if stat.Size() >= rl.maxSize {
 		return rl.rotate()
 	}
-	
+
 	return nil
 }
 
@@ -350,28 +350,28 @@ func (rl *RotatingLogger) rotate() error {
 	if err := rl.file.Close(); err != nil {
 		return err
 	}
-	
+
 	// 重命名当前文件
 	rotatedPath := fmt.Sprintf("%s.%d", rl.filePath, rl.fileIndex)
 	if err := os.Rename(rl.filePath, rotatedPath); err != nil {
 		return err
 	}
-	
+
 	// 创建新文件
 	file, err := os.OpenFile(rl.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
-	
+
 	rl.file = file
 	rl.fileIndex++
-	
+
 	// 清理旧文件
 	if rl.fileIndex >= rl.maxFiles {
 		oldPath := fmt.Sprintf("%s.%d", rl.filePath, rl.fileIndex-rl.maxFiles)
 		os.Remove(oldPath) // 忽略错误
 	}
-	
+
 	return nil
 }
 
@@ -379,7 +379,7 @@ func (rl *RotatingLogger) rotate() error {
 func (rl *RotatingLogger) log(level LogLevel, msg string, fields ...map[string]interface{}) {
 	// 检查是否需要轮转
 	rl.checkRotation()
-	
+
 	// 调用父类方法
 	rl.Logger.log(level, msg, fields...)
 }
