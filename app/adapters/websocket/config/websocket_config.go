@@ -278,3 +278,11 @@ func (b *BenchmarkConfig) GetRandomKeys() int {
 func (b *BenchmarkConfig) GetTestCase() string {
 	return b.TestCase
 }
+
+// 确保实现了所有接口
+var (
+	_ interfaces.Config           = (*WebSocketConfig)(nil)
+	_ interfaces.ConnectionConfig = (*ConnectionConfig)(nil)
+	_ interfaces.PoolConfig       = (*PoolConfig)(nil)
+	_ interfaces.BenchmarkConfig  = (*BenchmarkConfig)(nil)
+)

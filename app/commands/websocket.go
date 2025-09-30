@@ -49,9 +49,7 @@ func (h *WebSocketCommandHandler) Execute(ctx context.Context, args []string) er
 	}
 
 	// 创建适配器
-	// adapter := h.factory.CreateAdapter()
-	// 暂时使用模拟适配器，因为没有导入discovery包
-	adapter := h.createMockAdapter()
+	adapter := h.createAdapter()
 	if adapter == nil {
 		return fmt.Errorf("failed to create WebSocket adapter")
 	}
@@ -223,7 +221,7 @@ func (h *WebSocketCommandHandler) runMessageExchangeTest(ctx context.Context, ad
 
 	// 创建测试操作
 	operation := interfaces.Operation{
-		Type:  "message_exchange",
+		Type:  "send_text",
 		Key:   "test_message",
 		Value: message,
 		Metadata: map[string]string{
@@ -305,7 +303,7 @@ func (h *WebSocketCommandHandler) runLargeMessageTest(ctx context.Context, adapt
 	operation := interfaces.Operation{
 		Type:  "large_message",
 		Key:   "large_data",
-		Value: largeMessage,
+		Value: []byte(largeMessage),
 		Metadata: map[string]string{
 			"concurrent":   strconv.Itoa(concurrent),
 			"message_size": strconv.Itoa(messageSize),
@@ -345,9 +343,29 @@ func (h *WebSocketCommandHandler) GetFactory() interface{} {
 	return h.factory
 }
 
-// createMockAdapter 创建模拟适配器
+// createAdapter 创建适配器
+func (h *WebSocketCommandHandler) createAdapter() interfaces.ProtocolAdapter {
+	// 尝试转换为适配器工厂接口
+	if factory, ok := h.factory.(interface {
+		CreateAdapter() interfaces.ProtocolAdapter
+	}); ok {
+		return factory.CreateAdapter()
+	}
+
+	// 尝试转换为WebSocket特定工厂接口
+	if factory, ok := h.factory.(interface {
+		CreateWebSocketAdapter() interfaces.ProtocolAdapter
+	}); ok {
+		return factory.CreateWebSocketAdapter()
+	}
+
+	// 如果都失败，返回模拟适配器
+	return h.createMockAdapter()
+}
+
+// createMockAdapter 创建模拟适配器作为备用
 func (h *WebSocketCommandHandler) createMockAdapter() interfaces.ProtocolAdapter {
-	// 返回模拟适配器，实际应用中将由application.go中的注册逻辑处理
+	// 返回模拟适配器，仅用于开发和测试
 	return &MockWebSocketAdapter{}
 }
 

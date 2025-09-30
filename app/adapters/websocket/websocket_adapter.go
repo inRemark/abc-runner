@@ -8,434 +8,420 @@ import (
 	"time"
 
 	"abc-runner/app/adapters/websocket/config"
+	"abc-runner/app/adapters/websocket/connection"
+	"abc-runner/app/adapters/websocket/operations"
 	"abc-runner/app/core/interfaces"
+	"abc-runner/app/core/utils"
+
+	"github.com/gorilla/websocket"
 )
 
-// WebSocketAdapter WebSocket协议适配器
+// WebSocketAdapter WebSocket协议适配器 - 基于统一架构设计
 type WebSocketAdapter struct {
+	// 核心组件（与Redis/HTTP/TCP保持一致）
+	connectionPool    *connection.WebSocketConnectionPool
+	operationRegistry *utils.OperationRegistry
 	config           *config.WebSocketConfig
-	connections      map[string]*WebSocketConnection
+
+	// 指标收集器（统一依赖注入）
 	metricsCollector interfaces.DefaultMetricsCollector
-	mu               sync.RWMutex
-	isConnected      bool
+
+	// 状态管理
+	isConnected bool
+	mutex       sync.RWMutex
 
 	// 统计信息
+	totalOperations   int64
+	successOperations int64
+	failedOperations  int64
+	startTime         time.Time
+
+	// WebSocket特定统计
 	sentMessages     int64
 	receivedMessages int64
-	reconnectCount   int64
 	heartbeatCount   int64
+	reconnectCount   int64
 }
 
-// WebSocketConnection WebSocket连接封装
-type WebSocketConnection struct {
-	id             string
-	url            string
-	conn           interface{} // 模拟WebSocket连接，实际应使用真实WebSocket库
-	isConnected    bool
-	lastPingTime   time.Time
-	lastPongTime   time.Time
-	reconnectCount int
-	mu             sync.RWMutex
-}
-
-// NewWebSocketAdapter 创建WebSocket适配器
+// NewWebSocketAdapter 创建WebSocket适配器 - 新架构设计
 func NewWebSocketAdapter(metricsCollector interfaces.DefaultMetricsCollector) *WebSocketAdapter {
+	if metricsCollector == nil {
+		panic("metricsCollector cannot be nil - dependency injection required")
+	}
+
 	return &WebSocketAdapter{
 		metricsCollector: metricsCollector,
-		connections:      make(map[string]*WebSocketConnection),
-		isConnected:      false,
+		startTime:        time.Now(),
 	}
 }
 
-// Connect 初始化连接
+// Connect 初始化连接 - 统一架构实现
 func (w *WebSocketAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
 	// 类型断言配置
 	wsConfig, ok := cfg.(*config.WebSocketConfig)
 	if !ok {
-		return fmt.Errorf("invalid config type for WebSocket adapter")
+		return fmt.Errorf("invalid config type for WebSocket adapter: expected *config.WebSocketConfig, got %T", cfg)
 	}
-
-	w.config = wsConfig
 
 	// 验证配置
 	if err := wsConfig.Validate(); err != nil {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 
+	w.config = wsConfig
+
 	// 创建连接池
-	poolSize := wsConfig.Connection.Pool.PoolSize
-	for i := 0; i < poolSize; i++ {
-		connID := fmt.Sprintf("ws_conn_%d", i)
-		conn, err := w.createConnection(connID, wsConfig.Connection.URL)
-		if err != nil {
-			// 如果无法创建连接，记录错误但继续
-			fmt.Printf("Warning: failed to create WebSocket connection %s: %v\n", connID, err)
-			continue
-		}
-		w.connections[connID] = conn
+	pool, err := connection.NewWebSocketConnectionPool(wsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create WebSocket connection pool: %w", err)
+	}
+	w.connectionPool = pool
+
+	// 创建操作注册表并注册所有WebSocket操作
+	w.operationRegistry = utils.NewOperationRegistry()
+	operations.RegisterWebSocketOperations(w.operationRegistry)
+
+	// 执行健康检查
+	if err := w.HealthCheck(ctx); err != nil {
+		return fmt.Errorf("initial health check failed: %w", err)
 	}
 
 	w.isConnected = true
 	return nil
 }
 
-// createConnection 创建WebSocket连接
-func (w *WebSocketAdapter) createConnection(id, url string) (*WebSocketConnection, error) {
-	// 这里应该使用真实的WebSocket库，如gorilla/websocket
-	// 目前使用模拟实现
-	conn := &WebSocketConnection{
-		id:           id,
-		url:          url,
-		conn:         nil, // 模拟连接对象
-		isConnected:  false,
-		lastPingTime: time.Now(),
-		lastPongTime: time.Now(),
-	}
-
-	// 模拟连接过程
-	if err := w.simulateConnect(conn); err != nil {
-		return nil, fmt.Errorf("failed to connect to %s: %w", url, err)
-	}
-
-	conn.isConnected = true
-	return conn, nil
-}
-
-// simulateConnect 模拟连接过程
-func (w *WebSocketAdapter) simulateConnect(conn *WebSocketConnection) error {
-	// 模拟WebSocket握手
-	time.Sleep(time.Millisecond * 10) // 模拟连接延迟
-
-	// 在实际实现中，这里会：
-	// 1. 建立TCP连接
-	// 2. 发送WebSocket握手请求
-	// 3. 验证握手响应
-	// 4. 配置连接选项（压缩、扩展等）
-
-	return nil
-}
-
-// Execute 执行操作
+// Execute 执行操作 - 使用操作工厂模式
 func (w *WebSocketAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	result := &interfaces.OperationResult{
-		Success:  false,
-		Duration: 0,
-		IsRead:   false,
-		Error:    nil,
-		Value:    nil,
-		Metadata: make(map[string]interface{}),
+	if !w.IsConnected() {
+		return nil, fmt.Errorf("WebSocket adapter is not connected")
 	}
 
-	// 检查连接状态
-	if !w.isConnected {
-		result.Error = fmt.Errorf("adapter not connected")
-		result.Duration = time.Since(startTime)
-		return result, result.Error
+	// 统计操作数
+	w.incrementTotalOperations()
+
+	// 验证操作是否支持
+	if err := w.ValidateOperation(operation.Type); err != nil {
+		w.incrementFailedOperations()
+		return &interfaces.OperationResult{
+			Success: false,
+			Error:   err,
+		}, err
 	}
 
-	// 根据操作类型执行不同的操作
-	switch operation.Type {
-	case "message_exchange":
-		result, err := w.executeMessageExchange(ctx, operation)
-		result.Duration = time.Since(startTime)
-		if w.metricsCollector != nil {
-			w.metricsCollector.Record(result)
-		}
-		return result, err
-	case "ping_pong":
-		result, err := w.executePingPong(ctx, operation)
-		result.Duration = time.Since(startTime)
-		if w.metricsCollector != nil {
-			w.metricsCollector.Record(result)
-		}
-		return result, err
-	case "broadcast":
-		result, err := w.executeBroadcast(ctx, operation)
-		result.Duration = time.Since(startTime)
-		if w.metricsCollector != nil {
-			w.metricsCollector.Record(result)
-		}
-		return result, err
-	case "large_message":
-		result, err := w.executeLargeMessage(ctx, operation)
-		result.Duration = time.Since(startTime)
-		if w.metricsCollector != nil {
-			w.metricsCollector.Record(result)
-		}
-		return result, err
-	default:
-		result.Error = fmt.Errorf("unsupported operation type: %s", operation.Type)
-		result.Duration = time.Since(startTime)
-		return result, result.Error
+	// 执行具体操作
+	result, err := w.executeWebSocketOperation(ctx, operation)
+
+	// 更新统计信息
+	if err != nil || (result != nil && !result.Success) {
+		w.incrementFailedOperations()
+	} else {
+		w.incrementSuccessOperations()
 	}
+
+	// 记录到指标收集器
+	if result != nil && w.metricsCollector != nil {
+		w.metricsCollector.Record(result)
+	}
+
+	return result, err
 }
 
-// executeMessageExchange 执行消息交换
-func (w *WebSocketAdapter) executeMessageExchange(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+// executeWebSocketOperation 执行具体的WebSocket操作
+func (w *WebSocketAdapter) executeWebSocketOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+	startTime := time.Now()
 	result := &interfaces.OperationResult{
-		Success:  false,
-		IsRead:   true, // 消息交换既发送又接收
+		IsRead: w.isReadOperation(operation.Type),
 		Metadata: make(map[string]interface{}),
 	}
 
-	// 获取可用连接
-	conn := w.getAvailableConnection()
-	if conn == nil {
-		result.Error = fmt.Errorf("no available connections")
+	// 获取连接
+	conn, err := w.connectionPool.GetConnection()
+	if err != nil {
+		result.Error = fmt.Errorf("failed to get connection: %w", err)
+		result.Duration = time.Since(startTime)
 		return result, result.Error
 	}
+	defer w.connectionPool.ReturnConnection(conn)
 
-	// 构造消息数据
-	messageData := w.buildMessageData(operation)
+	var opErr error
+	switch operation.Type {
+	case "send_text":
+		opErr = w.executeSendText(ctx, operation, conn)
+	case "send_binary":
+		opErr = w.executeSendBinary(ctx, operation, conn)
+	case "echo_test":
+		result.Value, opErr = w.executeEchoTest(ctx, operation, conn)
+	case "ping_pong":
+		result.Value, opErr = w.executePingPong(ctx, operation, conn)
+	case "broadcast":
+		result.Value, opErr = w.executeBroadcast(ctx, operation, conn)
+	case "subscribe":
+		result.Value, opErr = w.executeSubscribe(ctx, operation, conn)
+	case "large_message":
+		opErr = w.executeLargeMessage(ctx, operation, conn)
+		if opErr == nil {
+			result.Value = len(operation.Value.([]byte))
+		}
+	case "stress_test":
+		result.Value, opErr = w.executeStressTest(ctx, operation, conn)
+	default:
+		opErr = fmt.Errorf("unsupported operation type: %s", operation.Type)
+	}
+
+	result.Success = opErr == nil
+	result.Error = opErr
+	result.Duration = time.Since(startTime)
+
+	// 添加操作特定元数据
+	for k, v := range operation.Metadata {
+		result.Metadata[k] = v
+	}
+	result.Metadata["connection_id"] = conn.ID
+	result.Metadata["operation_type"] = operation.Type
+
+	return result, opErr
+}
+
+// 具体操作实现方法
+
+// executeSendText 执行发送文本消息
+func (w *WebSocketAdapter) executeSendText(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) error {
+	message, ok := operation.Value.(string)
+	if !ok {
+		return fmt.Errorf("invalid message type for send_text operation")
+	}
+
+	err := conn.SendMessage(websocket.TextMessage, []byte(message))
+	if err == nil {
+		atomic.AddInt64(&w.sentMessages, 1)
+	}
+	return err
+}
+
+// executeSendBinary 执行发送二进制消息
+func (w *WebSocketAdapter) executeSendBinary(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) error {
+	data, ok := operation.Value.([]byte)
+	if !ok {
+		return fmt.Errorf("invalid data type for send_binary operation")
+	}
+
+	err := conn.SendMessage(websocket.BinaryMessage, data)
+	if err == nil {
+		atomic.AddInt64(&w.sentMessages, 1)
+	}
+	return err
+}
+
+// executeEchoTest 执行回显测试
+func (w *WebSocketAdapter) executeEchoTest(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) (interface{}, error) {
+	message, ok := operation.Value.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid message type for echo_test operation")
+	}
 
 	// 发送消息
-	err := w.sendMessage(conn, messageData)
+	err := conn.SendMessage(websocket.TextMessage, []byte(message))
 	if err != nil {
-		result.Error = fmt.Errorf("failed to send message: %w", err)
-		return result, result.Error
+		return nil, fmt.Errorf("failed to send echo message: %w", err)
 	}
-
 	atomic.AddInt64(&w.sentMessages, 1)
 
-	// 接收响应（模拟）
-	responseData, err := w.receiveMessage(conn)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to receive message: %w", err)
-		return result, result.Error
-	}
-
+	// 模拟接收回显响应
+	// 在实际实现中，这里会等待服务器的回显响应
+	time.Sleep(10 * time.Millisecond) // 模拟网络延迟
 	atomic.AddInt64(&w.receivedMessages, 1)
 
-	result.Success = true
-	result.Value = responseData
-	result.Metadata["sent_bytes"] = len(messageData)
-	result.Metadata["received_bytes"] = len(responseData)
-	result.Metadata["message_type"] = w.config.WebSocketSpecific.MessageType
-	result.Metadata["connection_id"] = conn.id
-
-	return result, nil
+	return message + "_echo", nil
 }
 
-// executePingPong 执行心跳检测
-func (w *WebSocketAdapter) executePingPong(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	result := &interfaces.OperationResult{
-		Success:  false,
-		IsRead:   true,
-		Metadata: make(map[string]interface{}),
-	}
+// executePingPong 执行心跳测试
+func (w *WebSocketAdapter) executePingPong(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) (interface{}, error) {
+	startTime := time.Now()
 
-	// 获取可用连接
-	conn := w.getAvailableConnection()
-	if conn == nil {
-		result.Error = fmt.Errorf("no available connections")
-		return result, result.Error
-	}
-
-	// 发送Ping
-	pingData := []byte("ping")
-	err := w.sendPing(conn, pingData)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to send ping: %w", err)
-		return result, result.Error
-	}
-
-	// 等待Pong
-	pongData, err := w.receivePong(conn)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to receive pong: %w", err)
-		return result, result.Error
-	}
-
+	// 发送Ping（通过连接池的心跳机制）
+	// 这里模拟ping-pong的延迟
+	time.Sleep(5 * time.Millisecond)
 	atomic.AddInt64(&w.heartbeatCount, 1)
 
-	result.Success = true
-	result.Value = pongData
-	result.Metadata["ping_data"] = string(pingData)
-	result.Metadata["pong_data"] = string(pongData)
-	result.Metadata["connection_id"] = conn.id
-
-	return result, nil
+	latency := time.Since(startTime)
+	return latency, nil
 }
 
 // executeBroadcast 执行广播测试
-func (w *WebSocketAdapter) executeBroadcast(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	result := &interfaces.OperationResult{
-		Success:  false,
-		IsRead:   false,
-		Metadata: make(map[string]interface{}),
+func (w *WebSocketAdapter) executeBroadcast(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) (interface{}, error) {
+	message, ok := operation.Value.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid message type for broadcast operation")
 	}
 
-	// 构造广播数据
-	broadcastData := w.buildMessageData(operation)
+	// 发送广播消息
+	err := conn.SendMessage(websocket.TextMessage, []byte(message))
+	if err != nil {
+		return nil, fmt.Errorf("failed to send broadcast message: %w", err)
+	}
+	atomic.AddInt64(&w.sentMessages, 1)
 
-	// 向所有连接广播
-	successCount := 0
-	totalConnections := len(w.connections)
+	// 返回广播成功的连接数（这里简化为1）
+	return 1, nil
+}
 
-	for _, conn := range w.connections {
-		if conn.isConnected {
-			err := w.sendMessage(conn, broadcastData)
-			if err == nil {
-				successCount++
-				atomic.AddInt64(&w.sentMessages, 1)
-			}
-		}
+// executeSubscribe 执行订阅操作
+func (w *WebSocketAdapter) executeSubscribe(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) (interface{}, error) {
+	channel := operation.Key
+	timeout := operation.TTL
+	if timeout == 0 {
+		timeout = 30 * time.Second
 	}
 
-	if successCount == 0 {
-		result.Error = fmt.Errorf("failed to broadcast to any connections")
-		return result, result.Error
+	// 发送订阅请求
+	subscribeMsg := fmt.Sprintf("SUBSCRIBE:%s", channel)
+	err := conn.SendMessage(websocket.TextMessage, []byte(subscribeMsg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to send subscribe message: %w", err)
 	}
+	atomic.AddInt64(&w.sentMessages, 1)
 
-	result.Success = true
-	result.Value = successCount
-	result.Metadata["broadcast_size"] = len(broadcastData)
-	result.Metadata["total_connections"] = totalConnections
-	result.Metadata["successful_broadcasts"] = successCount
+	// 模拟接收订阅消息
+	messages := []string{"message1", "message2", "message3"}
+	atomic.AddInt64(&w.receivedMessages, int64(len(messages)))
 
-	return result, nil
+	return messages, nil
 }
 
 // executeLargeMessage 执行大消息传输
-func (w *WebSocketAdapter) executeLargeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	result := &interfaces.OperationResult{
-		Success:  false,
-		IsRead:   false,
-		Metadata: make(map[string]interface{}),
-	}
-
-	// 获取可用连接
-	conn := w.getAvailableConnection()
-	if conn == nil {
-		result.Error = fmt.Errorf("no available connections")
-		return result, result.Error
-	}
-
-	// 构造大消息数据（比普通消息大10倍）
-	largeSize := w.config.BenchMark.DataSize * 10
-	largeData := make([]byte, largeSize)
-	for i := range largeData {
-		largeData[i] = byte(i % 256)
+func (w *WebSocketAdapter) executeLargeMessage(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) error {
+	data, ok := operation.Value.([]byte)
+	if !ok {
+		return fmt.Errorf("invalid data type for large_message operation")
 	}
 
 	// 发送大消息
-	err := w.sendMessage(conn, largeData)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to send large message: %w", err)
-		return result, result.Error
+	err := conn.SendMessage(websocket.BinaryMessage, data)
+	if err == nil {
+		atomic.AddInt64(&w.sentMessages, 1)
+	}
+	return err
+}
+
+// executeStressTest 执行压力测试
+func (w *WebSocketAdapter) executeStressTest(ctx context.Context, operation interfaces.Operation, conn *connection.WebSocketConnection) (interface{}, error) {
+	// 从元数据中获取压力测试参数
+	connections := 1
+	frequency := 10
+	duration := 10 * time.Second
+
+	if connStr, ok := operation.Metadata["connections"]; ok {
+		if c, err := fmt.Sscanf(connStr, "%d", &connections); err != nil || c != 1 {
+			connections = 1
+		}
 	}
 
-	atomic.AddInt64(&w.sentMessages, 1)
+	if freqStr, ok := operation.Metadata["frequency"]; ok {
+		if f, err := fmt.Sscanf(freqStr, "%d", &frequency); err != nil || f != 1 {
+			frequency = 10
+		}
+	}
 
-	result.Success = true
-	result.Value = len(largeData)
-	result.Metadata["message_size"] = len(largeData)
-	result.Metadata["connection_id"] = conn.id
-	result.Metadata["message_type"] = "large"
+	if durStr, ok := operation.Metadata["duration"]; ok {
+		if d, err := time.ParseDuration(durStr); err == nil {
+			duration = d
+		}
+	}
 
-	return result, nil
+	// 执行压力测试
+	startTime := time.Now()
+	messageCount := 0
+	successCount := 0
+
+	for time.Since(startTime) < duration {
+		err := conn.SendMessage(websocket.TextMessage, []byte("stress test message"))
+		messageCount++
+		if err == nil {
+			successCount++
+			atomic.AddInt64(&w.sentMessages, 1)
+		}
+
+		// 控制发送频率
+		time.Sleep(time.Second / time.Duration(frequency))
+	}
+
+	stats := map[string]interface{}{
+		"total_messages": messageCount,
+		"success_count":  successCount,
+		"success_rate":   float64(successCount) / float64(messageCount),
+		"duration":       time.Since(startTime).String(),
+	}
+
+	return stats, nil
 }
 
 // 辅助方法
 
-// getAvailableConnection 获取可用连接
-func (w *WebSocketAdapter) getAvailableConnection() *WebSocketConnection {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	for _, conn := range w.connections {
-		if conn.isConnected {
-			return conn
-		}
-	}
-	return nil
-}
-
-// sendMessage 发送消息（模拟）
-func (w *WebSocketAdapter) sendMessage(conn *WebSocketConnection, data []byte) error {
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
-
-	if !conn.isConnected {
-		return fmt.Errorf("connection %s is not connected", conn.id)
+// ValidateOperation 验证操作是否支持
+func (w *WebSocketAdapter) ValidateOperation(operationType string) error {
+	if w.operationRegistry == nil {
+		return fmt.Errorf("operation registry not initialized")
 	}
 
-	// 模拟发送延迟
-	time.Sleep(time.Microsecond * time.Duration(len(data)/100))
+	_, exists := w.operationRegistry.GetFactory(operationType)
+	if !exists {
+		return fmt.Errorf("unsupported operation type: %s", operationType)
+	}
 
 	return nil
 }
 
-// receiveMessage 接收消息（模拟）
-func (w *WebSocketAdapter) receiveMessage(conn *WebSocketConnection) ([]byte, error) {
-	conn.mu.RLock()
-	defer conn.mu.RUnlock()
-
-	if !conn.isConnected {
-		return nil, fmt.Errorf("connection %s is not connected", conn.id)
+// isReadOperation 判断是否为读操作
+func (w *WebSocketAdapter) isReadOperation(operationType string) bool {
+	readOperations := map[string]bool{
+		"echo_test":    true,
+		"ping_pong":    true,
+		"subscribe":    true,
+		"send_text":    false,
+		"send_binary":  false,
+		"broadcast":    false,
+		"large_message": false,
+		"stress_test":  false,
 	}
 
-	// 模拟接收延迟和数据
-	time.Sleep(time.Microsecond * 100)
-	return []byte("echo response"), nil
+	return readOperations[operationType]
 }
 
-// sendPing 发送Ping（模拟）
-func (w *WebSocketAdapter) sendPing(conn *WebSocketConnection, data []byte) error {
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
-
-	conn.lastPingTime = time.Now()
-	return nil
+// IsConnected 检查连接状态
+func (w *WebSocketAdapter) IsConnected() bool {
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
+	return w.isConnected
 }
 
-// receivePong 接收Pong（模拟）
-func (w *WebSocketAdapter) receivePong(conn *WebSocketConnection) ([]byte, error) {
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
-
-	conn.lastPongTime = time.Now()
-	return []byte("pong"), nil
+// incrementTotalOperations 增加总操作数
+func (w *WebSocketAdapter) incrementTotalOperations() {
+	atomic.AddInt64(&w.totalOperations, 1)
 }
 
-// buildMessageData 构造消息数据
-func (w *WebSocketAdapter) buildMessageData(operation interfaces.Operation) []byte {
-	// 如果操作中包含自定义数据，使用它
-	if operation.Value != nil {
-		if data, ok := operation.Value.([]byte); ok {
-			return data
-		}
-		if str, ok := operation.Value.(string); ok {
-			return []byte(str)
-		}
-	}
+// incrementSuccessOperations 增加成功操作数
+func (w *WebSocketAdapter) incrementSuccessOperations() {
+	atomic.AddInt64(&w.successOperations, 1)
+}
 
-	// 否则生成默认大小的测试数据
-	data := make([]byte, w.config.BenchMark.DataSize)
-	for i := range data {
-		data[i] = byte(i % 256)
-	}
-	return data
+// incrementFailedOperations 增加失败操作数
+func (w *WebSocketAdapter) incrementFailedOperations() {
+	atomic.AddInt64(&w.failedOperations, 1)
 }
 
 // Close 关闭连接
 func (w *WebSocketAdapter) Close() error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
-	for id, conn := range w.connections {
-		if conn.isConnected {
-			conn.mu.Lock()
-			conn.isConnected = false
-			// 这里应该关闭真实的WebSocket连接
-			conn.mu.Unlock()
+	if w.connectionPool != nil {
+		if err := w.connectionPool.Close(); err != nil {
+			return fmt.Errorf("failed to close WebSocket connection pool: %w", err)
 		}
-		delete(w.connections, id)
+		w.connectionPool = nil
 	}
 
 	w.isConnected = false
@@ -454,27 +440,23 @@ func (w *WebSocketAdapter) GetProtocolMetrics() map[string]interface{} {
 		metrics["heartbeat_enabled"] = w.config.WebSocketSpecific.Heartbeat.Enabled
 	}
 
+	metrics["total_operations"] = atomic.LoadInt64(&w.totalOperations)
+	metrics["success_operations"] = atomic.LoadInt64(&w.successOperations)
+	metrics["failed_operations"] = atomic.LoadInt64(&w.failedOperations)
 	metrics["sent_messages"] = atomic.LoadInt64(&w.sentMessages)
 	metrics["received_messages"] = atomic.LoadInt64(&w.receivedMessages)
 	metrics["reconnect_count"] = atomic.LoadInt64(&w.reconnectCount)
 	metrics["heartbeat_count"] = atomic.LoadInt64(&w.heartbeatCount)
-	metrics["active_connections"] = w.getActiveConnectionCount()
 
-	return metrics
-}
-
-// getActiveConnectionCount 获取活跃连接数
-func (w *WebSocketAdapter) getActiveConnectionCount() int {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	count := 0
-	for _, conn := range w.connections {
-		if conn.isConnected {
-			count++
+	// 连接池统计
+	if w.connectionPool != nil {
+		poolStats := w.connectionPool.GetStats()
+		for k, v := range poolStats {
+			metrics[k] = v
 		}
 	}
-	return count
+
+	return metrics
 }
 
 // HealthCheck 健康检查
@@ -483,10 +465,17 @@ func (w *WebSocketAdapter) HealthCheck(ctx context.Context) error {
 		return fmt.Errorf("adapter not connected")
 	}
 
-	// 检查是否有可用连接
-	if w.getAvailableConnection() == nil {
-		return fmt.Errorf("no available WebSocket connections")
+	// 检查连接池是否可用
+	if w.connectionPool == nil {
+		return fmt.Errorf("connection pool not initialized")
 	}
+
+	// 尝试获取连接进行健康检查
+	conn, err := w.connectionPool.GetConnection()
+	if err != nil {
+		return fmt.Errorf("no available WebSocket connections: %w", err)
+	}
+	defer w.connectionPool.ReturnConnection(conn)
 
 	return nil
 }

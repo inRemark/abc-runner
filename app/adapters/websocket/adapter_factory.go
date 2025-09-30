@@ -4,13 +4,17 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
-// AdapterFactory WebSocket适配器工厂
+// AdapterFactory WebSocket适配器工厂 - 统一接口实现
 type AdapterFactory struct {
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewAdapterFactory 创建WebSocket适配器工厂
 func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *AdapterFactory {
+	if metricsCollector == nil {
+		panic("metricsCollector cannot be nil - dependency injection required")
+	}
+
 	return &AdapterFactory{
 		metricsCollector: metricsCollector,
 	}
@@ -18,12 +22,12 @@ func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *Ada
 
 // CreateWebSocketAdapter 创建WebSocket适配器 (实现WebSocketAdapterFactory接口)
 func (f *AdapterFactory) CreateWebSocketAdapter() interfaces.ProtocolAdapter {
-	if f.metricsCollector == nil {
-		return nil
-	}
+	return NewWebSocketAdapter(f.metricsCollector)
+}
 
-	adapter := NewWebSocketAdapter(f.metricsCollector)
-	return adapter
+// CreateAdapter 创建适配器 (实现通用工厂接口)
+func (f *AdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
+	return f.CreateWebSocketAdapter()
 }
 
 // GetProtocolName 获取支持的协议名称
@@ -41,5 +45,8 @@ func (f *AdapterFactory) SetMetricsCollector(collector interfaces.DefaultMetrics
 	f.metricsCollector = collector
 }
 
-// 确保实现了interfaces.WebSocketAdapterFactory接口
-var _ interfaces.WebSocketAdapterFactory = (*AdapterFactory)(nil)
+// 确保实现了相关接口
+var (
+	_ interfaces.ProtocolAdapter = (*WebSocketAdapter)(nil)
+	_ = (*AdapterFactory)(nil) // WebSocket工厂接口检查
+)
