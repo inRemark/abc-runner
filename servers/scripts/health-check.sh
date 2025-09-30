@@ -20,6 +20,7 @@ HTTP_PORT=8080
 TCP_PORT=9090
 UDP_PORT=9091
 GRPC_PORT=50051
+WEBSOCKET_PORT=7070
 HOST="localhost"
 
 # 解析命令行参数
@@ -45,8 +46,12 @@ while [[ $# -gt 0 ]]; do
             GRPC_PORT="$2"
             shift 2
             ;;
+        --websocket-port)
+            WEBSOCKET_PORT="$2"
+            shift 2
+            ;;
         -h|--help)
-            echo "用法: $0 [--host HOST] [--http-port PORT] [--tcp-port PORT] [--udp-port PORT] [--grpc-port PORT]"
+            echo "用法: $0 [--host HOST] [--http-port PORT] [--tcp-port PORT] [--udp-port PORT] [--grpc-port PORT] [--websocket-port PORT]"
             exit 0
             ;;
         *)
@@ -84,12 +89,24 @@ check_http() {
 check_tcp() {
     echo -n "检查TCP服务端 ($HOST:$TCP_PORT)... "
     
-    if timeout 3 bash -c "</dev/tcp/$HOST/$TCP_PORT" >/dev/null 2>&1; then
-        echo -e "${GREEN}✅ 健康${NC}"
-        return 0
+    # 在macOS上使用nc检查TCP连接
+    if command -v nc >/dev/null 2>&1; then
+        if nc -z "$HOST" "$TCP_PORT" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ 健康${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ 不健康${NC}"
+            return 1
+        fi
     else
-        echo -e "${RED}❌ 不健康${NC}"
-        return 1
+        # 检查端口是否被监听
+        if lsof -i ":$TCP_PORT" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ 端口监听中${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ 端口未监听${NC}"
+            return 1
+        fi
     fi
 }
 
@@ -97,12 +114,24 @@ check_tcp() {
 check_udp() {
     echo -n "检查UDP服务端 ($HOST:$UDP_PORT)... "
     
-    # UDP检查比较复杂，这里只检查进程是否运行
-    if pgrep -f "udp-server.*$UDP_PORT" >/dev/null 2>&1; then
+    # 检查UDP端口是否被监听（支持multi-server和单独服务）
+    if lsof -i ":$UDP_PORT" >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ 端口监听中${NC}"
+        return 0
+    elif pgrep -f "udp-server.*$UDP_PORT" >/dev/null 2>&1; then
         echo -e "${GREEN}✅ 进程运行中${NC}"
         return 0
+    elif pgrep -f "multi-server" >/dev/null 2>&1; then
+        # 如果是multi-server，检查UDP端口监听
+        if lsof -i UDP:"$UDP_PORT" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ Multi-server UDP监听中${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ UDP端口未监听${NC}"
+            return 1
+        fi
     else
-        echo -e "${RED}❌ 进程未运行${NC}"
+        echo -e "${RED}❌ 服务未运行${NC}"
         return 1
     fi
 }
@@ -128,6 +157,40 @@ check_grpc() {
             echo -e "${RED}❌ 端口未开放${NC}"
             return 1
         fi
+    fi
+}
+
+# 检查WebSocket服务端
+check_websocket() {
+    echo -n "检查WebSocket服务端 ($HOST:$WEBSOCKET_PORT)... "
+    
+    # 首先检查HTTP健康端点
+    if command -v curl >/dev/null 2>&1; then
+        if curl -s -f "http://$HOST:$WEBSOCKET_PORT/health" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ 健康${NC}"
+            return 0
+        fi
+    fi
+    
+    # 检查端口是否被监听（支持multi-server和单独服务）
+    if lsof -i ":$WEBSOCKET_PORT" >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ 端口监听中${NC}"
+        return 0
+    elif pgrep -f "websocket-server.*$WEBSOCKET_PORT" >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ 进程运行中${NC}"
+        return 0
+    elif pgrep -f "multi-server" >/dev/null 2>&1; then
+        # 如果是multi-server，检查WebSocket端口监听
+        if lsof -i TCP:"$WEBSOCKET_PORT" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ Multi-server WebSocket监听中${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ WebSocket端口未监听${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}❌ 服务未运行${NC}"
+        return 1
     fi
 }
 
@@ -159,17 +222,43 @@ show_details() {
         fi
     fi
     
-    # TCP和UDP服务端
-    if pgrep -f "tcp-server.*$TCP_PORT" >/dev/null 2>&1; then
+    # WebSocket服务端详细信息
+    if curl -s "http://$HOST:$WEBSOCKET_PORT/health" >/dev/null 2>&1; then
+        echo -e "\n${GREEN}WebSocket服务端:${NC}"
+        echo "  地址: http://$HOST:$WEBSOCKET_PORT"
+        echo "  健康检查: http://$HOST:$WEBSOCKET_PORT/health"
+        echo "  指标: http://$HOST:$WEBSOCKET_PORT/metrics"
+        echo "  WebSocket端点: ws://$HOST:$WEBSOCKET_PORT/ws"
+        if command -v curl >/dev/null 2>&1; then
+            echo "  状态:"
+            curl -s "http://$HOST:$WEBSOCKET_PORT/health" | head -3
+        fi
+    elif lsof -i ":$WEBSOCKET_PORT" >/dev/null 2>&1; then
+        echo -e "\n${GREEN}WebSocket服务端:${NC}"
+        echo "  地址: ws://$HOST:$WEBSOCKET_PORT"
+        echo "  类型: WebSocket服务器"
+        if pgrep -f "multi-server" >/dev/null 2>&1; then
+            echo "  模式: Multi-server"
+        fi
+    fi
+    
+    # TCP和UDP服务端 (支持multi-server模式)
+    if lsof -i ":$TCP_PORT" >/dev/null 2>&1 || pgrep -f "tcp-server.*$TCP_PORT" >/dev/null 2>&1; then
         echo -e "\n${GREEN}TCP服务端:${NC}"
         echo "  地址: tcp://$HOST:$TCP_PORT"
         echo "  类型: 回显服务器"
+        if pgrep -f "multi-server" >/dev/null 2>&1; then
+            echo "  模式: Multi-server"
+        fi
     fi
     
-    if pgrep -f "udp-server.*$UDP_PORT" >/dev/null 2>&1; then
+    if lsof -i ":$UDP_PORT" >/dev/null 2>&1 || pgrep -f "udp-server.*$UDP_PORT" >/dev/null 2>&1; then
         echo -e "\n${GREEN}UDP服务端:${NC}"
         echo "  地址: udp://$HOST:$UDP_PORT"
         echo "  类型: 数据包回显服务器"
+        if pgrep -f "multi-server" >/dev/null 2>&1; then
+            echo "  模式: Multi-server"
+        fi
     fi
 }
 
@@ -194,6 +283,9 @@ main_check() {
     
     ((total++))
     if check_grpc; then ((healthy++)); fi
+    
+    ((total++))
+    if check_websocket; then ((healthy++)); fi
     
     echo ""
     echo -e "健康状态: ${GREEN}$healthy${NC}/$total 服务端健康"
