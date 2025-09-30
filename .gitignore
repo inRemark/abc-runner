@@ -26,4 +26,5 @@ reports/*
 releases/*
 backup-refactor-archive
 servers/bin/
+servers/.pids/*
 app/core/di/di.md
