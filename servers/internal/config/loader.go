@@ -8,6 +8,7 @@ import (
 
 	"abc-runner/servers/internal/common"
 	"abc-runner/servers/pkg/http"
+	"abc-runner/servers/pkg/websocket"
 	"abc-runner/servers/pkg/interfaces"
 
 	"gopkg.in/yaml.v3"
@@ -212,21 +213,98 @@ func (loader *GRPCConfigLoader) ValidateConfig(config interfaces.ServerConfig) e
 	return config.Validate()
 }
 
+// WebSocketConfigLoader WebSocket配置加载器
+type WebSocketConfigLoader struct{}
+
+// NewWebSocketConfigLoader 创建WebSocket配置加载器
+func NewWebSocketConfigLoader() *WebSocketConfigLoader {
+	return &WebSocketConfigLoader{}
+}
+
+// LoadFromFile 从文件加载WebSocket配置
+func (loader *WebSocketConfigLoader) LoadFromFile(configPath string) (*websocket.WebSocketServerConfig, error) {
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	config := websocket.NewWebSocketServerConfig()
+	if err := yaml.Unmarshal(data, config); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	return config, nil
+}
+
+// LoadConfig 实现interfaces.ConfigLoader接口
+func (loader *WebSocketConfigLoader) LoadConfig(configPath string) (interfaces.ServerConfig, error) {
+	config, err := loader.LoadFromFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+// LoadConfigWithDefaults 加载配置并应用默认值
+func (loader *WebSocketConfigLoader) LoadConfigWithDefaults(configPath string, defaults interfaces.ServerConfig) (interfaces.ServerConfig, error) {
+	// 检查文件是否存在
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return defaults, nil
+	}
+
+	config, err := loader.LoadConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// ValidateConfig 验证配置
+func (loader *WebSocketConfigLoader) ValidateConfig(config interfaces.ServerConfig) error {
+	if wsConfig, ok := config.(*websocket.WebSocketServerConfig); ok {
+		return wsConfig.Validate()
+	}
+	return fmt.Errorf("invalid config type for WebSocket loader")
+}
+
+// SaveToFile 保存配置到文件
+func (loader *WebSocketConfigLoader) SaveToFile(config *websocket.WebSocketServerConfig, configPath string) error {
+	// 确保目录存在
+	dir := filepath.Dir(configPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
 // UniversalConfigLoader 通用配置加载器
 type UniversalConfigLoader struct {
-	httpLoader *HTTPConfigLoader
-	tcpLoader  *TCPConfigLoader
-	udpLoader  *UDPConfigLoader
-	grpcLoader *GRPCConfigLoader
+	httpLoader      *HTTPConfigLoader
+	tcpLoader       *TCPConfigLoader
+	udpLoader       *UDPConfigLoader
+	grpcLoader      *GRPCConfigLoader
+	websocketLoader *WebSocketConfigLoader
 }
 
 // NewUniversalConfigLoader 创建通用配置加载器
 func NewUniversalConfigLoader() *UniversalConfigLoader {
 	return &UniversalConfigLoader{
-		httpLoader: NewHTTPConfigLoader(),
-		tcpLoader:  NewTCPConfigLoader(),
-		udpLoader:  NewUDPConfigLoader(),
-		grpcLoader: NewGRPCConfigLoader(),
+		httpLoader:      NewHTTPConfigLoader(),
+		tcpLoader:       NewTCPConfigLoader(),
+		udpLoader:       NewUDPConfigLoader(),
+		grpcLoader:      NewGRPCConfigLoader(),
+		websocketLoader: NewWebSocketConfigLoader(),
 	}
 }
 
@@ -241,6 +319,8 @@ func (loader *UniversalConfigLoader) LoadByProtocol(protocol, configPath string)
 		return loader.udpLoader.LoadConfig(configPath)
 	case "grpc":
 		return loader.grpcLoader.LoadConfig(configPath)
+	case "websocket":
+		return loader.websocketLoader.LoadConfig(configPath)
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
 	}

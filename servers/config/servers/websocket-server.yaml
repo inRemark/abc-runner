@@ -1,0 +1,54 @@
+# WebSocket服务端配置文件
+protocol: websocket
+host: localhost
+port: 7070
+
+# WebSocket升级器配置
+upgrader:
+  path: /ws                     # WebSocket端点路径
+  read_buffer_size: 4096        # 读取缓冲区大小 (bytes)
+  write_buffer_size: 4096       # 写入缓冲区大小 (bytes)
+  handshake_timeout: 10s        # 握手超时时间
+  enable_compression: false     # 启用压缩支持
+  check_origin: false           # 检查来源
+  allowed_origins:              # 允许的来源列表
+    - "*"
+  subprotocols: []              # 支持的子协议
+
+# 连接管理配置
+connection:
+  max_connections: 1000         # 最大并发连接数
+  connection_timeout: 30s       # 连接超时时间
+  read_timeout: 60s             # 读取超时时间
+  write_timeout: 10s            # 写入超时时间
+  idle_timeout: 300s            # 空闲超时时间 (5分钟)
+  cleanup_interval: 60s         # 清理间隔 (1分钟)
+
+# 心跳配置
+heartbeat:
+  enabled: true                 # 启用心跳
+  ping_interval: 30s            # Ping间隔
+  pong_timeout: 10s             # Pong响应超时
+  max_missed: 3                 # 最大丢失次数
+
+# 消息配置
+message:
+  max_message_size: 1048576     # 最大消息大小 (1MB)
+  message_timeout: 30s          # 消息处理超时
+  queue_size: 100               # 消息队列大小
+  echo_mode: true               # 回显模式
+  response_delay: 0ms           # 响应延迟
+
+# HTTP服务器配置（用于WebSocket升级）
+http_server:
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  max_header_bytes: 1048576     # 1MB
+  shutdown_timeout: 30s
+
+# 日志配置
+logging:
+  log_connections: true         # 记录连接日志
+  log_messages: false           # 记录消息日志
+  log_heartbeat: false          # 记录心跳日志

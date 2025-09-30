@@ -45,12 +45,13 @@ abc-runner 多协议服务端启动脚本
     $0 [选项]
 
 选项:
-    -p, --protocols <list>    启动的协议 (all,http,tcp,udp,grpc) [默认: all]
+    -p, --protocols <list>    启动的协议 (all,http,tcp,udp,grpc,websocket) [默认: all]
     -H, --host <host>         监听主机 [默认: localhost]
     --http-port <port>        HTTP服务端口 [默认: 8080]
     --tcp-port <port>         TCP服务端口 [默认: 9090]
     --udp-port <port>         UDP服务端口 [默认: 9091]
     --grpc-port <port>        gRPC服务端口 [默认: 50051]
+    --websocket-port <port>   WebSocket服务端口 [默认: 7070]
     -l, --log-level <level>   日志级别 (debug,info,warn,error) [默认: info]
     -d, --daemon              后台运行
     -s, --stop                停止所有服务端
@@ -63,8 +64,8 @@ abc-runner 多协议服务端启动脚本
     # 启动所有服务端
     $0
 
-    # 只启动HTTP和TCP服务端
-    $0 --protocols http,tcp
+    # 只启动HTTP和WebSocket服务端
+    $0 --protocols http,websocket
 
     # 在不同主机启动
     $0 --host 0.0.0.0
@@ -87,6 +88,7 @@ HTTP_PORT=8080
 TCP_PORT=9090
 UDP_PORT=9091
 GRPC_PORT=50051
+WEBSOCKET_PORT=7070
 LOG_LEVEL="info"
 DAEMON=false
 PID_DIR="$PROJECT_DIR/.pids"
@@ -116,6 +118,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --grpc-port)
             GRPC_PORT="$2"
+            shift 2
+            ;;
+        --websocket-port)
+            WEBSOCKET_PORT="$2"
             shift 2
             ;;
         -l|--log-level)
@@ -159,7 +165,7 @@ check_binaries() {
     log_info "检查二进制文件..."
     
     local missing=false
-    for binary in http-server tcp-server udp-server grpc-server multi-server; do
+    for binary in http-server tcp-server udp-server grpc-server websocket-server multi-server; do
         if [[ ! -f "$BIN_DIR/$binary" ]]; then
             log_warn "二进制文件不存在: $binary"
             missing=true
@@ -179,7 +185,7 @@ build_servers() {
     cd "$PROJECT_DIR"
     
     # 构建各个服务端
-    for server in http-server tcp-server udp-server grpc-server multi-server; do
+    for server in http-server tcp-server udp-server grpc-server websocket-server multi-server; do
         log_info "构建 $server..."
         if go build -o "bin/$server" "./cmd/$server"; then
             log_info "✅ $server 构建成功"
@@ -237,7 +243,7 @@ start_servers() {
     
     if [[ "$PROTOCOLS" == "all" ]]; then
         # 使用multi-server启动所有协议
-        local args="--host $HOST --http-port $HTTP_PORT --tcp-port $TCP_PORT --udp-port $UDP_PORT --grpc-port $GRPC_PORT --log-level $LOG_LEVEL"
+        local args="--host $HOST --http-port $HTTP_PORT --tcp-port $TCP_PORT --udp-port $UDP_PORT --grpc-port $GRPC_PORT --websocket-port $WEBSOCKET_PORT --log-level $LOG_LEVEL"
         start_single_server "Multi" "multi-server" "$args"
     else
         # 单独启动指定协议
@@ -256,6 +262,9 @@ start_servers() {
                     ;;
                 grpc)
                     start_single_server "gRPC" "grpc-server" "--host $HOST --port $GRPC_PORT --log-level $LOG_LEVEL"
+                    ;;
+                websocket)
+                    start_single_server "WebSocket" "websocket-server" "--host $HOST --port $WEBSOCKET_PORT --log-level $LOG_LEVEL"
                     ;;
                 *)
                     log_warn "未知协议: $protocol"
@@ -358,7 +367,7 @@ show_status() {
 show_version() {
     echo "abc-runner 多协议服务端启动脚本"
     echo "版本: 1.0.0"
-    echo "支持协议: HTTP, TCP, UDP, gRPC"
+    echo "支持协议: HTTP, TCP, UDP, gRPC, WebSocket"
 }
 
 # 信号处理
