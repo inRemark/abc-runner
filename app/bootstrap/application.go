@@ -22,10 +22,10 @@ type Application struct {
 
 // BootstrapConfig 启动配置
 type BootstrapConfig struct {
-	AutoDiscovery      bool     `json:"auto_discovery"`
-	ProtocolScanPaths  []string `json:"protocol_scan_paths"`
-	LoggingEnabled     bool     `json:"logging_enabled"`
-	LogDirectory       string   `json:"log_directory"`
+	AutoDiscovery     bool     `json:"auto_discovery"`
+	ProtocolScanPaths []string `json:"protocol_scan_paths"`
+	LoggingEnabled    bool     `json:"logging_enabled"`
+	LogDirectory      string   `json:"log_directory"`
 }
 
 // DefaultBootstrapConfig 默认启动配置
@@ -42,7 +42,7 @@ func DefaultBootstrapConfig() *BootstrapConfig {
 func NewApplication() *Application {
 	config := DefaultBootstrapConfig()
 	builder := discovery.NewAutoDIBuilder()
-	
+
 	return &Application{
 		registry: registry.NewProtocolRegistry(),
 		builder:  builder,
@@ -118,17 +118,17 @@ func (app *Application) initLogging() error {
 // autoDiscoverProtocols 自动发现协议
 func (app *Application) autoDiscoverProtocols() error {
 	log.Println("Auto-discovering protocols and building dependencies...")
-	
+
 	// 使用AutoDIBuilder构建所有组件
 	if err := app.builder.Build(); err != nil {
 		return fmt.Errorf("auto DI build failed: %w", err)
 	}
-	
+
 	// 自动注册命令
 	if err := app.router.AutoRegister(); err != nil {
 		return fmt.Errorf("command auto-registration failed: %w", err)
 	}
-	
+
 	log.Println("Protocol discovery and DI setup completed")
 	return nil
 }
@@ -160,11 +160,11 @@ func (app *Application) handleCommand() error {
 	// 执行命令
 	command := flag.Arg(0)
 	args := flag.Args()[1:]
-	
+
 	// 创建执行上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	
+
 	// 使用命令路由器执行
 	return app.router.Execute(ctx, command, args)
 }
@@ -196,7 +196,7 @@ func (app *Application) showGlobalHelp() {
 
 // showVersion 显示版本信息
 func (app *Application) showVersion() {
-	fmt.Println("abc-runner v3.0.0")
+	fmt.Println("abc-runner v0.2.0")
 	fmt.Println("Build with extreme simplicity and performance in mind")
 	fmt.Printf("Release date: %s\n", time.Now().Format("2006-01-02"))
 }

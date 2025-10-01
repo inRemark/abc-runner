@@ -423,8 +423,8 @@ func generateContextMetadata(snapshot *metrics.MetricsSnapshot[map[string]interf
 		Environment: generateEnvironmentInfo(),
 		ExecutionContext: ExecContext{
 			GeneratedAt:     time.Now(),
-			GeneratedBy:     "abc-runner-v3",
-			ReportVersion:   "3.0.0",
+			GeneratedBy:     "abc-runner",
+			ReportVersion:   "0.2.0",
 			UniqueSessionID: generateSessionID(),
 		},
 	}
@@ -442,7 +442,7 @@ func generateEnvironmentInfo() EnvInfo {
 		OSName:           runtime.GOOS,
 		Architecture:     runtime.GOARCH,
 		GoVersion:        runtime.Version(),
-		ABCRunnerVersion: "3.0.0",
+		ABCRunnerVersion: "0.2.0",
 		Hostname:         hostname,
 	}
 }

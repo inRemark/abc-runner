@@ -49,7 +49,7 @@ func (cm *ConfigManager) LoadConfig() error {
 	// 解析配置文件
 	config := &MetricsConfig{}
 	ext := strings.ToLower(filepath.Ext(cm.configPath))
-	
+
 	switch ext {
 	case ".yaml", ".yml":
 		if err := yaml.Unmarshal(data, config); err != nil {
@@ -92,7 +92,7 @@ func (cm *ConfigManager) SaveConfig(config *MetricsConfig) error {
 	// 序列化配置
 	var data []byte
 	var err error
-	
+
 	ext := strings.ToLower(filepath.Ext(cm.configPath))
 	switch ext {
 	case ".yaml", ".yml":
@@ -132,7 +132,7 @@ func (cm *ConfigManager) UpdateConfig(updater func(*MetricsConfig) error) error 
 
 	// 创建配置副本
 	configCopy := *cm.config
-	
+
 	// 应用更新
 	if err := updater(&configCopy); err != nil {
 		return fmt.Errorf("failed to update config: %w", err)
@@ -187,7 +187,7 @@ func (cm *ConfigManager) mergeDefaults(target, source reflect.Value) error {
 		for i := 0; i < target.NumField(); i++ {
 			fieldTarget := target.Field(i)
 			fieldSource := source.Field(i)
-			
+
 			if fieldTarget.CanSet() {
 				// 如果目标字段是零值，使用默认值
 				if cm.isZeroValue(fieldTarget) {
@@ -311,7 +311,7 @@ func (cm *ConfigManager) loadEnvRecursive(v reflect.Value, prefix string) error 
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 		fieldType := t.Field(i)
-		
+
 		if !field.CanSet() {
 			continue
 		}
@@ -416,7 +416,7 @@ type ConfigTemplate struct {
 func (cm *ConfigManager) GenerateTemplate() *ConfigTemplate {
 	return &ConfigTemplate{
 		Description: "ABC Runner Metrics Configuration Template",
-		Version:     "3.0.0",
+		Version:     "0.2.0",
 		Config:      DefaultMetricsConfig(),
 		Examples: map[string]interface{}{
 			"high_performance": map[string]interface{}{
@@ -436,9 +436,9 @@ func (cm *ConfigManager) GenerateTemplate() *ConfigTemplate {
 					"sampling_rate": 0.1,
 				},
 				"storage": map[string]interface{}{
-					"memory_limit":     "50MB",
-					"use_compression":  true,
-					"flush_interval":   "1s",
+					"memory_limit":    "50MB",
+					"use_compression": true,
+					"flush_interval":  "1s",
 				},
 			},
 			"detailed_monitoring": map[string]interface{}{
@@ -446,8 +446,8 @@ func (cm *ConfigManager) GenerateTemplate() *ConfigTemplate {
 					"monitor_interval":   "100ms",
 					"snapshot_retention": 1000,
 					"health_thresholds": map[string]interface{}{
-						"memory_usage":     60.0,
-						"goroutine_count":  500,
+						"memory_usage":    60.0,
+						"goroutine_count": 500,
 					},
 				},
 				"export": map[string]interface{}{
