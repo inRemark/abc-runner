@@ -111,6 +111,10 @@ func (p *WebSocketConnectionPool) createConnection() (*WebSocketConnection, erro
 		createdAt: time.Now(),
 		sendChan:  make(chan []byte, 100),
 		done:      make(chan struct{}),
+		// 初始化心跳相关字段
+		lastPingTime: time.Now(),
+		lastPongTime: time.Now(),
+		missedPongs:  0,
 	}
 
 	return wsConn, nil
@@ -124,9 +128,16 @@ func (p *WebSocketConnectionPool) Close() error {
 
 // GetStats 获取连接池统计信息
 func (p *WebSocketConnectionPool) GetStats() map[string]interface{} {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return map[string]interface{}{
-		"total_created": atomic.LoadInt64(&p.totalCreated),
-		"closed":        p.closed,
+		"max_connections":       p.maxConnections,
+		"current_connections":   p.currentConnections,
+		"active_connections":    int(atomic.LoadInt64(&p.activeCount)),
+		"available_connections": p.maxConnections - int(atomic.LoadInt64(&p.activeCount)),
+		"total_created":         atomic.LoadInt64(&p.totalCreated),
+		"closed":                p.closed,
 	}
 }
 
@@ -143,13 +154,21 @@ func (c *WebSocketConnection) SendMessage(messageType int, data []byte) error {
 
 // GetStats 获取连接统计信息
 func (c *WebSocketConnection) GetStats() map[string]interface{} {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
 	return map[string]interface{}{
-		"id":            c.ID,
-		"url":           c.URL,
-		"is_active":     c.isActive,
-		"created_at":    c.createdAt,
-		"last_used":     c.lastUsed,
-		"messages_sent": atomic.LoadInt64(&c.messagesSent),
-		"bytes_sent":    atomic.LoadInt64(&c.bytesSent),
+		"id":             c.ID,
+		"url":            c.URL,
+		"is_active":      c.isActive,
+		"created_at":     c.createdAt,
+		"last_used":      c.lastUsed,
+		"messages_sent":  atomic.LoadInt64(&c.messagesSent),
+		"messages_recv":  atomic.LoadInt64(&c.messagesRecv),
+		"bytes_sent":     atomic.LoadInt64(&c.bytesSent),
+		"bytes_recv":     atomic.LoadInt64(&c.bytesRecv),
+		"last_ping_time": c.lastPingTime,
+		"last_pong_time": c.lastPongTime,
+		"missed_pongs":   c.missedPongs,
 	}
 }

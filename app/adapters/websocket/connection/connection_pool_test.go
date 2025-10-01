@@ -30,19 +30,19 @@ func TestNewWebSocketConnectionPool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pool, err := NewWebSocketConnectionPool(tt.config)
-			
+
 			if tt.expectErr && err == nil {
 				t.Errorf("Expected error but got none")
 			}
-			
+
 			if !tt.expectErr && err != nil {
 				t.Errorf("Expected no error but got: %v", err)
 			}
-			
+
 			if !tt.expectErr && pool == nil {
 				t.Errorf("Expected pool to be created but got nil")
 			}
-			
+
 			if pool != nil {
 				// 清理
 				pool.Close()
@@ -82,7 +82,7 @@ func TestWebSocketConnectionPoolStats(t *testing.T) {
 
 	// 检查基本值
 	if stats["max_connections"] != config.Connection.Pool.PoolSize {
-		t.Errorf("Expected max_connections to be %d but got %v", 
+		t.Errorf("Expected max_connections to be %d but got %v",
 			config.Connection.Pool.PoolSize, stats["max_connections"])
 	}
 
@@ -129,10 +129,14 @@ func TestWebSocketConnectionStats(t *testing.T) {
 	// 创建模拟连接
 	conn := &WebSocketConnection{
 		ID:        "test_conn_1",
-		URL:       "ws://localhost:8080/ws",
+		URL:       "ws://localhost:7070/ws",
 		isActive:  true,
 		createdAt: time.Now(),
 		lastUsed:  time.Now(),
+		// 初始化心跳相关字段
+		lastPingTime: time.Now(),
+		lastPongTime: time.Now(),
+		missedPongs:  0,
 	}
 
 	stats := conn.GetStats()
@@ -142,7 +146,7 @@ func TestWebSocketConnectionStats(t *testing.T) {
 
 	expectedKeys := []string{
 		"id",
-		"url", 
+		"url",
 		"is_active",
 		"created_at",
 		"last_used",
@@ -234,7 +238,7 @@ func TestWebSocketConnectionConcurrency(t *testing.T) {
 func TestConnectionHeartbeat(t *testing.T) {
 	conn := &WebSocketConnection{
 		ID:           "test_heartbeat_conn",
-		URL:          "ws://localhost:8080/ws",
+		URL:          "ws://localhost:7070/ws",
 		isActive:     true,
 		lastPingTime: time.Now(),
 		lastPongTime: time.Now(),
@@ -255,17 +259,18 @@ func TestConnectionHeartbeat(t *testing.T) {
 	// 模拟接收Pong响应
 	originalMissedPongs := conn.missedPongs
 	conn.missedPongs = 5 // 模拟错过的心跳
-	
+
+	// 验证missedPongs已经增加
+	if conn.missedPongs == originalMissedPongs {
+		t.Errorf("Expected missed pongs to be different from original value")
+	}
+
 	// 模拟收到Pong，重置计数
 	conn.lastPongTime = time.Now()
 	conn.missedPongs = 0
 
 	if conn.missedPongs != 0 {
 		t.Errorf("Expected missed pongs to be reset to 0 but got %d", conn.missedPongs)
-	}
-
-	if conn.missedPongs == originalMissedPongs {
-		t.Errorf("Expected missed pongs to be different from original value")
 	}
 }
 
@@ -274,7 +279,7 @@ func createValidConfig() *config.WebSocketConfig {
 	return &config.WebSocketConfig{
 		Protocol: "websocket",
 		Connection: config.ConnectionConfig{
-			URL:     "ws://localhost:8080/ws",
+			URL:     "ws://localhost:7070/ws",
 			Timeout: 30 * time.Second,
 			Pool: config.PoolConfig{
 				PoolSize:          5,
