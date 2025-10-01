@@ -3,6 +3,7 @@ package operations
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	httpConfig "abc-runner/app/adapters/http/config"
@@ -43,6 +44,9 @@ func (f *HttpOperationFactory) CreateOperation(jobID int, config execution.Bench
 		"base_url":     f.config.Connection.BaseURL,
 		"timeout":      f.config.Connection.Timeout.Seconds(),
 		"headers":      f.generateHeaders(jobID),
+		"method":       "GET",              // 添加HTTP方法，先使用默认值
+		"path":         path,               // 添加请求路径
+		"content_type": "application/json", // 添加内容类型
 	}
 
 	// 创建操作元数据
@@ -55,6 +59,12 @@ func (f *HttpOperationFactory) CreateOperation(jobID int, config execution.Bench
 
 	// 根据测试用例确定具体操作类型
 	operationType := f.determineOperationType(jobID)
+
+	// 确定HTTP方法
+	httpMethod := f.getHTTPMethodFromOperationType(operationType)
+
+	// 更新参数中的HTTP方法
+	params["method"] = httpMethod
 
 	return interfaces.Operation{
 		Type:     operationType,
@@ -136,6 +146,12 @@ func (f *HttpOperationFactory) determineOperationType(jobID int) string {
 
 // generatePath 生成请求路径
 func (f *HttpOperationFactory) generatePath(jobID int) string {
+	// 如果是外部URL（非本地API），使用简单的根路径
+	if f.isExternalURL() {
+		return "/" // 对于外部网站，只访问根路径
+	}
+
+	// 对于内部API测试，使用复杂的路径
 	switch f.testCase {
 	case "get_post_mixed", "get_only":
 		if f.config.Benchmark.RandomKeys > 0 {
@@ -317,6 +333,39 @@ func (f *HttpOperationFactory) isReadOperation(operationType string) bool {
 		}
 	}
 	return false
+}
+
+// isExternalURL 判断是否为外部URL
+func (f *HttpOperationFactory) isExternalURL() bool {
+	baseURL := f.config.Connection.BaseURL
+	// 判断是否为外部URL（非localhost或127.0.0.1）
+	return !strings.Contains(baseURL, "localhost") && !strings.Contains(baseURL, "127.0.0.1")
+}
+
+// getHTTPMethodFromOperationType 根据操作类型获取HTTP方法
+func (f *HttpOperationFactory) getHTTPMethodFromOperationType(operationType string) string {
+	switch operationType {
+	case "http_get":
+		return "GET"
+	case "http_post":
+		return "POST"
+	case "http_put":
+		return "PUT"
+	case "http_patch":
+		return "PATCH"
+	case "http_delete":
+		return "DELETE"
+	case "http_head":
+		return "HEAD"
+	case "http_options":
+		return "OPTIONS"
+	case "http_trace":
+		return "TRACE"
+	case "http_connect":
+		return "CONNECT"
+	default:
+		return "GET" // 默认方法
+	}
 }
 
 // 确保实现了execution.OperationFactory接口

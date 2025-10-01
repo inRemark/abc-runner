@@ -139,10 +139,7 @@ func (r *RedisAdapter) Close() error {
 
 // HealthCheck 健康检查
 func (r *RedisAdapter) HealthCheck(ctx context.Context) error {
-	if !r.isConnected {
-		return fmt.Errorf("adapter not connected")
-	}
-
+	// 在连接过程中允许健康检查，只检查客户端是否初始化
 	if r.client == nil {
 		return fmt.Errorf("redis client not initialized")
 	}

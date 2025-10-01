@@ -122,6 +122,7 @@ func (h *HttpCommandHandler) parseArgs(args []string) (*httpConfig.HttpAdapterCo
 	config.Benchmark.Parallels = 10
 	config.Benchmark.Method = "GET"
 	config.Benchmark.Path = "/"
+	config.Benchmark.TestCase = "get_only" // 设置默认测试用例
 	config.Benchmark.Timeout = 30 * time.Second
 
 	// 根据用户记忆，设置默认的Request配置

@@ -367,7 +367,7 @@ func NewDefaultRedisConfig() *RedisConfig {
 		},
 		Standalone: StandAloneInfo{
 			Addr:     "localhost:6379",
-			Password: "pwd@redis",
+			Password: "", // 默认不使用密码
 			Db:       0,
 		},
 	}
