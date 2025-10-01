@@ -11,6 +11,7 @@ import (
 	"abc-runner/app/core/execution"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
+	"abc-runner/app/reporting"
 )
 
 // GRPCCommandHandler gRPC命令处理器
@@ -337,7 +338,11 @@ func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultM
 	}
 	fmt.Printf("=====================================\n")
 
-	return nil
+	// 生成结构化文件报告（使用修正后的数据）
+	report := reporting.ConvertFromMetricsSnapshot(snapshot)
+	reportConfig := reporting.NewStandardReportConfig("grpc")
+	generator := reporting.NewReportGenerator(reportConfig)
+	return generator.Generate(report)
 }
 
 // GetProtocolName 获取协议名称

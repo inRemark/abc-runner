@@ -406,11 +406,11 @@ func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("\nTest Duration: %v (Actual: %v)\n", core.Duration, actualDuration)
 	fmt.Printf("=====================================\n")
 
-	// 简化的文件报告
-	config := reporting.NewStandardReportConfig("udp")
-	fmt.Printf("📄 Report configuration ready for: %s\n", config.OutputDir)
-
-	return nil
+	// 生成结构化文件报告（使用修正后的数据）
+	report := reporting.ConvertFromMetricsSnapshot(snapshot)
+	reportConfig := reporting.NewStandardReportConfig("udp")
+	generator := reporting.NewReportGenerator(reportConfig)
+	return generator.Generate(report)
 }
 
 // generatePacketData 生成数据包数据
