@@ -8,17 +8,22 @@ import (
 
 	kafkaConfig "abc-runner/app/adapters/kafka/config"
 	"abc-runner/app/adapters/kafka/connection"
+	"abc-runner/app/adapters/kafka/operations"
 
 	"abc-runner/app/core/interfaces"
 
 	"github.com/segmentio/kafka-go"
 )
 
-// KafkaAdapter Kafka协议适配器实现
+// KafkaAdapter Kafka协议适配器实现 - 遵循统一架构模式
+// 职责：连接管理、状态维护、健康检查
 type KafkaAdapter struct {
 	// 连接管理
 	connPool *connection.ConnectionPool
 	config   *kafkaConfig.KafkaAdapterConfig
+
+	// 操作执行器
+	kafkaOperations *operations.KafkaOperations
 
 	// 指标收集器
 	metricsCollector interfaces.DefaultMetricsCollector
@@ -81,135 +86,22 @@ func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) er
 		return fmt.Errorf("connection test failed: %w", err)
 	}
 
+	// 创建Kafka操作执行器
+	k.kafkaOperations = operations.NewKafkaOperations(k.connPool, k.config, k.metricsCollector)
+
 	k.isConnected = true
 
 	return nil
 }
 
-// Execute 执行操作并返回结果
-// Execute 执行Kafka操作
+// Execute 执行Kafka操作 - 使用执行器处理
 func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !k.isConnected {
 		return nil, fmt.Errorf("kafka adapter not connected")
 	}
 
-	startTime := time.Now()
-
-	// 根据操作类型选择执行方法
-	result, err := k.executeOperation(ctx, operation)
-	if result != nil {
-		result.Duration = time.Since(startTime)
-
-		// 注意：不要在这里调用 k.metricsCollector.Record(result)
-		// 因为执行引擎会负责记录指标，避免重复计数
-	}
-
-	return result, err
-}
-
-// executeOperation 执行具体操作
-func (k *KafkaAdapter) executeOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	switch operation.Type {
-	case "produce", "produce_message":
-		return k.executeProduceMessage(ctx, operation)
-	case "produce_batch":
-		return k.executeProduceBatch(ctx, operation)
-	case "consume", "consume_message":
-		return k.executeConsumeMessage(ctx, operation)
-	case "consume_batch":
-		return k.executeConsumeBatch(ctx, operation)
-	case "create_topic":
-		return k.executeCreateTopic(ctx, operation)
-	case "delete_topic":
-		return k.executeDeleteTopic(ctx, operation)
-	case "list_topics":
-		return k.executeListTopics(ctx, operation)
-	case "describe_consumer_groups":
-		return k.executeDescribeConsumerGroups(ctx, operation)
-	default:
-		return &interfaces.OperationResult{
-			Success: false,
-			IsRead:  false,
-			Error:   fmt.Errorf("unsupported operation type: %s", operation.Type),
-		}, fmt.Errorf("unsupported operation type: %s", operation.Type)
-	}
-}
-
-// executeProduceMessage 执行单条消息生产
-func (k *KafkaAdapter) executeProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return k.executeKafkaOperation(ctx, operation)
-}
-
-// executeProduceBatch 执行批量消息生产
-func (k *KafkaAdapter) executeProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return k.executeKafkaOperation(ctx, operation)
-}
-
-// executeConsumeMessage 执行单条消息消费
-func (k *KafkaAdapter) executeConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return k.executeKafkaOperation(ctx, operation)
-}
-
-// executeConsumeBatch 执行批量消息消费
-func (k *KafkaAdapter) executeConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	return k.executeKafkaOperation(ctx, operation)
-}
-
-// executeCreateTopic 执行创建主题
-func (k *KafkaAdapter) executeCreateTopic(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	// TODO: 实现主题创建逻辑
-	// 这需要使用Kafka Admin API
-
-	return &interfaces.OperationResult{
-		Success:  false,
-		Duration: time.Since(startTime),
-		IsRead:   false,
-		Error:    fmt.Errorf("create topic operation not implemented yet"),
-	}, fmt.Errorf("create topic operation not implemented yet")
-}
-
-// executeDeleteTopic 执行删除主题
-func (k *KafkaAdapter) executeDeleteTopic(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	// TODO: 实现主题删除逻辑
-
-	return &interfaces.OperationResult{
-		Success:  false,
-		Duration: time.Since(startTime),
-		IsRead:   false,
-		Error:    fmt.Errorf("delete topic operation not implemented yet"),
-	}, fmt.Errorf("delete topic operation not implemented yet")
-}
-
-// executeListTopics 执行列出主题
-func (k *KafkaAdapter) executeListTopics(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	// TODO: 实现主题列表查询逻辑
-
-	return &interfaces.OperationResult{
-		Success:  false,
-		Duration: time.Since(startTime),
-		IsRead:   true,
-		Error:    fmt.Errorf("list topics operation not implemented yet"),
-	}, fmt.Errorf("list topics operation not implemented yet")
-}
-
-// executeDescribeConsumerGroups 执行描述消费者组
-func (k *KafkaAdapter) executeDescribeConsumerGroups(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	// TODO: 实现消费者组描述逻辑
-
-	return &interfaces.OperationResult{
-		Success:  false,
-		Duration: time.Since(startTime),
-		IsRead:   true,
-		Error:    fmt.Errorf("describe consumer groups operation not implemented yet"),
-	}, fmt.Errorf("describe consumer groups operation not implemented yet")
+	// 委托给Kafka操作执行器处理
+	return k.kafkaOperations.ExecuteOperation(ctx, operation)
 }
 
 // Close 关闭连接
@@ -428,175 +320,4 @@ func (k *KafkaAdapter) GetMetricsCollector() interfaces.DefaultMetricsCollector 
 // GetProtocolName 获取协议名称
 func (k *KafkaAdapter) GetProtocolName() string {
 	return "kafka"
-}
-
-// === 架构兼容性方法，与 operations 系统集成 ===
-
-// GetSupportedOperations 获取支持的操作类型（架构兼容性）
-func (k *KafkaAdapter) GetSupportedOperations() []string {
-	return []string{
-		"produce", "produce_message", "produce_batch",
-		"consume", "consume_message", "consume_batch",
-		"create_topic", "delete_topic", "list_topics",
-		"describe_consumer_groups", "get_metadata",
-	}
-}
-
-// ValidateOperation 验证操作是否受支持（架构兼容性）
-func (k *KafkaAdapter) ValidateOperation(operationType string) error {
-	supportedOps := k.GetSupportedOperations()
-	for _, op := range supportedOps {
-		if op == operationType {
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported operation type: %s", operationType)
-}
-
-// GetOperationMetadata 获取操作元数据（架构兼容性）
-func (k *KafkaAdapter) GetOperationMetadata(operationType string) map[string]interface{} {
-	metadata := map[string]interface{}{
-		"protocol":       "kafka",
-		"adapter_type":   "kafka_adapter",
-		"operation_type": operationType,
-		"is_read":        k.isReadOperation(operationType),
-	}
-
-	if k.config != nil {
-		metadata["brokers"] = k.config.Brokers
-		metadata["producer_pool_size"] = k.config.Performance.ProducerPoolSize
-		metadata["consumer_pool_size"] = k.config.Performance.ConsumerPoolSize
-	}
-
-	return metadata
-}
-
-// isReadOperation 判断是否为读操作
-func (k *KafkaAdapter) isReadOperation(operationType string) bool {
-	readOps := []string{"consume", "consume_message", "consume_batch", "list_topics", "describe_consumer_groups", "get_metadata"}
-	for _, readOp := range readOps {
-		if readOp == operationType {
-			return true
-		}
-	}
-	return false
-}
-
-// executeKafkaOperation 执行具体的Kafka操作
-func (k *KafkaAdapter) executeKafkaOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-	result := &interfaces.OperationResult{
-		IsRead: k.isReadOperation(operation.Type),
-	}
-
-	var err error
-	switch operation.Type {
-	case "produce", "produce_message":
-		result.Value, err = k.executeProduceOperation(ctx, operation)
-	case "produce_batch":
-		result.Value, err = k.executeProduceBatchOperation(ctx, operation)
-	case "consume", "consume_message":
-		result.Value, err = k.executeConsumeOperation(ctx, operation)
-	case "consume_batch":
-		result.Value, err = k.executeConsumeBatchOperation(ctx, operation)
-	default:
-		err = fmt.Errorf("unsupported operation type: %s", operation.Type)
-	}
-
-	result.Duration = time.Since(startTime)
-	result.Success = err == nil
-	result.Error = err
-
-	// 设置结果元数据
-	result.Metadata = map[string]interface{}{
-		"operation_type": operation.Type,
-		"topic":          operation.Params["topic"],
-		"duration_ms":    result.Duration.Milliseconds(),
-	}
-
-	return result, nil
-}
-
-// executeProduceOperation 执行生产操作
-func (k *KafkaAdapter) executeProduceOperation(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
-	// 获取生产者
-	producer, err := k.connPool.GetProducer()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get producer: %w", err)
-	}
-	defer k.connPool.ReturnProducer(producer)
-
-	// 构造消息
-	topic := ""
-	if topicParam, exists := operation.Params["topic"]; exists {
-		if topicStr, ok := topicParam.(string); ok {
-			topic = topicStr
-		}
-	}
-	if topic == "" {
-		topic = k.config.Benchmark.DefaultTopic
-	}
-
-	msg := kafka.Message{
-		Topic: topic,
-		Key:   []byte(operation.Key),
-		Value: []byte(fmt.Sprintf("%v", operation.Value)),
-	}
-
-	// 设置分区
-	if partitionParam, exists := operation.Params["partition"]; exists {
-		if partition, ok := partitionParam.(int); ok {
-			msg.Partition = partition
-		}
-	}
-
-	// 发送消息
-	err = producer.WriteMessages(ctx, msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to produce message: %w", err)
-	}
-
-	return &ProduceResult{
-		Partition: int32(msg.Partition),
-		Offset:    0, // kafka-go不直接返回offset
-		Timestamp: time.Now(),
-		Duration:  0, // 将在上层设置
-	}, nil
-}
-
-// executeProduceBatchOperation 执行批量生产操作
-func (k *KafkaAdapter) executeProduceBatchOperation(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
-	// TODO: 实现批量生产逻辑
-	return k.executeProduceOperation(ctx, operation)
-}
-
-// executeConsumeOperation 执行消费操作
-func (k *KafkaAdapter) executeConsumeOperation(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
-	// 获取消费者
-	consumer, err := k.connPool.GetConsumer()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get consumer: %w", err)
-	}
-	defer k.connPool.ReturnConsumer(consumer)
-
-	// 读取消息
-	msg, err := consumer.ReadMessage(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to consume message: %w", err)
-	}
-
-	return map[string]interface{}{
-		"topic":     msg.Topic,
-		"key":       string(msg.Key),
-		"value":     string(msg.Value),
-		"partition": msg.Partition,
-		"offset":    msg.Offset,
-		"timestamp": msg.Time,
-	}, nil
-}
-
-// executeConsumeBatchOperation 执行批量消费操作
-func (k *KafkaAdapter) executeConsumeBatchOperation(ctx context.Context, operation interfaces.Operation) (interface{}, error) {
-	// TODO: 实现批量消费逻辑
-	return k.executeConsumeOperation(ctx, operation)
 }

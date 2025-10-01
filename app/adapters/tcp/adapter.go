@@ -9,14 +9,16 @@ import (
 
 	"abc-runner/app/adapters/tcp/config"
 	"abc-runner/app/adapters/tcp/connection"
+	"abc-runner/app/adapters/tcp/operations"
 
 	"abc-runner/app/core/interfaces"
 )
 
-// TCPAdapter TCP协议适配器
+// TCPAdapter TCP协议适配器 - 遵循统一架构模式
 type TCPAdapter struct {
 	config           *config.TCPConfig
 	connectionPool   *connection.ConnectionPool
+	tcpOperations    *operations.TCPOperations
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
@@ -56,6 +58,9 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 
 	t.connectionPool = pool
 
+	// 创建TCP操作执行器
+	t.tcpOperations = operations.NewTCPOperations(pool, tcpConfig, t.metricsCollector)
+
 	// 测试连接
 	if err := t.testConnection(ctx); err != nil {
 		return fmt.Errorf("connection test failed: %w", err)
@@ -65,72 +70,19 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	return nil
 }
 
-// Execute 执行操作
+// Execute 执行TCP操作 - 使用TCPOperations执行器
 func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
-	startTime := time.Now()
-
-	result := &interfaces.OperationResult{
-		Success:  false,
-		Duration: 0,
-		IsRead:   false,
-		Error:    nil,
-		Value:    nil,
-		Metadata: make(map[string]interface{}),
-	}
-
 	// 检查连接状态
 	if !t.isConnected {
-		result.Error = fmt.Errorf("adapter not connected")
-		result.Duration = time.Since(startTime)
-		return result, result.Error
+		return &interfaces.OperationResult{
+			Success:  false,
+			Duration: 0,
+			Error:    fmt.Errorf("adapter not connected"),
+		}, fmt.Errorf("adapter not connected")
 	}
 
-	// 检查上下文是否已取消
-	select {
-	case <-ctx.Done():
-		result.Error = ctx.Err()
-		result.Duration = time.Since(startTime)
-		return result, result.Error
-	default:
-	}
-
-	// 获取连接
-	conn, err := t.connectionPool.GetConnection()
-	if err != nil {
-		result.Error = fmt.Errorf("failed to get connection: %w", err)
-		result.Duration = time.Since(startTime)
-		return result, result.Error
-	}
-	defer t.connectionPool.ReturnConnection(conn)
-
-	// 根据操作类型执行不同的操作
-	switch operation.Type {
-	case "echo_test":
-		result, err = t.executeEchoTest(ctx, conn, operation)
-	case "send_only":
-		result, err = t.executeSendOnly(ctx, conn, operation)
-	case "receive_only":
-		result, err = t.executeReceiveOnly(ctx, conn, operation)
-	case "bidirectional":
-		result, err = t.executeBidirectional(ctx, conn, operation)
-	default:
-		result.Error = fmt.Errorf("unsupported operation type: %s", operation.Type)
-	}
-
-	result.Duration = time.Since(startTime)
-
-	// 添加通用元数据
-	result.Metadata["protocol"] = "tcp"
-	result.Metadata["operation_type"] = operation.Type
-	result.Metadata["connection_mode"] = t.config.TCPSpecific.ConnectionMode
-	result.Metadata["no_delay"] = t.config.TCPSpecific.NoDelay
-	result.Metadata["execution_time_ms"] = float64(result.Duration.Nanoseconds()) / 1e6
-
-	// 记录指标
-	// 注意：不要在这里调用 t.metricsCollector.Record(result)
-	// 因为执行引擎会负责记录指标，避免重复计数
-
-	return result, err
+	// 使用TCPOperations执行器执行操作
+	return t.tcpOperations.ExecuteOperation(ctx, operation)
 }
 
 // executeEchoTest 执行回显测试

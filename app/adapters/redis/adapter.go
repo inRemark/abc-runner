@@ -10,18 +10,17 @@ import (
 	"abc-runner/app/adapters/redis/connection"
 	operation "abc-runner/app/adapters/redis/operations"
 	"abc-runner/app/core/interfaces"
-	"abc-runner/app/core/utils"
 
 	"github.com/go-redis/redis/v8"
 )
 
-// RedisAdapter Redis协议适配器 - 基于operations.go工厂模式
+// RedisAdapter Redis协议适配器 - 遵循HTTP协议最佳实践
 type RedisAdapter struct {
 	// 核心组件
-	connectionPool    *connection.RedisConnectionPool
-	operationRegistry *utils.OperationRegistry
-	client            redis.Cmdable
-	config            *redisConfig.RedisConfig
+	connectionPool  *connection.RedisConnectionPool
+	redisOperations *operation.RedisOperations
+	client          redis.Cmdable
+	config          *redisConfig.RedisConfig
 
 	// 指标收集器
 	metricsCollector interfaces.DefaultMetricsCollector
@@ -75,9 +74,8 @@ func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) er
 
 	r.connectionPool = pool
 
-	// 创建操作注册表并注册所有Redis操作
-	r.operationRegistry = utils.NewOperationRegistry()
-	operation.RegisterRedisOperations(r.operationRegistry)
+	// 创建Redis操作执行器
+	r.redisOperations = operation.NewRedisOperations(pool, redisConfig, r.metricsCollector)
 
 	// 获取客户端
 	client := pool.GetClient()
@@ -96,8 +94,7 @@ func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) er
 	return nil
 }
 
-// Execute 执行操作 - 使用operations.go工厂模式
-// Execute 执行Redis操作
+// Execute 执行Redis操作 - 使用RedisOperations执行器
 func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !r.IsConnected() {
 		return nil, fmt.Errorf("Redis adapter is not connected")
@@ -106,17 +103,8 @@ func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operati
 	// 统计操作数
 	r.incrementTotalOperations()
 
-	// 验证操作是否支持
-	if err := r.ValidateOperation(operation.Type); err != nil {
-		r.incrementFailedOperations()
-		return &interfaces.OperationResult{
-			Success: false,
-			Error:   err,
-		}, err
-	}
-
-	// 直接使用Redis客户端执行操作
-	result, err := r.executeRedisOperation(ctx, operation)
+	// 执行操作
+	result, err := r.redisOperations.ExecuteOperation(ctx, operation)
 
 	// 更新统计信息
 	if err != nil || (result != nil && !result.Success) {
@@ -464,11 +452,17 @@ func (r *RedisAdapter) isReadOperation(operationType string) bool {
 
 // HealthCheck 健康检查
 func (r *RedisAdapter) HealthCheck(ctx context.Context) error {
-	if r.connectionPool == nil {
-		return fmt.Errorf("connection pool not initialized")
+	if !r.isConnected {
+		return fmt.Errorf("adapter not connected")
 	}
 
-	return r.connectionPool.Ping(ctx)
+	if r.client == nil {
+		return fmt.Errorf("Redis client not initialized")
+	}
+
+	// 执行ping操作进行健康检查
+	cmd := r.client.Ping(ctx)
+	return cmd.Err()
 }
 
 // GetProtocolName 获取协议名称
@@ -488,7 +482,6 @@ func (r *RedisAdapter) GetProtocolMetrics() map[string]interface{} {
 
 	metrics := map[string]interface{}{
 		"protocol":           "redis",
-		"mode":               r.getMode(),
 		"is_connected":       r.isConnected,
 		"total_operations":   r.totalOperations,
 		"success_operations": r.successOperations,
@@ -504,10 +497,10 @@ func (r *RedisAdapter) GetProtocolMetrics() map[string]interface{} {
 
 	// 添加配置信息
 	if r.config != nil {
+		connectionConfig := r.config.GetConnection()
 		metrics["config"] = map[string]interface{}{
-			"mode":               r.config.GetMode(),
-			"pool_size":          r.config.Pool.PoolSize,
-			"connection_timeout": r.config.Pool.ConnectionTimeout.String(),
+			"addresses": connectionConfig.GetAddresses(),
+			"mode":      r.config.GetMode(),
 		}
 	}
 
@@ -521,156 +514,18 @@ func (r *RedisAdapter) IsConnected() bool {
 	return r.isConnected
 }
 
-// GetConfig 获取Redis配置
-func (r *RedisAdapter) GetConfig() *redisConfig.RedisConfig {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	return r.config
-}
-
-// GetConnectionPool 获取连接池
-func (r *RedisAdapter) GetConnectionPool() *connection.RedisConnectionPool {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	return r.connectionPool
-}
-
-// GetOperationRegistry 获取操作注册表
-func (r *RedisAdapter) GetOperationRegistry() *utils.OperationRegistry {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	return r.operationRegistry
-}
-
-// CreateOperationFromFactory 使用operations.go工厂创建操作
-func (r *RedisAdapter) CreateOperationFromFactory(operationType string, params map[string]interface{}) (interfaces.Operation, error) {
-	if r.operationRegistry == nil {
-		return interfaces.Operation{}, fmt.Errorf("operation registry not initialized")
-	}
-
-	return r.operationRegistry.CreateOperation(operationType, params)
-}
-
-// ValidateOperationParams 验证操作参数
-func (r *RedisAdapter) ValidateOperationParams(operationType string, params map[string]interface{}) error {
-	if r.operationRegistry == nil {
-		return fmt.Errorf("operation registry not initialized")
-	}
-
-	return r.operationRegistry.ValidateOperation(operationType, params)
-}
-
-// GetSupportedOperationTypes 获取支持的操作类型（来自operations.go）
-func (r *RedisAdapter) GetSupportedOperationTypes() []string {
-	if r.operationRegistry == nil {
-		return []string{}
-	}
-
-	return r.operationRegistry.GetSupportedOperations()
-}
-
-// Redis特定便捷方法
-
-// ExecuteRedisCommand 执行Redis命令（便捷方法）
-func (r *RedisAdapter) ExecuteRedisCommand(ctx context.Context, commandType, key string, value interface{}, params map[string]interface{}) (*interfaces.OperationResult, error) {
-	operation := interfaces.Operation{
-		Type:   commandType,
-		Key:    key,
-		Value:  value,
-		Params: params,
-		Metadata: map[string]string{
-			"adapter": "redis",
-		},
-	}
-
-	return r.Execute(ctx, operation)
-}
-
-// Get Redis GET操作
-func (r *RedisAdapter) Get(ctx context.Context, key string) (*interfaces.OperationResult, error) {
-	return r.ExecuteRedisCommand(ctx, "get", key, nil, nil)
-}
-
-// Set Redis SET操作
-func (r *RedisAdapter) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) (*interfaces.OperationResult, error) {
-	operation := interfaces.Operation{
-		Type:  "set",
-		Key:   key,
-		Value: value,
-		TTL:   ttl,
-		Metadata: map[string]string{
-			"adapter": "redis",
-		},
-	}
-
-	return r.Execute(ctx, operation)
-}
-
-// Del Redis DEL操作
-func (r *RedisAdapter) Del(ctx context.Context, key string) (*interfaces.OperationResult, error) {
-	return r.ExecuteRedisCommand(ctx, "del", key, nil, nil)
-}
-
-// HSet Redis HSET操作
-func (r *RedisAdapter) HSet(ctx context.Context, key string, fields map[string]interface{}) (*interfaces.OperationResult, error) {
-	return r.ExecuteRedisCommand(ctx, "hset", key, fields, nil)
-}
-
-// HGet Redis HGET操作
-func (r *RedisAdapter) HGet(ctx context.Context, key, field string) (*interfaces.OperationResult, error) {
-	params := map[string]interface{}{
-		"field": field,
-	}
-	return r.ExecuteRedisCommand(ctx, "hget", key, nil, params)
-}
-
-// GetSupportedOperations 获取支持的操作列表
-func (r *RedisAdapter) GetSupportedOperations() []string {
-	return []string{
-		"get", "set", "del", "incr", "decr",
-		"hget", "hset", "hgetall",
-		"lpush", "rpush", "lpop", "rpop",
-		"sadd", "smembers", "srem", "sismember",
-		"zadd", "zrange", "zrem", "zrank",
-		"publish", "subscribe",
-	}
-}
-
-// ValidateOperation 验证操作是否受支持
-func (r *RedisAdapter) ValidateOperation(operationType string) error {
-	supportedOps := r.GetSupportedOperations()
-	for _, op := range supportedOps {
-		if op == operationType {
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported Redis operation: %s", operationType)
-}
-
-// 内部方法
-
-func (r *RedisAdapter) getMode() string {
-	if r.config != nil {
-		return r.config.GetMode()
-	}
-	return "unknown"
-}
-
+// incrementTotalOperations 增加总操作数
 func (r *RedisAdapter) incrementTotalOperations() {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	r.totalOperations++
 }
 
+// incrementSuccessOperations 增加成功操作数
 func (r *RedisAdapter) incrementSuccessOperations() {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	r.successOperations++
 }
 
+// incrementFailedOperations 增加失败操作数
 func (r *RedisAdapter) incrementFailedOperations() {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	r.failedOperations++
 }
 
