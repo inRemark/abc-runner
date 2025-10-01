@@ -9,9 +9,7 @@ import (
 
 	"abc-runner/app/adapters/websocket/config"
 	"abc-runner/app/adapters/websocket/connection"
-	"abc-runner/app/adapters/websocket/operations"
 	"abc-runner/app/core/interfaces"
-	"abc-runner/app/core/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,9 +17,8 @@ import (
 // WebSocketAdapter WebSocket协议适配器 - 基于统一架构设计
 type WebSocketAdapter struct {
 	// 核心组件（与Redis/HTTP/TCP保持一致）
-	connectionPool    *connection.WebSocketConnectionPool
-	operationRegistry *utils.OperationRegistry
-	config            *config.WebSocketConfig
+	connectionPool *connection.WebSocketConnectionPool
+	config         *config.WebSocketConfig
 
 	// 指标收集器（统一依赖注入）
 	metricsCollector interfaces.DefaultMetricsCollector
@@ -79,10 +76,6 @@ func (w *WebSocketAdapter) Connect(ctx context.Context, cfg interfaces.Config) e
 		return fmt.Errorf("failed to create WebSocket connection pool: %w", err)
 	}
 	w.connectionPool = pool
-
-	// 创建操作注册表并注册所有WebSocket操作
-	w.operationRegistry = utils.NewOperationRegistry()
-	operations.RegisterWebSocketOperations(w.operationRegistry)
 
 	// 执行健康检查
 	if err := w.HealthCheck(ctx); err != nil {
@@ -361,12 +354,18 @@ func (w *WebSocketAdapter) executeStressTest(ctx context.Context, operation inte
 
 // ValidateOperation 验证操作是否支持
 func (w *WebSocketAdapter) ValidateOperation(operationType string) error {
-	if w.operationRegistry == nil {
-		return fmt.Errorf("operation registry not initialized")
+	supportedOperations := map[string]bool{
+		"send_text":     true,
+		"send_binary":   true,
+		"echo_test":     true,
+		"ping_pong":     true,
+		"broadcast":     true,
+		"subscribe":     true,
+		"large_message": true,
+		"stress_test":   true,
 	}
 
-	_, exists := w.operationRegistry.GetFactory(operationType)
-	if !exists {
+	if !supportedOperations[operationType] {
 		return fmt.Errorf("unsupported operation type: %s", operationType)
 	}
 
