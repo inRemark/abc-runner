@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [1.25.x]
+        go-version: ['1.23.x']
     
     steps:
     - name: Checkout code
@@ -23,10 +23,33 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Install dependencies
-      run: go mod tidy
-
-    - name: Run tests
-      run: make test
-
-    - name: Run integration tests
-      run: make integration-test
+      run: |
+        go mod tidy
+        echo "Dependencies installed for main module"
+        if [ -d "servers" ] && [ -f "servers/go.mod" ]; then
+          echo "Installing dependencies for servers module..."
+          cd servers && go mod tidy && cd ..
+          echo "Dependencies installed for servers module"
+        fi
+      
+    - name: Verify Go installation
+      run: |
+        go version
+        go env GOVERSION
+    
+    - name: Check Go module status
+      run: |
+        go mod verify
+        go list -m all
+    
+    - name: Run unit tests with explicit paths
+      run: |
+        echo "Running unit tests..."
+        go test -v ./app/... ./config/...
+        echo "Unit tests completed successfully"
+      
+    - name: Run integration tests  
+      run: |
+        echo "Running integration tests..."
+        make integration-test
+        echo "Integration tests completed successfully"

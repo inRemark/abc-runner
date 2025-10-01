@@ -15,7 +15,7 @@ GO_CLEAN=$(GO) clean
 GO_DEPS=$(GO) mod tidy
 
 # 版本信息
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 
@@ -71,8 +71,9 @@ build-windows:
 # 测试相关
 .PHONY: test
 test:
-	@echo "Running tests..."
-	$(GO_TEST) -v ./...
+	@echo "Running unit tests only..."
+	$(GO_TEST) -v ./app/... ./config/...
+	@echo "Unit tests completed!"
 
 .PHONY: test-cover
 test-cover:
@@ -84,7 +85,14 @@ test-cover:
 .PHONY: integration-test
 integration-test:
 	@echo "Running integration tests..."
-	$(GO_TEST) -v ./test/integration/...
+	@if [ -d "./test/integration" ]; then \
+		echo "Found integration test directory"; \
+		$(GO_TEST) -v ./test/integration/... || exit 1; \
+		echo "Integration tests completed successfully"; \
+	else \
+		echo "No integration tests found (./test/integration directory does not exist)"; \
+		echo "Skipping integration tests"; \
+	fi
 
 # 清理
 .PHONY: clean

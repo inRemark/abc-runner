@@ -18,6 +18,16 @@ func LoadDefaultHttpConfig() *HttpAdapterConfig {
 			MaxConnsPerHost: 10,
 			IdleConnTimeout: 90 * time.Second,
 		},
+		// 添加默认请求配置以满足验证要求
+		Requests: []HttpRequestConfig{
+			{
+				Method:      "GET",
+				Path:        "/",
+				Headers:     make(map[string]string),
+				ContentType: "application/json",
+				Weight:      1,
+			},
+		},
 		Benchmark: HttpBenchmarkConfig{
 			Total:     1000,
 			Parallels: 10,
