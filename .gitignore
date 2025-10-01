@@ -27,3 +27,4 @@ releases/*
 backup-refactor-archive
 servers/bin/
 app/core/di/di.md
+docs/development

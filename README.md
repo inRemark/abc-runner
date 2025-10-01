@@ -202,14 +202,14 @@ config/websocket.yaml
 
 For detailed documentation, please see the following resources:
 
-- [Architecture Overview](docs/en/architecture/overview.md) - System architecture and design principles | [架构概述](docs/zh/architecture/overview.md)
-- [Component Documentation](docs/en/architecture/components.md) - Detailed component documentation | [组件详解](docs/zh/architecture/components.md)
-- [Quick Start Guide](docs/en/getting-started/quickstart.md) - Getting started quickly | [快速开始](docs/zh/getting-started/quickstart.md)
-- [Redis Testing Guide](docs/en/user-guide/redis.md) - Redis-specific features and usage | [Redis测试指南](docs/zh/user-guide/redis.md)
-- [HTTP Testing Guide](docs/en/user-guide/http.md) - HTTP-specific features and usage | [HTTP测试指南](docs/zh/user-guide/http.md)
-- [Kafka Testing Guide](docs/en/user-guide/kafka.md) - Kafka-specific features and usage | [Kafka测试指南](docs/zh/user-guide/kafka.md)
-- [Contributing Guide](docs/en/developer-guide/contributing.md) - Guidelines for contributing | [贡献指南](docs/zh/developer-guide/contributing.md)
-- [Extending abc-runner](docs/en/developer-guide/extending.md) - How to extend the tool | [扩展abc-runner](docs/zh/developer-guide/extending.md)
+- [Architecture Overview](docs/en/architecture/overview.md) - System architecture and design principles | [Architecture Overview](docs/en/architecture/overview.md)
+- [Component Documentation](docs/en/architecture/components.md) - Detailed component documentation | [Component Documentation](docs/en/architecture/components.md)
+- [Quick Start Guide](docs/en/getting-started/quickstart.md) - Getting started quickly | [Quick Start Guide](docs/en/getting-started/quickstart.md)
+- [Redis Testing Guide](docs/en/user-guide/redis.md) - Redis-specific features and usage | [Redis Testing Guide](docs/en/user-guide/redis.md)
+- [HTTP Testing Guide](docs/en/user-guide/http.md) - HTTP-specific features and usage | [HTTP Testing Guide](docs/en/user-guide/http.md)
+- [Kafka Testing Guide](docs/en/user-guide/kafka.md) - Kafka-specific features and usage | [Kafka Testing Guide](docs/en/user-guide/kafka.md)
+- [Contributing Guide](docs/en/developer-guide/contributing.md) - Guidelines for contributing | [Contributing Guide](docs/en/developer-guide/contributing.md)
+- [Extending abc-runner](docs/en/developer-guide/extending.md) - How to extend the tool | [Extending abc-runner](docs/en/developer-guide/extending.md)
 
 ## License
 
