@@ -197,26 +197,6 @@ type CPUMetrics struct {
 	Cores        int     `json:"cores"`         // CPU核心数
 }
 
-// Metrics 兼容性结构（向前兼容）
-type Metrics struct {
-	RPS        int32         `json:"rps"`         // 每秒请求数
-	TotalOps   int64         `json:"total_ops"`   // 总操作数
-	SuccessOps int64         `json:"success_ops"` // 成功操作数
-	FailedOps  int64         `json:"failed_ops"`  // 失败操作数
-	ReadOps    int64         `json:"read_ops"`    // 读操作数
-	WriteOps   int64         `json:"write_ops"`   // 写操作数
-	AvgLatency time.Duration `json:"avg_latency"` // 平均延迟
-	MinLatency time.Duration `json:"min_latency"` // 最小延迟
-	MaxLatency time.Duration `json:"max_latency"` // 最大延迟
-	P90Latency time.Duration `json:"p90_latency"` // P90延迟
-	P95Latency time.Duration `json:"p95_latency"` // P95延迟
-	P99Latency time.Duration `json:"p99_latency"` // P99延迟
-	ErrorRate  float64       `json:"error_rate"`  // 错误率
-	StartTime  time.Time     `json:"start_time"`  // 开始时间
-	EndTime    time.Time     `json:"end_time"`    // 结束时间
-	Duration   time.Duration `json:"duration"`    // 总耗时
-}
-
 // OperationFactory 操作工厂接口
 type OperationFactory interface {
 	CreateOperation(params map[string]interface{}) (Operation, error)

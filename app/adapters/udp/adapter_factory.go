@@ -19,7 +19,7 @@ func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *Ada
 // CreateUDPAdapter 创建UDP适配器 (实现UDPAdapterFactory接口)
 func (f *AdapterFactory) CreateUDPAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
-		return nil
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
 
 	adapter := NewUDPAdapter(f.metricsCollector)

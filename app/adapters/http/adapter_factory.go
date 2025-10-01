@@ -19,9 +19,9 @@ func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *Ada
 // CreateHttpAdapter 创建HTTP适配器 (实现HttpAdapterFactory接口)
 func (f *AdapterFactory) CreateHttpAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
-		return nil
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
-	
+
 	adapter := NewHttpAdapter(f.metricsCollector)
 	return adapter
 }

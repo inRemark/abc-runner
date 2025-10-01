@@ -19,7 +19,7 @@ func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *Ada
 // CreateRedisAdapter 创建Redis适配器 (实现RedisAdapterFactory接口)
 func (f *AdapterFactory) CreateRedisAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
-		return nil
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
 
 	adapter := NewRedisAdapter(f.metricsCollector)

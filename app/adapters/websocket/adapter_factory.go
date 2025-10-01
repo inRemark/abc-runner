@@ -25,11 +25,6 @@ func (f *AdapterFactory) CreateWebSocketAdapter() interfaces.ProtocolAdapter {
 	return NewWebSocketAdapter(f.metricsCollector)
 }
 
-// CreateAdapter 创建适配器 (实现通用工厂接口)
-func (f *AdapterFactory) CreateAdapter() interfaces.ProtocolAdapter {
-	return f.CreateWebSocketAdapter()
-}
-
 // GetProtocolName 获取支持的协议名称
 func (f *AdapterFactory) GetProtocolName() string {
 	return "websocket"
@@ -48,5 +43,5 @@ func (f *AdapterFactory) SetMetricsCollector(collector interfaces.DefaultMetrics
 // 确保实现了相关接口
 var (
 	_ interfaces.ProtocolAdapter = (*WebSocketAdapter)(nil)
-	_ = (*AdapterFactory)(nil) // WebSocket工厂接口检查
+	_                            = (*AdapterFactory)(nil) // WebSocket工厂接口检查
 )

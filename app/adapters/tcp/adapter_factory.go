@@ -19,7 +19,7 @@ func NewAdapterFactory(metricsCollector interfaces.DefaultMetricsCollector) *Ada
 // CreateTCPAdapter 创建TCP适配器 (实现TCPAdapterFactory接口)
 func (f *AdapterFactory) CreateTCPAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
-		return nil
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
 
 	adapter := NewTCPAdapter(f.metricsCollector)

@@ -41,15 +41,3 @@ type GRPCAdapterFactory interface {
 type WebSocketAdapterFactory interface {
 	CreateWebSocketAdapter() ProtocolAdapter
 }
-
-// AdapterFactory 统一适配器工厂接口（组合接口）
-// 注意：这个接口仅用于类型约束，实际实现应该只实现所需的特定接口
-type AdapterFactory interface {
-	RedisAdapterFactory
-	HttpAdapterFactory
-	KafkaAdapterFactory
-	TCPAdapterFactory
-	UDPAdapterFactory
-	GRPCAdapterFactory
-	WebSocketAdapterFactory
-}

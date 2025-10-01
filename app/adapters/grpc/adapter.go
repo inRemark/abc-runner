@@ -190,14 +190,24 @@ func (adapter *GRPCAdapter) GetMetricsCollector() interfaces.DefaultMetricsColle
 
 // parseConfig 解析配置
 func (adapter *GRPCAdapter) parseConfig(cfg interfaces.Config) (*config.GRPCConfig, error) {
+	// 检查是否为nil
+	if cfg == nil {
+		return nil, fmt.Errorf("config cannot be nil")
+	}
+
+	// 检查协议类型是否匹配
+	protocol := cfg.GetProtocol()
+	if protocol != "grpc" {
+		return nil, fmt.Errorf("invalid protocol for gRPC adapter: expected 'grpc', got '%s'", protocol)
+	}
+
 	// 如果传入的是gRPC配置类型，直接使用
 	if gCfg, ok := cfg.(*config.GRPCConfig); ok {
 		return gCfg, nil
 	}
 
-	// 使用默认配置
-	grpcConfig := config.NewDefaultGRPCConfig()
-	return grpcConfig, nil
+	// 如果不是期望的配置类型，返回详细错误
+	return nil, fmt.Errorf("invalid config type for gRPC adapter: expected *config.GRPCConfig, got %T (protocol: %s)", cfg, protocol)
 }
 
 // recordMetrics 记录指标（仅作为适配器内部统计）

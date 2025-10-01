@@ -31,7 +31,7 @@ func NewAdapterFactoryWithConfig(metricsCollector interfaces.DefaultMetricsColle
 // CreateGRPCAdapter 创建gRPC适配器 (实现GRPCAdapterFactory接口)
 func (f *AdapterFactory) CreateGRPCAdapter() interfaces.ProtocolAdapter {
 	if f.metricsCollector == nil {
-		return nil
+		panic("metricsCollector cannot be nil - dependency injection required")
 	}
 
 	adapter := NewGRPCAdapter(f.metricsCollector)
