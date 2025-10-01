@@ -15,7 +15,7 @@ GO_CLEAN=$(GO) clean
 GO_DEPS=$(GO) mod tidy
 
 # 版本信息
-VERSION ?= 0.3.0
+VERSION ?= 0.3.1
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 
