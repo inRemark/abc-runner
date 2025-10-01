@@ -20,15 +20,95 @@ jobs:
     - name: Install dependencies
       run: go mod tidy
 
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "🏷️ Release version: $VERSION"
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        echo "📝 Generating release notes for version $VERSION"
+        
+        # 创建临时的release notes文件
+        RELEASE_NOTES_FILE="temp_release_notes.md"
+        
+        # 尝试从多个位置提取changelog内容
+        if [ -f "docs/CHANGELOG.md" ]; then
+          CHANGELOG_FILE="docs/CHANGELOG.md"
+        elif [ -f "config/CHANGELOG.md" ]; then
+          CHANGELOG_FILE="config/CHANGELOG.md"
+        elif [ -f "CHANGELOG.md" ]; then
+          CHANGELOG_FILE="CHANGELOG.md"
+        else
+          echo "⚠️ No changelog file found, using generated notes"
+          echo "## Release $VERSION" > $RELEASE_NOTES_FILE
+          echo "" >> $RELEASE_NOTES_FILE
+          echo "🚀 What's New in this release:" >> $RELEASE_NOTES_FILE
+          echo "" >> $RELEASE_NOTES_FILE
+          echo "See the full changes in this release." >> $RELEASE_NOTES_FILE
+          echo "release_notes_file=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        echo "📖 Found changelog file: $CHANGELOG_FILE"
+        
+        # 使用awk提取当前版本的changelog内容
+        awk -v version="$VERSION" '
+        BEGIN { found=0; printing=0 }
+        /^## \[.*\]/ || /^## [0-9]/ || /^# [0-9]/ {
+          if (index($0, version) > 0) {
+            found=1
+            printing=1
+            next
+          } else if (printing) {
+            exit
+          }
+        }
+        printing && !/^## \[.*\]/ && !/^## [0-9]/ && !/^# [0-9]/ { print }
+        END { if (!found) print "No changelog content found for version " version }
+        ' "$CHANGELOG_FILE" > "$RELEASE_NOTES_FILE"
+        
+        # 如果没有找到内容，使用默认模板
+        if [ ! -s "$RELEASE_NOTES_FILE" ] || grep -q "No changelog content found" "$RELEASE_NOTES_FILE"; then
+          echo "⚠️ Version $VERSION not found in changelog, using default template"
+          echo "## Release $VERSION" > $RELEASE_NOTES_FILE
+          echo "" >> $RELEASE_NOTES_FILE
+          echo "🚀 What's New in this release:" >> $RELEASE_NOTES_FILE
+          echo "" >> $RELEASE_NOTES_FILE
+          echo "See the full changes in this release." >> $RELEASE_NOTES_FILE
+        else
+          # 在内容前添加版本标题
+          sed -i '1i## Release '$VERSION'\n' "$RELEASE_NOTES_FILE"
+        fi
+        
+        echo "release_notes_file=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
+        echo "📋 Release notes file created: $RELEASE_NOTES_FILE"
+        
+        # 显示生成的内容预览
+        echo "📖 Generated release notes preview:"
+        echo "==========================================="
+        head -20 "$RELEASE_NOTES_FILE"
+        echo "==========================================="
+
     - name: Create release with archives
-      run: make release
+      run: |
+        echo "🔨 Creating release archives..."
+        make release
+        echo "📦 Release archives created"
+        ls -la releases/
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          releases/*.tar.gz
-          releases/*.zip
-        body_path: docs/CHANGELOG.md
+          releases/v*/*.tar.gz
+          releases/v*/*.zip
+        body_path: ${{ steps.release_notes.outputs.release_notes_file }}
+        generate_release_notes: false
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
