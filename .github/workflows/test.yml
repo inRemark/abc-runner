@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.25.1']
+        go-version: ['1.23.x']
     
     steps:
     - name: Checkout code
@@ -45,11 +45,11 @@ jobs:
     - name: Run unit tests with explicit paths
       run: |
         echo "Running unit tests..."
-        go test -v ./app/... ./config/... || exit 1
+        go test -v ./app/... ./config/...
         echo "Unit tests completed successfully"
       
     - name: Run integration tests  
       run: |
         echo "Running integration tests..."
-        make integration-test || exit 1
+        make integration-test
         echo "Integration tests completed successfully"
