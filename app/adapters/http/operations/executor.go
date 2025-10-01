@@ -10,20 +10,20 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
-// HttpOperations HTTP操作执行器
-type HttpOperations struct {
+// HttpExecutor HTTP操作执行器
+type HttpExecutor struct {
 	pool             *connection.HTTPConnectionPool
 	config           *httpConfig.HttpAdapterConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
-// NewHttpOperations 创建HTTP操作执行器
-func NewHttpOperations(
+// NewHttpExecutor 创建HTTP操作执行器
+func NewHttpExecutor(
 	pool *connection.HTTPConnectionPool,
 	config *httpConfig.HttpAdapterConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *HttpOperations {
-	return &HttpOperations{
+) *HttpExecutor {
+	return &HttpExecutor{
 		pool:             pool,
 		config:           config,
 		metricsCollector: metricsCollector,
@@ -31,7 +31,7 @@ func NewHttpOperations(
 }
 
 // ExecuteOperation 执行HTTP操作
-func (h *HttpOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 
 	// 从操作参数中提取HTTP请求配置
@@ -98,7 +98,7 @@ func (h *HttpOperations) ExecuteOperation(ctx context.Context, operation interfa
 }
 
 // extractRequestConfig 从操作中提取请求配置
-func (h *HttpOperations) extractRequestConfig(operation interfaces.Operation) (httpConfig.HttpRequestConfig, error) {
+func (h *HttpExecutor) extractRequestConfig(operation interfaces.Operation) (httpConfig.HttpRequestConfig, error) {
 	// 尝试从参数中获取原始配置
 	if rawConfig, exists := operation.Params["raw_config"]; exists {
 		if config, ok := rawConfig.(httpConfig.HttpRequestConfig); ok {
@@ -158,7 +158,7 @@ func (h *HttpOperations) extractRequestConfig(operation interfaces.Operation) (h
 }
 
 // isReadOperation 判断是否为读操作
-func (h *HttpOperations) isReadOperation(operationType string) bool {
+func (h *HttpExecutor) isReadOperation(operationType string) bool {
 	readMethods := []string{"http_get", "http_head", "http_options"}
 	for _, method := range readMethods {
 		if operationType == method {
@@ -169,7 +169,7 @@ func (h *HttpOperations) isReadOperation(operationType string) bool {
 }
 
 // createResultValue 创建结果值
-func (h *HttpOperations) createResultValue(response *connection.HttpResponse) interface{} {
+func (h *HttpExecutor) createResultValue(response *connection.HttpResponse) interface{} {
 	if response == nil {
 		return nil
 	}
@@ -185,7 +185,7 @@ func (h *HttpOperations) createResultValue(response *connection.HttpResponse) in
 }
 
 // createResultMetadata 创建结果元数据
-func (h *HttpOperations) createResultMetadata(operation interfaces.Operation, response *connection.HttpResponse) map[string]interface{} {
+func (h *HttpExecutor) createResultMetadata(operation interfaces.Operation, response *connection.HttpResponse) map[string]interface{} {
 	metadata := make(map[string]interface{})
 
 	// 复制操作元数据
@@ -213,7 +213,7 @@ func (h *HttpOperations) createResultMetadata(operation interfaces.Operation, re
 }
 
 // ExecuteGetOperation 执行GET操作
-func (h *HttpOperations) ExecuteGetOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteGetOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为GET
 	operation.Type = "http_get"
 	if operation.Params == nil {
@@ -225,7 +225,7 @@ func (h *HttpOperations) ExecuteGetOperation(ctx context.Context, operation inte
 }
 
 // ExecutePostOperation 执行POST操作
-func (h *HttpOperations) ExecutePostOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecutePostOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为POST
 	operation.Type = "http_post"
 	if operation.Params == nil {
@@ -237,7 +237,7 @@ func (h *HttpOperations) ExecutePostOperation(ctx context.Context, operation int
 }
 
 // ExecutePutOperation 执行PUT操作
-func (h *HttpOperations) ExecutePutOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecutePutOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为PUT
 	operation.Type = "http_put"
 	if operation.Params == nil {
@@ -249,7 +249,7 @@ func (h *HttpOperations) ExecutePutOperation(ctx context.Context, operation inte
 }
 
 // ExecutePatchOperation 执行PATCH操作
-func (h *HttpOperations) ExecutePatchOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecutePatchOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为PATCH
 	operation.Type = "http_patch"
 	if operation.Params == nil {
@@ -261,7 +261,7 @@ func (h *HttpOperations) ExecutePatchOperation(ctx context.Context, operation in
 }
 
 // ExecuteDeleteOperation 执行DELETE操作
-func (h *HttpOperations) ExecuteDeleteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteDeleteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为DELETE
 	operation.Type = "http_delete"
 	if operation.Params == nil {
@@ -273,7 +273,7 @@ func (h *HttpOperations) ExecuteDeleteOperation(ctx context.Context, operation i
 }
 
 // ExecuteHeadOperation 执行HEAD操作
-func (h *HttpOperations) ExecuteHeadOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteHeadOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为HEAD
 	operation.Type = "http_head"
 	if operation.Params == nil {
@@ -285,7 +285,7 @@ func (h *HttpOperations) ExecuteHeadOperation(ctx context.Context, operation int
 }
 
 // ExecuteOptionsOperation 执行OPTIONS操作
-func (h *HttpOperations) ExecuteOptionsOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteOptionsOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为OPTIONS
 	operation.Type = "http_options"
 	if operation.Params == nil {
@@ -297,7 +297,7 @@ func (h *HttpOperations) ExecuteOptionsOperation(ctx context.Context, operation 
 }
 
 // ExecuteTraceOperation 执行TRACE操作
-func (h *HttpOperations) ExecuteTraceOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteTraceOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为TRACE
 	operation.Type = "http_trace"
 	if operation.Params == nil {
@@ -309,7 +309,7 @@ func (h *HttpOperations) ExecuteTraceOperation(ctx context.Context, operation in
 }
 
 // ExecuteConnectOperation 执行CONNECT操作
-func (h *HttpOperations) ExecuteConnectOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteConnectOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为CONNECT
 	operation.Type = "http_connect"
 	if operation.Params == nil {
@@ -321,7 +321,7 @@ func (h *HttpOperations) ExecuteConnectOperation(ctx context.Context, operation 
 }
 
 // ExecuteUploadOperation 执行文件上传操作
-func (h *HttpOperations) ExecuteUploadOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (h *HttpExecutor) ExecuteUploadOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 确保操作类型为文件上传
 	operation.Type = "http_upload"
 	if operation.Params == nil {

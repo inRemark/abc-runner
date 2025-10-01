@@ -16,7 +16,7 @@ import (
 type HttpAdapter struct {
 	// 核心组件
 	connectionPool *connection.HTTPConnectionPool
-	httpOperations *operations.HttpOperations
+	httpOperations *operations.HttpExecutor
 	config         *httpConfig.HttpAdapterConfig
 
 	// 指标收集器
@@ -85,7 +85,7 @@ func (h *HttpAdapter) Connect(ctx context.Context, config interfaces.Config) err
 	h.connectionPool = pool
 
 	// 创建HTTP操作执行器
-	h.httpOperations = operations.NewHttpOperations(pool, httpConfig, h.metricsCollector)
+	h.httpOperations = operations.NewHttpExecutor(pool, httpConfig, h.metricsCollector)
 
 	// 执行健康检查
 	if err := h.HealthCheck(ctx); err != nil {

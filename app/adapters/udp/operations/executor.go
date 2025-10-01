@@ -10,22 +10,22 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
-// UDPOperations UDP操作执行器 - 遵循统一架构模式
-type UDPOperations struct {
+// UDPExecutor UDP操作执行器 - 遵循统一架构模式
+type UDPExecutor struct {
 	conn             net.Conn
 	packetConn       net.PacketConn
 	config           *config.UDPConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
-// NewUDPOperations 创建UDP操作执行器
-func NewUDPOperations(
+// NewUDPExecutor 创建UDP操作执行器
+func NewUDPExecutor(
 	conn net.Conn,
 	packetConn net.PacketConn,
 	config *config.UDPConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *UDPOperations {
-	return &UDPOperations{
+) *UDPExecutor {
+	return &UDPExecutor{
 		conn:             conn,
 		packetConn:       packetConn,
 		config:           config,
@@ -34,7 +34,7 @@ func NewUDPOperations(
 }
 
 // ExecuteOperation 执行UDP操作 - 统一操作入口
-func (u *UDPOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (u *UDPExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
 		IsRead:   u.isReadOperation(operation.Type),
@@ -74,7 +74,7 @@ func (u *UDPOperations) ExecuteOperation(ctx context.Context, operation interfac
 }
 
 // executePacketSend 执行数据包发送
-func (u *UDPOperations) executePacketSend(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (u *UDPExecutor) executePacketSend(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	testData := u.buildTestData(operation)
 	if len(testData) == 0 {
 		testData = []byte(fmt.Sprintf("UDP_PACKET_%d", time.Now().Unix()))
@@ -115,7 +115,7 @@ func (u *UDPOperations) executePacketSend(ctx context.Context, operation interfa
 }
 
 // executePacketReceive 执行数据包接收
-func (u *UDPOperations) executePacketReceive(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (u *UDPExecutor) executePacketReceive(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	bufferSize := 4096
 	if size, ok := operation.Params["buffer_size"].(int); ok && size > 0 {
 		bufferSize = size
@@ -145,7 +145,7 @@ func (u *UDPOperations) executePacketReceive(ctx context.Context, operation inte
 }
 
 // executeEchoTest 执行回显测试
-func (u *UDPOperations) executeEchoTest(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (u *UDPExecutor) executeEchoTest(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// 简化实现：发送后尝试接收
 	if err := u.executePacketSend(ctx, operation, result); err != nil {
 		return err
@@ -165,17 +165,17 @@ func (u *UDPOperations) executeEchoTest(ctx context.Context, operation interface
 }
 
 // executeBroadcast 执行广播操作
-func (u *UDPOperations) executeBroadcast(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (u *UDPExecutor) executeBroadcast(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	return u.executePacketSend(ctx, operation, result)
 }
 
 // executeMulticast 执行组播操作
-func (u *UDPOperations) executeMulticast(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (u *UDPExecutor) executeMulticast(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	return u.executePacketSend(ctx, operation, result)
 }
 
 // buildTestData 构造测试数据
-func (u *UDPOperations) buildTestData(operation interfaces.Operation) []byte {
+func (u *UDPExecutor) buildTestData(operation interfaces.Operation) []byte {
 	if operation.Value != nil {
 		switch v := operation.Value.(type) {
 		case []byte:
@@ -197,7 +197,7 @@ func (u *UDPOperations) buildTestData(operation interfaces.Operation) []byte {
 }
 
 // isReadOperation 判断是否为读操作
-func (u *UDPOperations) isReadOperation(operationType string) bool {
+func (u *UDPExecutor) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
 		"packet_receive": true,
 		"echo_test":      true,
@@ -209,7 +209,7 @@ func (u *UDPOperations) isReadOperation(operationType string) bool {
 }
 
 // GetSupportedOperations 获取支持的操作类型
-func (u *UDPOperations) GetSupportedOperations() []string {
+func (u *UDPExecutor) GetSupportedOperations() []string {
 	return []string{
 		"packet_send",
 		"packet_receive",

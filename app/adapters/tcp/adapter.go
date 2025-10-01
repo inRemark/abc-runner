@@ -18,7 +18,7 @@ import (
 type TCPAdapter struct {
 	config           *config.TCPConfig
 	connectionPool   *connection.ConnectionPool
-	tcpOperations    *operations.TCPOperations
+	tcpOperations    *operations.TCPExecutor
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
@@ -59,7 +59,7 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	t.connectionPool = pool
 
 	// 创建TCP操作执行器
-	t.tcpOperations = operations.NewTCPOperations(pool, tcpConfig, t.metricsCollector)
+	t.tcpOperations = operations.NewTCPExecutor(pool, tcpConfig, t.metricsCollector)
 
 	// 测试连接
 	if err := t.testConnection(ctx); err != nil {
@@ -70,7 +70,7 @@ func (t *TCPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	return nil
 }
 
-// Execute 执行TCP操作 - 使用TCPOperations执行器
+// Execute 执行TCP操作 - 使用TCPExecutor执行器
 func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	// 检查连接状态
 	if !t.isConnected {
@@ -81,7 +81,7 @@ func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation
 		}, fmt.Errorf("adapter not connected")
 	}
 
-	// 使用TCPOperations执行器执行操作
+	// 使用TCPExecutor执行器执行操作
 	return t.tcpOperations.ExecuteOperation(ctx, operation)
 }
 

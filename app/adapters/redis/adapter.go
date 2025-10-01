@@ -18,7 +18,7 @@ import (
 type RedisAdapter struct {
 	// 核心组件
 	connectionPool  *connection.RedisConnectionPool
-	redisOperations *operation.RedisOperations
+	redisOperations *operation.RedisExecutor
 	client          redis.Cmdable
 	config          *redisConfig.RedisConfig
 
@@ -75,7 +75,7 @@ func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) er
 	r.connectionPool = pool
 
 	// 创建Redis操作执行器
-	r.redisOperations = operation.NewRedisOperations(pool, redisConfig, r.metricsCollector)
+	r.redisOperations = operation.NewRedisExecutor(pool, redisConfig, r.metricsCollector)
 
 	// 获取客户端
 	client := pool.GetClient()
@@ -94,7 +94,7 @@ func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) er
 	return nil
 }
 
-// Execute 执行Redis操作 - 使用RedisOperations执行器
+// Execute 执行Redis操作 - 使用RedisExecutor执行器
 func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !r.IsConnected() {
 		return nil, fmt.Errorf("redis adapter is not connected")

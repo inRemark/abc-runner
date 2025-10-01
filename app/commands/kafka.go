@@ -85,7 +85,7 @@ func (k *KafkaCommandHandler) Execute(ctx context.Context, args []string) error 
 
 // GetHelp 获取帮助信息
 func (k *KafkaCommandHandler) GetHelp() string {
-	return fmt.Sprintf(`Kafka Performance Testing
+	return `Kafka Performance Testing
 
 USAGE:
   abc-runner kafka [options]
@@ -108,7 +108,7 @@ EXAMPLES:
 
 NOTE: 
   This implementation performs real Kafka performance testing with metrics collection.
-`)
+`
 }
 
 // parseArgs 解析命令行参数

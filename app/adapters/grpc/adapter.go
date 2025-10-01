@@ -17,7 +17,7 @@ import (
 type GRPCAdapter struct {
 	config           *config.GRPCConfig
 	connectionPool   *connection.ConnectionPool
-	grpcOperations   *operations.GRPCOperations
+	grpcOperations   *operations.GRPCExecutor
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
@@ -64,7 +64,7 @@ func (adapter *GRPCAdapter) Connect(ctx context.Context, cfg interfaces.Config) 
 	}
 
 	// 创建gRPC操作执行器
-	adapter.grpcOperations = operations.NewGRPCOperations(adapter.connectionPool, adapter.config, adapter.metricsCollector)
+	adapter.grpcOperations = operations.NewGRPCExecutor(adapter.connectionPool, adapter.config, adapter.metricsCollector)
 
 	adapter.isConnected = true
 	log.Printf("Successfully connected to gRPC server: %s:%d with %d connections",

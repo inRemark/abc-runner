@@ -86,7 +86,7 @@ func (h *HttpCommandHandler) Execute(ctx context.Context, args []string) error {
 
 // GetHelp 获取帮助信息
 func (h *HttpCommandHandler) GetHelp() string {
-	return fmt.Sprintf(`HTTP Performance Testing
+	return `HTTP Performance Testing
 
 USAGE:
   abc-runner http [options]
@@ -108,7 +108,7 @@ EXAMPLES:
 
 NOTE: 
   This implementation performs real HTTP performance testing with metrics collection.
-`)
+`
 }
 
 // parseArgs 解析命令行参数

@@ -12,20 +12,20 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// RedisOperations Redis操作执行器 - 遵循HTTP协议的最佳实践
-type RedisOperations struct {
+// RedisExecutor Redis操作执行器 - 遵循HTTP协议的最佳实践
+type RedisExecutor struct {
 	connectionPool   *connection.RedisConnectionPool
 	config           *redisConfig.RedisConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
-// NewRedisOperations 创建Redis操作执行器
-func NewRedisOperations(
+// NewRedisExecutor 创建Redis操作执行器
+func NewRedisExecutor(
 	connectionPool *connection.RedisConnectionPool,
 	config *redisConfig.RedisConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *RedisOperations {
-	return &RedisOperations{
+) *RedisExecutor {
+	return &RedisExecutor{
 		connectionPool:   connectionPool,
 		config:           config,
 		metricsCollector: metricsCollector,
@@ -33,7 +33,7 @@ func NewRedisOperations(
 }
 
 // ExecuteOperation 执行Redis操作 - 统一操作入口
-func (r *RedisOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (r *RedisExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
 		IsRead:   r.isReadOperation(operation.Type),
@@ -115,7 +115,7 @@ func (r *RedisOperations) ExecuteOperation(ctx context.Context, operation interf
 // 具体操作实现方法
 
 // executeGet 执行GET操作
-func (r *RedisOperations) executeGet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeGet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.Get(ctx, operation.Key)
 	value, err := cmd.Result()
 	if err == redis.Nil {
@@ -125,7 +125,7 @@ func (r *RedisOperations) executeGet(ctx context.Context, client redis.Cmdable, 
 }
 
 // executeSet 执行SET操作
-func (r *RedisOperations) executeSet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) error {
+func (r *RedisExecutor) executeSet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) error {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return fmt.Errorf("invalid value type for SET operation: expected string")
@@ -136,28 +136,28 @@ func (r *RedisOperations) executeSet(ctx context.Context, client redis.Cmdable, 
 }
 
 // executeDelete 执行DELETE操作
-func (r *RedisOperations) executeDelete(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeDelete(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.Del(ctx, operation.Key)
 	deletedCount, err := cmd.Result()
 	return deletedCount, err
 }
 
 // executeIncr 执行INCR操作
-func (r *RedisOperations) executeIncr(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeIncr(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.Incr(ctx, operation.Key)
 	value, err := cmd.Result()
 	return value, err
 }
 
 // executeDecr 执行DECR操作
-func (r *RedisOperations) executeDecr(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeDecr(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.Decr(ctx, operation.Key)
 	value, err := cmd.Result()
 	return value, err
 }
 
 // executeHGet 执行HGET操作
-func (r *RedisOperations) executeHGet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeHGet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	field, ok := operation.Params["field"].(string)
 	if !ok {
 		return nil, fmt.Errorf("field parameter is required for HGET operation")
@@ -172,7 +172,7 @@ func (r *RedisOperations) executeHGet(ctx context.Context, client redis.Cmdable,
 }
 
 // executeHSet 执行HSET操作
-func (r *RedisOperations) executeHSet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) error {
+func (r *RedisExecutor) executeHSet(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) error {
 	field, ok := operation.Params["field"].(string)
 	if !ok {
 		return fmt.Errorf("field parameter is required for HSET operation")
@@ -188,14 +188,14 @@ func (r *RedisOperations) executeHSet(ctx context.Context, client redis.Cmdable,
 }
 
 // executeHGetAll 执行HGETALL操作
-func (r *RedisOperations) executeHGetAll(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeHGetAll(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.HGetAll(ctx, operation.Key)
 	values, err := cmd.Result()
 	return values, err
 }
 
 // executeLPush 执行LPUSH操作
-func (r *RedisOperations) executeLPush(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeLPush(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for LPUSH operation: expected string")
@@ -207,7 +207,7 @@ func (r *RedisOperations) executeLPush(ctx context.Context, client redis.Cmdable
 }
 
 // executeRPush 执行RPUSH操作
-func (r *RedisOperations) executeRPush(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeRPush(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for RPUSH operation: expected string")
@@ -219,7 +219,7 @@ func (r *RedisOperations) executeRPush(ctx context.Context, client redis.Cmdable
 }
 
 // executeLPop 执行LPOP操作
-func (r *RedisOperations) executeLPop(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeLPop(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.LPop(ctx, operation.Key)
 	value, err := cmd.Result()
 	if err == redis.Nil {
@@ -229,7 +229,7 @@ func (r *RedisOperations) executeLPop(ctx context.Context, client redis.Cmdable,
 }
 
 // executeRPop 执行RPOP操作
-func (r *RedisOperations) executeRPop(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeRPop(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.RPop(ctx, operation.Key)
 	value, err := cmd.Result()
 	if err == redis.Nil {
@@ -239,7 +239,7 @@ func (r *RedisOperations) executeRPop(ctx context.Context, client redis.Cmdable,
 }
 
 // executeSAdd 执行SADD操作
-func (r *RedisOperations) executeSAdd(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeSAdd(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for SADD operation: expected string")
@@ -251,14 +251,14 @@ func (r *RedisOperations) executeSAdd(ctx context.Context, client redis.Cmdable,
 }
 
 // executeSMembers 执行SMEMBERS操作
-func (r *RedisOperations) executeSMembers(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeSMembers(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	cmd := client.SMembers(ctx, operation.Key)
 	members, err := cmd.Result()
 	return members, err
 }
 
 // executeSRem 执行SREM操作
-func (r *RedisOperations) executeSRem(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeSRem(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for SREM operation: expected string")
@@ -270,7 +270,7 @@ func (r *RedisOperations) executeSRem(ctx context.Context, client redis.Cmdable,
 }
 
 // executeSIsMember 执行SISMEMBER操作
-func (r *RedisOperations) executeSIsMember(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeSIsMember(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for SISMEMBER operation: expected string")
@@ -282,7 +282,7 @@ func (r *RedisOperations) executeSIsMember(ctx context.Context, client redis.Cmd
 }
 
 // executeZAdd 执行ZADD操作
-func (r *RedisOperations) executeZAdd(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeZAdd(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	score, ok := operation.Params["score"].(float64)
 	if !ok {
 		return nil, fmt.Errorf("score parameter is required for ZADD operation")
@@ -299,7 +299,7 @@ func (r *RedisOperations) executeZAdd(ctx context.Context, client redis.Cmdable,
 }
 
 // executeZRange 执行ZRANGE操作
-func (r *RedisOperations) executeZRange(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeZRange(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	start, ok := operation.Params["start"].(int64)
 	if !ok {
 		start = 0
@@ -316,7 +316,7 @@ func (r *RedisOperations) executeZRange(ctx context.Context, client redis.Cmdabl
 }
 
 // executeZRem 执行ZREM操作
-func (r *RedisOperations) executeZRem(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeZRem(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for ZREM operation: expected string")
@@ -328,7 +328,7 @@ func (r *RedisOperations) executeZRem(ctx context.Context, client redis.Cmdable,
 }
 
 // executeZRank 执行ZRANK操作
-func (r *RedisOperations) executeZRank(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeZRank(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	valueStr, ok := operation.Value.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid value type for ZRANK operation: expected string")
@@ -343,7 +343,7 @@ func (r *RedisOperations) executeZRank(ctx context.Context, client redis.Cmdable
 }
 
 // executePublish 执行PUBLISH操作
-func (r *RedisOperations) executePublish(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executePublish(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	channel := operation.Key
 	messageStr, ok := operation.Value.(string)
 	if !ok {
@@ -356,14 +356,14 @@ func (r *RedisOperations) executePublish(ctx context.Context, client redis.Cmdab
 }
 
 // executeSubscribe 执行SUBSCRIBE操作
-func (r *RedisOperations) executeSubscribe(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
+func (r *RedisExecutor) executeSubscribe(ctx context.Context, client redis.Cmdable, operation interfaces.Operation) (interface{}, error) {
 	// 订阅操作比较特殊，通常需要维持连接
 	// 这里简化实现，返回订阅成功的消息
 	return fmt.Sprintf("subscribed to channel: %s", operation.Key), nil
 }
 
 // isReadOperation 判断是否为读操作
-func (r *RedisOperations) isReadOperation(operationType string) bool {
+func (r *RedisExecutor) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
 		"get":       true,
 		"hget":      true,
@@ -394,7 +394,7 @@ func (r *RedisOperations) isReadOperation(operationType string) bool {
 }
 
 // GetSupportedOperations 获取支持的操作类型
-func (r *RedisOperations) GetSupportedOperations() []string {
+func (r *RedisExecutor) GetSupportedOperations() []string {
 	return []string{
 		"get", "set", "del", "incr", "decr",
 		"hget", "hset", "hgetall",

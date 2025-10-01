@@ -12,21 +12,21 @@ import (
 )
 
 // ProducerOperations 生产者操作实现
-type ProducerOperations struct {
+type ProducerExecutor struct {
 	pool             *connection.ConnectionPool
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewProducerOperations 创建生产者操作实例
-func NewProducerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ProducerOperations {
-	return &ProducerOperations{
+func NewProducerExecutor(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ProducerExecutor {
+	return &ProducerExecutor{
 		pool:             pool,
 		metricsCollector: metricsCollector,
 	}
 }
 
 // ExecuteProduceMessage 执行单条消息生产
-func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (p *ProducerExecutor) ExecuteProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 
 	// 解析参数
@@ -148,7 +148,7 @@ func (p *ProducerOperations) ExecuteProduceMessage(ctx context.Context, operatio
 }
 
 // ExecuteProduceBatch 执行批量消息生产
-func (p *ProducerOperations) ExecuteProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (p *ProducerExecutor) ExecuteProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 
 	// 解析参数

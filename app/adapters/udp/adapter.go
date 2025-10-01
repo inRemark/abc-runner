@@ -18,7 +18,7 @@ type UDPAdapter struct {
 	config           *config.UDPConfig
 	conn             net.Conn
 	packetConn       net.PacketConn
-	udpOperations    *operations.UDPOperations
+	udpOperations    *operations.UDPExecutor
 	metricsCollector interfaces.DefaultMetricsCollector
 	mu               sync.RWMutex
 	isConnected      bool
@@ -75,7 +75,7 @@ func (u *UDPAdapter) Connect(ctx context.Context, cfg interfaces.Config) error {
 	}
 
 	// 创建 UDP操作执行器
-	u.udpOperations = operations.NewUDPOperations(u.conn, u.packetConn, u.config, u.metricsCollector)
+	u.udpOperations = operations.NewUDPExecutor(u.conn, u.packetConn, u.config, u.metricsCollector)
 
 	u.isConnected = true
 	return nil

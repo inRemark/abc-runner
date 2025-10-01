@@ -12,21 +12,21 @@ import (
 )
 
 // ConsumerOperations 消费者操作实现
-type ConsumerOperations struct {
+type ConsumerExecutor struct {
 	pool             *connection.ConnectionPool
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
 // NewConsumerOperations 创建消费者操作实例
-func NewConsumerOperations(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ConsumerOperations {
-	return &ConsumerOperations{
+func NewConsumerExecutor(pool *connection.ConnectionPool, metricsCollector interfaces.DefaultMetricsCollector) *ConsumerExecutor {
+	return &ConsumerExecutor{
 		pool:             pool,
 		metricsCollector: metricsCollector,
 	}
 }
 
 // ExecuteConsumeMessage 执行单条消息消费
-func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (c *ConsumerExecutor) ExecuteConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 
 	// 解析参数
@@ -146,7 +146,7 @@ func (c *ConsumerOperations) ExecuteConsumeMessage(ctx context.Context, operatio
 }
 
 // ExecuteConsumeBatch 执行批量消息消费
-func (c *ConsumerOperations) ExecuteConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (c *ConsumerExecutor) ExecuteConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 
 	// 解析参数

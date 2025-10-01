@@ -11,20 +11,20 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
-// TCPOperations TCP操作执行器 - 遵循统一架构模式
-type TCPOperations struct {
+// TCPExecutor TCP操作执行器 - 遵循统一架构模式
+type TCPExecutor struct {
 	connectionPool   *connection.ConnectionPool
 	config           *config.TCPConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
-// NewTCPOperations 创建TCP操作执行器
-func NewTCPOperations(
+// NewTCPExecutor 创建TCP操作执行器
+func NewTCPExecutor(
 	connectionPool *connection.ConnectionPool,
 	config *config.TCPConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *TCPOperations {
-	return &TCPOperations{
+) *TCPExecutor {
+	return &TCPExecutor{
 		connectionPool:   connectionPool,
 		config:           config,
 		metricsCollector: metricsCollector,
@@ -32,7 +32,7 @@ func NewTCPOperations(
 }
 
 // ExecuteOperation 执行TCP操作 - 统一操作入口
-func (t *TCPOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (t *TCPExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
 		IsRead:   t.isReadOperation(operation.Type),
@@ -80,7 +80,7 @@ func (t *TCPOperations) ExecuteOperation(ctx context.Context, operation interfac
 }
 
 // executeEchoTest 执行回显测试
-func (t *TCPOperations) executeEchoTest(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (t *TCPExecutor) executeEchoTest(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// 构造测试数据
 	testData := t.buildTestData(operation)
 	if len(testData) == 0 {
@@ -125,7 +125,7 @@ func (t *TCPOperations) executeEchoTest(ctx context.Context, conn net.Conn, oper
 }
 
 // executeSendOnly 执行仅发送操作
-func (t *TCPOperations) executeSendOnly(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (t *TCPExecutor) executeSendOnly(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// 构造测试数据
 	testData := t.buildTestData(operation)
 	if len(testData) == 0 {
@@ -151,7 +151,7 @@ func (t *TCPOperations) executeSendOnly(ctx context.Context, conn net.Conn, oper
 }
 
 // executeReceiveOnly 执行仅接收操作
-func (t *TCPOperations) executeReceiveOnly(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (t *TCPExecutor) executeReceiveOnly(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// 设置超时
 	if err := conn.SetDeadline(time.Now().Add(t.config.Connection.Timeout)); err != nil {
 		return fmt.Errorf("failed to set deadline: %w", err)
@@ -178,7 +178,7 @@ func (t *TCPOperations) executeReceiveOnly(ctx context.Context, conn net.Conn, o
 }
 
 // executeBidirectional 执行双向通信操作
-func (t *TCPOperations) executeBidirectional(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (t *TCPExecutor) executeBidirectional(ctx context.Context, conn net.Conn, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// 构造测试数据
 	testData := t.buildTestData(operation)
 	if len(testData) == 0 {
@@ -217,7 +217,7 @@ func (t *TCPOperations) executeBidirectional(ctx context.Context, conn net.Conn,
 }
 
 // buildTestData 构造测试数据
-func (t *TCPOperations) buildTestData(operation interfaces.Operation) []byte {
+func (t *TCPExecutor) buildTestData(operation interfaces.Operation) []byte {
 	// 尝试从操作中获取数据
 	if operation.Value != nil {
 		switch v := operation.Value.(type) {
@@ -242,7 +242,7 @@ func (t *TCPOperations) buildTestData(operation interfaces.Operation) []byte {
 }
 
 // isReadOperation 判断是否为读操作
-func (t *TCPOperations) isReadOperation(operationType string) bool {
+func (t *TCPExecutor) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
 		"echo_test":     true,  // 回显测试既读又写，但主要是验证读取
 		"receive_only":  true,  // 仅接收
@@ -254,7 +254,7 @@ func (t *TCPOperations) isReadOperation(operationType string) bool {
 }
 
 // GetSupportedOperations 获取支持的操作类型
-func (t *TCPOperations) GetSupportedOperations() []string {
+func (t *TCPExecutor) GetSupportedOperations() []string {
 	return []string{
 		"echo_test",
 		"send_only",

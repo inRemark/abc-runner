@@ -86,7 +86,7 @@ func (r *RedisCommandHandler) Execute(ctx context.Context, args []string) error 
 
 // GetHelp 获取帮助信息
 func (r *RedisCommandHandler) GetHelp() string {
-	return fmt.Sprintf(`Redis Performance Testing
+	return `Redis Performance Testing
 USAGE:
   abc-runner redis [options]
 DESCRIPTION:
@@ -107,7 +107,7 @@ EXAMPLES:
   abc-runner redis -h localhost -a pwd@redis -n 100 -c 2
 NOTE: 
   This implementation performs real Redis performance testing with metrics collection.
-`)
+`
 }
 
 // parseArgs 解析命令行参数

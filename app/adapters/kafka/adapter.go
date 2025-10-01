@@ -23,7 +23,7 @@ type KafkaAdapter struct {
 	config   *kafkaConfig.KafkaAdapterConfig
 
 	// 操作执行器
-	kafkaOperations *operations.KafkaOperations
+	kafkaOperations *operations.KafkaExecutor
 
 	// 指标收集器
 	metricsCollector interfaces.DefaultMetricsCollector
@@ -87,7 +87,7 @@ func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) er
 	}
 
 	// 创建Kafka操作执行器
-	k.kafkaOperations = operations.NewKafkaOperations(k.connPool, k.config, k.metricsCollector)
+	k.kafkaOperations = operations.NewKafkaExecutor(k.connPool, k.config, k.metricsCollector)
 
 	k.isConnected = true
 

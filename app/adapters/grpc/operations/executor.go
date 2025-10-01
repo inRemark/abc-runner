@@ -13,20 +13,20 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// GRPCOperations gRPC操作执行器 - 遵循统一架构模式
-type GRPCOperations struct {
+// GRPCExecutor gRPC操作执行器 - 遵循统一架构模式
+type GRPCExecutor struct {
 	connectionPool   *connection.ConnectionPool
 	config           *config.GRPCConfig
 	metricsCollector interfaces.DefaultMetricsCollector
 }
 
-// NewGRPCOperations 创建gRPC操作执行器
-func NewGRPCOperations(
+// NewGRPCExecutor 创建gRPC操作执行器
+func NewGRPCExecutor(
 	connectionPool *connection.ConnectionPool,
 	config *config.GRPCConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *GRPCOperations {
-	return &GRPCOperations{
+) *GRPCExecutor {
+	return &GRPCExecutor{
 		connectionPool:   connectionPool,
 		config:           config,
 		metricsCollector: metricsCollector,
@@ -34,7 +34,7 @@ func NewGRPCOperations(
 }
 
 // ExecuteOperation 执行gRPC操作 - 统一操作入口
-func (g *GRPCOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (g *GRPCExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
 		IsRead:   g.isReadOperation(operation.Type),
@@ -94,7 +94,7 @@ func (g *GRPCOperations) ExecuteOperation(ctx context.Context, operation interfa
 }
 
 // executeUnaryCall 执行一元调用
-func (g *GRPCOperations) executeUnaryCall(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (g *GRPCExecutor) executeUnaryCall(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	log.Printf("Executing unary call: %s.%s",
 		g.config.GRPCSpecific.ServiceName,
 		g.config.GRPCSpecific.MethodName)
@@ -112,7 +112,7 @@ func (g *GRPCOperations) executeUnaryCall(ctx context.Context, operation interfa
 }
 
 // executeServerStream 执行服务器流调用
-func (g *GRPCOperations) executeServerStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (g *GRPCExecutor) executeServerStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	log.Printf("Executing server stream call: %s.%s",
 		g.config.GRPCSpecific.ServiceName,
 		g.config.GRPCSpecific.MethodName)
@@ -137,7 +137,7 @@ func (g *GRPCOperations) executeServerStream(ctx context.Context, operation inte
 }
 
 // executeClientStream 执行客户端流调用
-func (g *GRPCOperations) executeClientStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (g *GRPCExecutor) executeClientStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	log.Printf("Executing client stream call: %s.%s",
 		g.config.GRPCSpecific.ServiceName,
 		g.config.GRPCSpecific.MethodName)
@@ -162,7 +162,7 @@ func (g *GRPCOperations) executeClientStream(ctx context.Context, operation inte
 }
 
 // executeBidirectionalStream 执行双向流调用
-func (g *GRPCOperations) executeBidirectionalStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (g *GRPCExecutor) executeBidirectionalStream(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	log.Printf("Executing bidirectional stream call: %s.%s",
 		g.config.GRPCSpecific.ServiceName,
 		g.config.GRPCSpecific.MethodName)
@@ -187,7 +187,7 @@ func (g *GRPCOperations) executeBidirectionalStream(ctx context.Context, operati
 }
 
 // addAuthMetadata 添加认证metadata
-func (g *GRPCOperations) addAuthMetadata(ctx context.Context) context.Context {
+func (g *GRPCExecutor) addAuthMetadata(ctx context.Context) context.Context {
 	if !g.config.GRPCSpecific.Auth.Enabled {
 		return ctx
 	}
@@ -216,7 +216,7 @@ func (g *GRPCOperations) addAuthMetadata(ctx context.Context) context.Context {
 }
 
 // isReadOperation 判断是否为读操作
-func (g *GRPCOperations) isReadOperation(operationType string) bool {
+func (g *GRPCExecutor) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
 		"unary_call":           true,  // 一元调用通常是读取数据
 		"server_stream":        true,  // 服务器流是从服务器读取数据
@@ -227,7 +227,7 @@ func (g *GRPCOperations) isReadOperation(operationType string) bool {
 }
 
 // GetSupportedOperations 获取支持的操作类型
-func (g *GRPCOperations) GetSupportedOperations() []string {
+func (g *GRPCExecutor) GetSupportedOperations() []string {
 	return []string{
 		"unary_call",
 		"server_stream",

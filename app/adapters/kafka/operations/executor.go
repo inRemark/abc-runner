@@ -10,32 +10,32 @@ import (
 	"abc-runner/app/core/interfaces"
 )
 
-// KafkaOperations Kafka操作执行器 - 遵循统一架构模式
-type KafkaOperations struct {
+// KafkaExecutor Kafka操作执行器 - 遵循统一架构模式
+type KafkaExecutor struct {
 	connPool         *connection.ConnectionPool
 	config           *kafkaConfig.KafkaAdapterConfig
 	metricsCollector interfaces.DefaultMetricsCollector
-	producer         *ProducerOperations
-	consumer         *ConsumerOperations
+	producer         *ProducerExecutor
+	consumer         *ConsumerExecutor
 }
 
-// NewKafkaOperations 创建Kafka操作执行器
-func NewKafkaOperations(
+// NewKafkaExecutor 创建Kafka操作执行器
+func NewKafkaExecutor(
 	connPool *connection.ConnectionPool,
 	config *kafkaConfig.KafkaAdapterConfig,
 	metricsCollector interfaces.DefaultMetricsCollector,
-) *KafkaOperations {
-	return &KafkaOperations{
+) *KafkaExecutor {
+	return &KafkaExecutor{
 		connPool:         connPool,
 		config:           config,
 		metricsCollector: metricsCollector,
-		producer:         NewProducerOperations(connPool, metricsCollector),
-		consumer:         NewConsumerOperations(connPool, metricsCollector),
+		producer:         NewProducerExecutor(connPool, metricsCollector),
+		consumer:         NewConsumerExecutor(connPool, metricsCollector),
 	}
 }
 
 // ExecuteOperation 执行Kafka操作 - 统一操作入口
-func (k *KafkaOperations) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (k *KafkaExecutor) ExecuteOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
 		IsRead:   k.isReadOperation(operation.Type),
@@ -90,7 +90,7 @@ func (k *KafkaOperations) ExecuteOperation(ctx context.Context, operation interf
 }
 
 // executeProduceMessage 执行单条消息生产
-func (k *KafkaOperations) executeProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (k *KafkaExecutor) executeProduceMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if k.producer == nil {
 		return &interfaces.OperationResult{
 			Success: false,
@@ -101,7 +101,7 @@ func (k *KafkaOperations) executeProduceMessage(ctx context.Context, operation i
 }
 
 // executeProduceBatch 执行批量消息生产
-func (k *KafkaOperations) executeProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (k *KafkaExecutor) executeProduceBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if k.producer == nil {
 		return &interfaces.OperationResult{
 			Success: false,
@@ -112,7 +112,7 @@ func (k *KafkaOperations) executeProduceBatch(ctx context.Context, operation int
 }
 
 // executeConsumeMessage 执行单条消息消费
-func (k *KafkaOperations) executeConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (k *KafkaExecutor) executeConsumeMessage(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if k.consumer == nil {
 		return &interfaces.OperationResult{
 			Success: false,
@@ -123,7 +123,7 @@ func (k *KafkaOperations) executeConsumeMessage(ctx context.Context, operation i
 }
 
 // executeConsumeBatch 执行批量消息消费
-func (k *KafkaOperations) executeConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
+func (k *KafkaExecutor) executeConsumeBatch(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if k.consumer == nil {
 		return &interfaces.OperationResult{
 			Success: false,
@@ -134,7 +134,7 @@ func (k *KafkaOperations) executeConsumeBatch(ctx context.Context, operation int
 }
 
 // executeCreateTopic 执行创建主题
-func (k *KafkaOperations) executeCreateTopic(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (k *KafkaExecutor) executeCreateTopic(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// TODO: 实现主题创建逻辑
 	// 这需要使用Kafka Admin API
 	result.Value = fmt.Sprintf("Topic creation for operation: %s", operation.Key)
@@ -143,7 +143,7 @@ func (k *KafkaOperations) executeCreateTopic(ctx context.Context, operation inte
 }
 
 // executeDeleteTopic 执行删除主题
-func (k *KafkaOperations) executeDeleteTopic(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (k *KafkaExecutor) executeDeleteTopic(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// TODO: 实现主题删除逻辑
 	result.Value = fmt.Sprintf("Topic deletion for operation: %s", operation.Key)
 	result.Metadata["admin_operation"] = "delete_topic"
@@ -151,7 +151,7 @@ func (k *KafkaOperations) executeDeleteTopic(ctx context.Context, operation inte
 }
 
 // executeListTopics 执行列出主题
-func (k *KafkaOperations) executeListTopics(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (k *KafkaExecutor) executeListTopics(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// TODO: 实现主题列表查询逻辑
 	result.Value = []string{} // 空列表
 	result.Metadata["admin_operation"] = "list_topics"
@@ -159,7 +159,7 @@ func (k *KafkaOperations) executeListTopics(ctx context.Context, operation inter
 }
 
 // executeDescribeConsumerGroups 执行描述消费者组
-func (k *KafkaOperations) executeDescribeConsumerGroups(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
+func (k *KafkaExecutor) executeDescribeConsumerGroups(ctx context.Context, operation interfaces.Operation, result *interfaces.OperationResult) error {
 	// TODO: 实现消费者组描述逻辑
 	result.Value = map[string]interface{}{
 		"consumer_groups": []string{},
@@ -169,7 +169,7 @@ func (k *KafkaOperations) executeDescribeConsumerGroups(ctx context.Context, ope
 }
 
 // isReadOperation 判断是否为读操作
-func (k *KafkaOperations) isReadOperation(operationType string) bool {
+func (k *KafkaExecutor) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
 		"produce":                  false,
 		"produce_message":          false,
@@ -186,7 +186,7 @@ func (k *KafkaOperations) isReadOperation(operationType string) bool {
 }
 
 // GetSupportedOperations 获取支持的操作类型
-func (k *KafkaOperations) GetSupportedOperations() []string {
+func (k *KafkaExecutor) GetSupportedOperations() []string {
 	return []string{
 		"produce",
 		"produce_message",
