@@ -1,5 +1,15 @@
 # WebSocket协议配置文件
 websocket:
+  # 基准测试配置
+  benchmark:
+    total: 2000               # 总消息数
+    parallels: 30             # 并发连接数
+    data_size: 1024           # 消息大小（字节）
+    duration: "60s"           # 测试持续时间
+    read_percent: 50          # 读操作百分比
+    random_keys: 1000         # 随机键数量
+    test_case: "message_exchange" # 测试用例：message_exchange, ping_pong, broadcast, large_message
+
   # 连接配置
   connection:
     url: "ws://localhost:8080/ws" # WebSocket服务器URL
@@ -14,16 +24,6 @@ websocket:
       max_idle: 5             # 最大空闲连接数
       idle_timeout: "300s"    # 空闲连接超时时间
       connection_timeout: "30s" # 创建连接超时时间
-
-  # 基准测试配置
-  benchmark:
-    total: 2000               # 总消息数
-    parallels: 30             # 并发连接数
-    data_size: 1024           # 消息大小（字节）
-    duration: "60s"           # 测试持续时间
-    read_percent: 50          # 读操作百分比
-    random_keys: 1000         # 随机键数量
-    test_case: "message_exchange" # 测试用例：message_exchange, ping_pong, broadcast, large_message
 
   # WebSocket特定配置
   websocket_specific:

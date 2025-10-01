@@ -1,4 +1,21 @@
 kafka:
+  # 基准测试配置
+  benchmark:
+    default_topic: "benchmark-topic"
+    message_size_range:
+      min: 100
+      max: 10240
+    batch_sizes: [1, 10, 100, 1000]
+    partition_strategy: "round_robin"  # round_robin, hash, random
+    total: 100000
+    parallels: 50
+    data_size: 1024
+    ttl: 0
+    read_percent: 50
+    random_keys: 10000
+    test_case: "produce"
+    timeout: "30s"
+    
   # 基础连接配置
   brokers:
     - "192.168.0.62:9092"
@@ -58,19 +75,3 @@ kafka:
     consumer_pool_size: 5
     metrics_interval: "5s"
     
-  # 基准测试配置
-  benchmark:
-    default_topic: "benchmark-topic"
-    message_size_range:
-      min: 100
-      max: 10240
-    batch_sizes: [1, 10, 100, 1000]
-    partition_strategy: "round_robin"  # round_robin, hash, random
-    total: 100000
-    parallels: 50
-    data_size: 1024
-    ttl: 0
-    read_percent: 50
-    random_keys: 10000
-    test_case: "produce"
-    timeout: "30s"

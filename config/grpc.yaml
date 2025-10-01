@@ -2,7 +2,7 @@
 grpc:
   # 连接配置
   connection:
-    address: "localhost"       # gRPC服务器地址
+    address: "localhost"      # gRPC服务器地址
     port: 50051               # gRPC服务器端口
     timeout: "30s"            # 连接超时时间
     keep_alive: true          # 启用Keep-Alive

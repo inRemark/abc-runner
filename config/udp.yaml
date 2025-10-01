@@ -1,14 +1,5 @@
 # UDP协议配置文件
 udp:
-  # 连接配置
-  connection:
-    address: "localhost"       # 目标服务器地址
-    port: 9090                # 目标端口
-    timeout: "10s"            # 操作超时时间
-    buffer_size: 65536        # 缓冲区大小 (64KB)
-    read_buffer_size: 65536   # 读缓冲区大小
-    write_buffer_size: 65536  # 写缓冲区大小
-
   # 基准测试配置
   benchmark:
     total: 1000               # 总数据包数
@@ -19,6 +10,15 @@ udp:
     random_keys: 1000         # 随机键数量
     test_case: "packet_send"  # 测试用例：packet_send, packet_receive, echo_udp, multicast
     packet_rate: 1000         # 每秒数据包发送率
+
+  # 连接配置
+  connection:
+    address: "localhost"      # 目标服务器地址
+    port: 9090                # 目标端口
+    timeout: "10s"            # 操作超时时间
+    buffer_size: 65536        # 缓冲区大小 (64KB)
+    read_buffer_size: 65536   # 读缓冲区大小
+    write_buffer_size: 65536  # 写缓冲区大小
 
   # UDP特定配置
   udp_specific:

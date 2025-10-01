@@ -1,4 +1,24 @@
 http:
+  # 基准测试配置
+  benchmark:
+    total: 1000
+    parallels: 50
+    duration: "5m"
+    ramp_up: "30s"
+    data_size: 1024
+    ttl: 0s
+    read_percent: 70
+    random_keys: 0
+    test_case: "http_get"
+    timeout: 30s
+    
+    # HTTP特定配置
+    follow_redirects: true
+    max_redirects: 10
+    disable_compression: false
+    enable_http2: true
+    user_agent: "abc-runner-http-client/1.0"
+
   # 连接配置
   connection:
     base_url: "http://cn.bing.com"
@@ -113,22 +133,3 @@ http:
           description: "{{random.description}}"
       weight: 2
   
-  # 基准测试配置
-  benchmark:
-    total: 100000
-    parallels: 50
-    duration: "5m"
-    ramp_up: "30s"
-    data_size: 1024
-    ttl: 0s
-    read_percent: 70
-    random_keys: 0
-    test_case: "http_get"
-    timeout: 30s
-    
-    # HTTP特定配置
-    follow_redirects: true
-    max_redirects: 10
-    disable_compression: false
-    enable_http2: true
-    user_agent: "abc-runner-http-client/1.0"
