@@ -170,4 +170,3 @@ func BenchmarkSimpleOperations(b *testing.B) {
 		}
 	})
 }
-
