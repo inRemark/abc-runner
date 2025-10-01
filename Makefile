@@ -71,8 +71,9 @@ build-windows:
 # 测试相关
 .PHONY: test
 test:
-	@echo "Running tests..."
-	$(GO_TEST) -v ./...
+	@echo "Running unit tests only..."
+	$(GO_TEST) -v ./app/... ./config/...
+	@echo "Unit tests completed!"
 
 .PHONY: test-cover
 test-cover:
@@ -85,9 +86,12 @@ test-cover:
 integration-test:
 	@echo "Running integration tests..."
 	@if [ -d "./test/integration" ]; then \
-		$(GO_TEST) -v ./test/integration/...; \
+		echo "Found integration test directory"; \
+		$(GO_TEST) -v ./test/integration/... || exit 1; \
+		echo "Integration tests completed successfully"; \
 	else \
 		echo "No integration tests found (./test/integration directory does not exist)"; \
+		echo "Skipping integration tests"; \
 	fi
 
 # 清理
