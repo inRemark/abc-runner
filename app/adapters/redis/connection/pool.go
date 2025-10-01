@@ -90,12 +90,12 @@ func (p *RedisConnectionPool) GetClient() redis.UniversalClient {
 func (p *RedisConnectionPool) Ping(ctx context.Context) error {
 	client := p.GetClient()
 	if client == nil {
-		return fmt.Errorf("Redis client is not initialized")
+		return fmt.Errorf("redis client is not initialized")
 	}
 
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		return fmt.Errorf("Redis ping failed: %w", err)
+		return fmt.Errorf("redis ping failed: %w", err)
 	}
 
 	return nil
