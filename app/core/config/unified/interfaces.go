@@ -34,7 +34,7 @@ func (s *StandardConfigManagerImpl) LoadConfiguration(sources ...ConfigSource) e
 	// 依次加载配置，后面的配置源会覆盖前面的配置
 	var baseConfig interfaces.Config
 	var lastError error
-	for _, source := range sources {
+	for i, source := range sources {
 		if source.CanLoad() {
 			// 如果是环境变量或命令行参数源，设置基础配置
 			if envSource, ok := source.(*EnvConfigSource); ok && baseConfig != nil {
@@ -55,6 +55,16 @@ func (s *StandardConfigManagerImpl) LoadConfiguration(sources ...ConfigSource) e
 			}
 			// 更新基础配置
 			baseConfig = config
+
+			// 为后续的源设置更新后的基础配置
+			for j := i + 1; j < len(sources); j++ {
+				if envSource, ok := sources[j].(*EnvConfigSource); ok {
+					envSource.SetConfig(baseConfig)
+				}
+				if argSource, ok := sources[j].(*ArgConfigSource); ok {
+					argSource.SetConfig(baseConfig)
+				}
+			}
 		}
 	}
 	if baseConfig != nil {
