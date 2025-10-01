@@ -2,7 +2,27 @@ package config
 
 import (
 	"fmt"
+	"runtime"
 	"time"
+)
+
+// 版本常量定义 - 统一管理所有版本号
+const (
+	// 主应用版本
+	AppVersion = "0.2.0"
+	AppName    = "abc-runner"
+
+	// 服务组件版本
+	GRPCServerVersion      = "1.0.0"
+	WebSocketServerVersion = "1.0.0"
+
+	// 第三方组件默认版本
+	DefaultKafkaVersion = "2.8.0"
+
+	// 内部版本标识
+	AutoDiscoveryVersion  = "3.0.0"
+	ConfigTemplateVersion = "0.2.0"
+	ReportVersion         = "0.2.0"
 )
 
 // ConfigVersion 配置版本信息
@@ -32,9 +52,29 @@ func (cv *ConfigVersion) String() string {
 // GetVersionInfo 获取配置版本信息
 func GetVersionInfo() *ConfigVersion {
 	return &ConfigVersion{
-		Version:     "0.2.0",
+		Version:     AppVersion,
 		CreatedAt:   time.Now(),
 		Description: "Initial configuration version",
-		Author:      "abc-runner",
+		Author:      AppName,
+	}
+}
+
+// GetAppVersion 获取应用版本
+func GetAppVersion() string {
+	return AppVersion
+}
+
+// GetFullVersionString 获取完整版本字符串
+func GetFullVersionString() string {
+	return fmt.Sprintf("%s v%s", AppName, AppVersion)
+}
+
+// GetBuildInfo 获取构建信息
+func GetBuildInfo() map[string]string {
+	return map[string]string{
+		"app_name":    AppName,
+		"app_version": AppVersion,
+		"go_version":  runtime.Version(),
+		"build_time":  time.Now().Format("2006-01-02 15:04:05"),
 	}
 }

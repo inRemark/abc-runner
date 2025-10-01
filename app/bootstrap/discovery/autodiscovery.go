@@ -19,6 +19,7 @@ import (
 	"abc-runner/app/commands"
 	"abc-runner/app/core/interfaces"
 	"abc-runner/app/core/metrics"
+	"abc-runner/config"
 )
 
 // AutoDIBuilder 自动装配构建器
@@ -78,13 +79,13 @@ func (builder *AutoDIBuilder) Build() error {
 // setupMetricsCollector 设置指标收集器
 func (builder *AutoDIBuilder) setupMetricsCollector() error {
 	// 创建通用指标收集器
-	config := metrics.DefaultMetricsConfig()
+	metricsConfig := metrics.DefaultMetricsConfig()
 	protocolData := map[string]interface{}{
-		"application": "abc-runner",
-		"version":     "3.0.0",
+		"application": config.AppName,
+		"version":     config.AutoDiscoveryVersion,
 	}
 
-	baseCollector := metrics.NewBaseCollector(config, protocolData)
+	baseCollector := metrics.NewBaseCollector(metricsConfig, protocolData)
 
 	// 直接使用新的泛型收集器
 	builder.components["metrics_collector"] = baseCollector

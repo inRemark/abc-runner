@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"abc-runner/app/core/interfaces"
+	globalConfig "abc-runner/config"
 )
 
 // LoadDefaultKafkaConfig 加载默认Kafka配置
@@ -12,8 +13,8 @@ func LoadDefaultKafkaConfig() *KafkaAdapterConfig {
 	return &KafkaAdapterConfig{
 		Protocol: "kafka",
 		Brokers:  []string{"localhost:9092"},
-		ClientID: "abc-runner",
-		Version:  "2.6.0",
+		ClientID: globalConfig.AppName,
+		Version:  globalConfig.DefaultKafkaVersion,
 		TopicConfigs: []TopicConfig{
 			{
 				Name:       "test-topic",

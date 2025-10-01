@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"abc-runner/app/core/metrics"
+	"abc-runner/config"
 )
 
 // StructuredReport 结构化报告模型
@@ -423,8 +424,8 @@ func generateContextMetadata(snapshot *metrics.MetricsSnapshot[map[string]interf
 		Environment: generateEnvironmentInfo(),
 		ExecutionContext: ExecContext{
 			GeneratedAt:     time.Now(),
-			GeneratedBy:     "abc-runner",
-			ReportVersion:   "0.2.0",
+			GeneratedBy:     config.AppName,
+			ReportVersion:   config.ReportVersion,
 			UniqueSessionID: generateSessionID(),
 		},
 	}
@@ -442,7 +443,7 @@ func generateEnvironmentInfo() EnvInfo {
 		OSName:           runtime.GOOS,
 		Architecture:     runtime.GOARCH,
 		GoVersion:        runtime.Version(),
-		ABCRunnerVersion: "0.2.0",
+		ABCRunnerVersion: config.AppVersion,
 		Hostname:         hostname,
 	}
 }

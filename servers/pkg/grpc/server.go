@@ -13,6 +13,11 @@ import (
 	"abc-runner/servers/pkg/interfaces"
 )
 
+// Version 常量定义
+const (
+	ServerVersion = "1.0.0"
+)
+
 // GRPCServer 简化的gRPC服务端实现（基于HTTP/2）
 type GRPCServer struct {
 	*common.BaseServer
@@ -363,7 +368,7 @@ func (gs *GRPCServer) handleReflection(w http.ResponseWriter, r *http.Request) {
 func (gs *GRPCServer) handleServiceList(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"name":       "abc-runner gRPC Test Server",
-		"version":    "1.0.0",
+		"version":    ServerVersion,
 		"protocol":   "gRPC (HTTP/2)",
 		"services":   ServiceMethods,
 		"health":     gs.config.HealthCheck.Enabled,

@@ -15,6 +15,11 @@ import (
 	"abc-runner/servers/pkg/interfaces"
 )
 
+// Version 常量定义
+const (
+	ServerVersion = "1.0.0"
+)
+
 // WebSocketServer WebSocket服务端实现
 type WebSocketServer struct {
 	*common.BaseServer
@@ -24,11 +29,11 @@ type WebSocketServer struct {
 	upgrader          *websocket.Upgrader
 	connectionManager *ConnectionManager
 	mux               *http.ServeMux
-	
+
 	// 统计信息
-	upgradeCount    int64
-	broadcastCount  int64
-	mutex           sync.RWMutex
+	upgradeCount   int64
+	broadcastCount int64
+	mutex          sync.RWMutex
 }
 
 // NewWebSocketServer 创建WebSocket服务端
@@ -139,19 +144,19 @@ func (ws *WebSocketServer) buildHandler() http.Handler {
 func (ws *WebSocketServer) registerRoutes() {
 	// WebSocket升级端点
 	ws.mux.HandleFunc(ws.config.Upgrader.Path, ws.handleWebSocketUpgrade)
-	
+
 	// 健康检查端点
 	ws.mux.HandleFunc("/health", ws.handleHealth)
-	
+
 	// 指标端点
 	ws.mux.HandleFunc("/metrics", ws.handleMetrics)
-	
+
 	// 连接统计端点
 	ws.mux.HandleFunc("/stats", ws.handleStats)
-	
+
 	// 广播端点
 	ws.mux.HandleFunc("/broadcast", ws.handleBroadcast)
-	
+
 	// 根路径
 	ws.mux.HandleFunc("/", ws.handleRoot)
 }
@@ -171,7 +176,7 @@ func (ws *WebSocketServer) handleWebSocketUpgrade(w http.ResponseWriter, r *http
 			"remote_addr": r.RemoteAddr,
 			"user_agent":  r.UserAgent(),
 		})
-		
+
 		if ws.GetMetricsCollector() != nil {
 			ws.GetMetricsCollector().RecordError("websocket", "upgrade", "upgrade_failed")
 		}
@@ -265,7 +270,7 @@ func (ws *WebSocketServer) handleBroadcast(w http.ResponseWriter, r *http.Reques
 
 	// 读取消息内容
 	var request struct {
-		Type    string `json:"type"`    // "text" or "binary"
+		Type    string `json:"type"` // "text" or "binary"
 		Message string `json:"message"`
 	}
 
@@ -300,12 +305,12 @@ func (ws *WebSocketServer) handleBroadcast(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
-		"success":            true,
-		"broadcast_count":    successCount,
-		"total_connections":  ws.connectionManager.GetConnectionCount(),
-		"message_type":       request.Type,
-		"message_size":       len(request.Message),
-		"timestamp":          time.Now().Unix(),
+		"success":           true,
+		"broadcast_count":   successCount,
+		"total_connections": ws.connectionManager.GetConnectionCount(),
+		"message_type":      request.Type,
+		"message_size":      len(request.Message),
+		"timestamp":         time.Now().Unix(),
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -316,9 +321,9 @@ func (ws *WebSocketServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]interface{}{
-		"message":     "WebSocket Test Server",
-		"protocol":    "websocket",
-		"version":     "1.0.0",
+		"message":  "WebSocket Test Server",
+		"protocol": "websocket",
+		"version":  ServerVersion,
 		"endpoints": map[string]interface{}{
 			"websocket": ws.config.Upgrader.Path,
 			"health":    "/health",
@@ -382,14 +387,14 @@ func (ws *WebSocketServer) GetMetrics() map[string]interface{} {
 
 	// 配置信息
 	baseMetrics["config"] = map[string]interface{}{
-		"read_buffer_size":    ws.config.Upgrader.ReadBufferSize,
-		"write_buffer_size":   ws.config.Upgrader.WriteBufferSize,
-		"handshake_timeout":   ws.config.Upgrader.HandshakeTimeout.String(),
-		"max_message_size":    ws.config.Message.MaxMessageSize,
-		"ping_interval":       ws.config.Heartbeat.PingInterval.String(),
-		"pong_timeout":        ws.config.Heartbeat.PongTimeout.String(),
-		"idle_timeout":        ws.config.Connection.IdleTimeout.String(),
-		"cleanup_interval":    ws.config.Connection.CleanupInterval.String(),
+		"read_buffer_size":  ws.config.Upgrader.ReadBufferSize,
+		"write_buffer_size": ws.config.Upgrader.WriteBufferSize,
+		"handshake_timeout": ws.config.Upgrader.HandshakeTimeout.String(),
+		"max_message_size":  ws.config.Message.MaxMessageSize,
+		"ping_interval":     ws.config.Heartbeat.PingInterval.String(),
+		"pong_timeout":      ws.config.Heartbeat.PongTimeout.String(),
+		"idle_timeout":      ws.config.Connection.IdleTimeout.String(),
+		"cleanup_interval":  ws.config.Connection.CleanupInterval.String(),
 	}
 
 	return baseMetrics
@@ -398,7 +403,7 @@ func (ws *WebSocketServer) GetMetrics() map[string]interface{} {
 // BroadcastText 广播文本消息
 func (ws *WebSocketServer) BroadcastText(message string) int {
 	successCount := ws.connectionManager.BroadcastMessage(websocket.TextMessage, []byte(message))
-	
+
 	ws.mutex.Lock()
 	ws.broadcastCount++
 	ws.mutex.Unlock()
@@ -413,7 +418,7 @@ func (ws *WebSocketServer) BroadcastText(message string) int {
 // BroadcastBinary 广播二进制消息
 func (ws *WebSocketServer) BroadcastBinary(data []byte) int {
 	successCount := ws.connectionManager.BroadcastMessage(websocket.BinaryMessage, data)
-	
+
 	ws.mutex.Lock()
 	ws.broadcastCount++
 	ws.mutex.Unlock()
@@ -428,7 +433,7 @@ func (ws *WebSocketServer) BroadcastBinary(data []byte) int {
 // GetConnectionStats 获取连接统计信息
 func (ws *WebSocketServer) GetConnectionStats() map[string]interface{} {
 	connections := ws.connectionManager.GetAllConnections()
-	
+
 	stats := map[string]interface{}{
 		"total_connections":  len(connections),
 		"active_connections": ws.connectionManager.GetConnectionCount(),
@@ -447,13 +452,13 @@ func (ws *WebSocketServer) GetConnectionStats() map[string]interface{} {
 		totalDuration := time.Duration(0)
 		totalBytesSent := int64(0)
 		totalBytesRecv := int64(0)
-		
+
 		for _, conn := range connections {
 			totalDuration += time.Since(conn.ConnectedAt)
 			totalBytesSent += conn.BytesSent
 			totalBytesRecv += conn.BytesRecv
 		}
-		
+
 		stats["avg_connection_duration"] = (totalDuration / time.Duration(len(connections))).String()
 		stats["avg_bytes_sent"] = totalBytesSent / int64(len(connections))
 		stats["avg_bytes_recv"] = totalBytesRecv / int64(len(connections))

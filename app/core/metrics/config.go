@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"abc-runner/config"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -416,7 +418,7 @@ type ConfigTemplate struct {
 func (cm *ConfigManager) GenerateTemplate() *ConfigTemplate {
 	return &ConfigTemplate{
 		Description: "ABC Runner Metrics Configuration Template",
-		Version:     "0.2.0",
+		Version:     config.ConfigTemplateVersion,
 		Config:      DefaultMetricsConfig(),
 		Examples: map[string]interface{}{
 			"high_performance": map[string]interface{}{
