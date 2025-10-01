@@ -4,7 +4,7 @@
 
 ## 配置文件结构
 
-abc-runner使用YAML格式的配置文件，支持三种协议的配置：
+abc-runner使用YAML格式的配置文件，支持七种协议的配置：Redis、HTTP、Kafka、gRPC、WebSocket、TCP和UDP。
 
 ```bash
 config/
@@ -12,6 +12,14 @@ config/
 ├── examples/            # 配置示例文件
 ├── production/          # 生产环境配置
 ├── development/         # 开发环境配置
+├── core.yaml            # 所有协议的核心配置
+├── redis.yaml           # Redis特定配置
+├── http.yaml            # HTTP特定配置
+├── kafka.yaml           # Kafka特定配置
+├── grpc.yaml            # gRPC特定配置
+├── websocket.yaml       # WebSocket特定配置
+├── tcp.yaml             # TCP特定配置
+├── udp.yaml             # UDP特定配置
 └── README.md            # 配置说明文档
 ```
 
@@ -145,6 +153,129 @@ consumer:
   auto_offset_reset: "latest"
 ```
 
+## gRPC配置
+
+### 连接配置
+
+```yaml
+grpc:
+  target: "localhost:9090"
+  timeout: "30s"
+  max_recv_msg_size: 4194304
+  max_send_msg_size: 4194304
+  
+  # TLS 配置
+  tls:
+    enabled: false
+    cert_file: "/path/to/cert.pem"
+    key_file: "/path/to/key.pem"
+    ca_file: "/path/to/ca.pem"
+```
+
+### 请求配置
+
+```yaml
+requests:
+  - method: "/example.Service/UnaryMethod"
+    payload: |
+      {
+        "message": "test",
+        "value": 123
+      }
+    metadata:
+      authorization: "Bearer token123"
+    weight: 100
+```
+
+## WebSocket配置
+
+### 连接配置
+
+```yaml
+websocket:
+  url: "ws://localhost:8080/ws"
+  timeout: "30s"
+  handshake_timeout: "10s"
+  
+  # 握手头部
+  headers:
+    Origin: "http://localhost:8080"
+    Authorization: "Bearer token123"
+```
+
+### 消息配置
+
+```yaml
+messages:
+  - type: "text"
+    content: "Hello WebSocket"
+    weight: 70
+
+  - type: "binary"
+    content_base64: "SGVsbG8gV2ViU29ja2V0"
+    weight: 30
+```
+
+## TCP配置
+
+### 连接配置
+
+```yaml
+tcp:
+  host: "localhost"
+  port: 8080
+  timeout: "30s"
+  connect_timeout: "10s"
+  
+  # Socket 选项
+  socket:
+    keep_alive: true
+    no_delay: true
+    buffer_size: 4096
+```
+
+### 负载配置
+
+```yaml
+payloads:
+  - type: "text"
+    content: "Hello TCP Server"
+    weight: 50
+
+  - type: "binary"
+    content_hex: "48656c6c6f20544350"
+    weight: 30
+```
+
+## UDP配置
+
+### 连接配置
+
+```yaml
+udp:
+  host: "localhost"
+  port: 8080
+  timeout: "30s"
+  
+  # 数据包选项
+  packet:
+    max_size: 1472
+    fragment_threshold: 1400
+```
+
+### 负载配置
+
+```yaml
+payloads:
+  - type: "text"
+    content: "Hello UDP Server"
+    weight: 50
+
+  - type: "random"
+    size: 512
+    weight: 30
+```
+
 ## 环境变量
 
 支持以下环境变量：
@@ -155,6 +286,13 @@ consumer:
 - `REDIS_PORT`: Redis端口
 - `REDIS_PASSWORD`: Redis密码
 - `KAFKA_BROKERS`: Kafka broker列表
+- `HTTP_BASE_URL`: HTTP基础URL
+- `GRPC_TARGET`: gRPC服务器目标
+- `WEBSOCKET_URL`: WebSocket URL
+- `TCP_HOST`: TCP服务器主机
+- `TCP_PORT`: TCP服务器端口
+- `UDP_HOST`: UDP服务器主机
+- `UDP_PORT`: UDP服务器端口
 
 ## 配置验证
 

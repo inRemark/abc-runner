@@ -9,7 +9,7 @@ import (
 // 版本常量定义 - 统一管理所有版本号
 const (
 	// 主应用版本
-	AppVersion = "0.2.0"
+	AppVersion = "0.3.0"
 	AppName    = "abc-runner"
 
 	// 服务组件版本

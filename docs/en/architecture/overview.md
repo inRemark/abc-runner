@@ -4,31 +4,43 @@
 
 ## System Architecture
 
-abc-runner adopts a modular, layered architecture design with clear component boundaries and separation of responsibilities.
+abc-runner adopts a modular, layered architecture design with clear component boundaries and separation of responsibilities, supporting seven protocols: Redis, HTTP, Kafka, gRPC, WebSocket, TCP, and UDP.
 
 ```mermaid
 graph TD
     A[main.go - Program Entry] --> B[Command Router]
     B --> C{Command Routing}
     C --> |redis| D[Redis Command Handler]
-    C --> |http| E[HTTP Command Handler]
+    C --> |http| E[HTTP Command Handler] 
     C --> |kafka| F[Kafka Command Handler]
-    D --> G[Configuration Manager]
-    E --> G
-    F --> G
-    G --> H[Protocol Adapter]
-    H --> I[Connection Management]
-    H --> J[Operation Registration]
-    H --> K[Metrics Collection]
-    I --> L[Redis/HTTP/Kafka Client]
-    J --> M[Operation Factory]
-    K --> N[Performance Metrics]
-    D --> O[Enhanced Execution Engine]
-    E --> O
-    F --> O
-    O --> P[Concurrent Task Scheduling]
-    P --> Q[Result Collection]
-    Q --> R[Result Output]
+    C --> |grpc| G[gRPC Command Handler]
+    C --> |websocket| H[WebSocket Command Handler]
+    C --> |tcp| I[TCP Command Handler]
+    C --> |udp| J[UDP Command Handler]
+    D --> K[Configuration Manager]
+    E --> K
+    F --> K
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L[Protocol Adapter]
+    L --> M[Connection Management]
+    L --> N[Operation Registration]
+    L --> O[Metrics Collection]
+    M --> P[Protocol-Specific Client]
+    N --> Q[Operation Factory]
+    O --> R[Performance Metrics]
+    D --> S[Enhanced Execution Engine]
+    E --> S
+    F --> S
+    G --> S
+    H --> S
+    I --> S
+    J --> S
+    S --> T[Concurrent Task Scheduling]
+    T --> U[Result Collection]
+    U --> V[Result Output]
 ```
 
 ## Core Components

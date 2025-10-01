@@ -4,7 +4,7 @@
 
 ## Configuration File Structure
 
-abc-runner uses YAML format configuration files, supporting configurations for three protocols:
+abc-runner uses YAML format configuration files, supporting configurations for seven protocols: Redis, HTTP, Kafka, gRPC, WebSocket, TCP, and UDP.
 
 ```
 config/
@@ -12,6 +12,14 @@ config/
 ├── examples/            # Configuration example files
 ├── production/          # Production environment configuration
 ├── development/         # Development environment configuration
+├── core.yaml            # Core configuration for all protocols
+├── redis.yaml           # Redis-specific configuration
+├── http.yaml            # HTTP-specific configuration
+├── kafka.yaml           # Kafka-specific configuration
+├── grpc.yaml            # gRPC-specific configuration
+├── websocket.yaml       # WebSocket-specific configuration
+├── tcp.yaml             # TCP-specific configuration
+├── udp.yaml             # UDP-specific configuration
 └── README.md            # Configuration documentation
 ```
 
@@ -145,6 +153,129 @@ consumer:
   auto_offset_reset: "latest"
 ```
 
+## gRPC Configuration
+
+### Connection Configuration
+
+```yaml
+grpc:
+  target: "localhost:9090"
+  timeout: "30s"
+  max_recv_msg_size: 4194304
+  max_send_msg_size: 4194304
+  
+  # TLS Configuration
+  tls:
+    enabled: false
+    cert_file: "/path/to/cert.pem"
+    key_file: "/path/to/key.pem"
+    ca_file: "/path/to/ca.pem"
+```
+
+### Request Configuration
+
+```yaml
+requests:
+  - method: "/example.Service/UnaryMethod"
+    payload: |
+      {
+        "message": "test",
+        "value": 123
+      }
+    metadata:
+      authorization: "Bearer token123"
+    weight: 100
+```
+
+## WebSocket Configuration
+
+### Connection Configuration
+
+```yaml
+websocket:
+  url: "ws://localhost:8080/ws"
+  timeout: "30s"
+  handshake_timeout: "10s"
+  
+  # Headers for handshake
+  headers:
+    Origin: "http://localhost:8080"
+    Authorization: "Bearer token123"
+```
+
+### Message Configuration
+
+```yaml
+messages:
+  - type: "text"
+    content: "Hello WebSocket"
+    weight: 70
+
+  - type: "binary"
+    content_base64: "SGVsbG8gV2ViU29ja2V0"
+    weight: 30
+```
+
+## TCP Configuration
+
+### Connection Configuration
+
+```yaml
+tcp:
+  host: "localhost"
+  port: 8080
+  timeout: "30s"
+  connect_timeout: "10s"
+  
+  # Socket options
+  socket:
+    keep_alive: true
+    no_delay: true
+    buffer_size: 4096
+```
+
+### Payload Configuration
+
+```yaml
+payloads:
+  - type: "text"
+    content: "Hello TCP Server"
+    weight: 50
+
+  - type: "binary"
+    content_hex: "48656c6c6f20544350"
+    weight: 30
+```
+
+## UDP Configuration
+
+### Connection Configuration
+
+```yaml
+udp:
+  host: "localhost"
+  port: 8080
+  timeout: "30s"
+  
+  # Packet options
+  packet:
+    max_size: 1472
+    fragment_threshold: 1400
+```
+
+### Payload Configuration
+
+```yaml
+payloads:
+  - type: "text"
+    content: "Hello UDP Server"
+    weight: 50
+
+  - type: "random"
+    size: 512
+    weight: 30
+```
+
 ## Environment Variables
 
 The following environment variables are supported:
@@ -155,6 +286,13 @@ The following environment variables are supported:
 - `REDIS_PORT`: Redis port
 - `REDIS_PASSWORD`: Redis password
 - `KAFKA_BROKERS`: Kafka broker list
+- `HTTP_BASE_URL`: HTTP base URL
+- `GRPC_TARGET`: gRPC server target
+- `WEBSOCKET_URL`: WebSocket URL
+- `TCP_HOST`: TCP server host
+- `TCP_PORT`: TCP server port
+- `UDP_HOST`: UDP server host
+- `UDP_PORT`: UDP server port
 
 ## Configuration Validation
 

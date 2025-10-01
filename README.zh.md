@@ -4,30 +4,49 @@
 
 ## 关于
 
-一个用于Redis、HTTP和Kafka协议的统一性能测试工具。
+一个用于多种协议性能测试的统一工具，支持Redis、HTTP、Kafka、gRPC、WebSocket、TCP和UDP等协议。
 
 ## 特性
 
-### Redis测试
+### 支持的协议
 
+#### Redis测试
 - 支持Redis集群、哨兵和单机模式
 - 多种测试用例：set_get_random, set_only, get_only, incr, decr, lpush, rpush, lpop, rpop, sadd, smembers, zadd, zrange, hset, hget, hmset, hmget, hgetall, pub, sub等
 - 可配置的读写比例和TTL
 - 全局自增键或随机键生成
 
-### HTTP测试
-
+#### HTTP测试
 - 支持GET、POST、PUT、DELETE方法
 - 自定义头部和请求体
 - 连接池和keep-alive
 - 基于持续时间和请求数的测试
 
-### Kafka测试
-
+#### Kafka测试
 - 生产者和消费者性能测试
 - 支持多个broker和主题
 - 可配置的消息大小和压缩
 - 混合生产和消费工作负载
+
+#### gRPC测试
+- gRPC服务性能测试
+- 连接池和流式支持
+- 自定义元数据和请求/响应处理
+
+#### WebSocket测试
+- WebSocket连接和消息测试
+- 实时通信性能分析
+- 自定义协议和消息格式
+
+#### TCP测试
+- TCP连接性能测试
+- 自定义负载和连接模式
+- 网络延迟和吞吐量分析
+
+#### UDP测试
+- UDP数据包传输测试
+- 数据报性能分析
+- 网络可靠性测试
 
 ## 打包和分发
 
@@ -108,15 +127,31 @@ For detailed information about the packaging process, see [Packaging Guide](docs
 
 # Kafka性能测试
 ./abc-runner kafka --broker localhost:9092 --topic test -n 10000 -c 5
+
+# gRPC性能测试
+./abc-runner grpc --target localhost:9090 -n 1000 -c 10
+
+# WebSocket性能测试
+./abc-runner websocket --url ws://localhost:8080/ws -n 1000 -c 10
+
+# TCP性能测试
+./abc-runner tcp --host localhost --port 8080 -n 1000 -c 10
+
+# UDP性能测试
+./abc-runner udp --host localhost --port 8080 -n 1000 -c 10
 ```
 
 ### 使用别名
 
 ```bash
 # 快速测试的短别名
-./abc-runner r -h localhost -p 6379 -n 1000 -c 10  # Redis
-./abc-runner h --url http://httpbin.org/get -n 100  # HTTP
-./abc-runner k --broker localhost:9092 -n 100      # Kafka
+./abc-runner r -h localhost -p 6379 -n 1000 -c 10      # Redis
+./abc-runner h --url http://httpbin.org/get -n 100      # HTTP
+./abc-runner k --broker localhost:9092 -n 100          # Kafka
+./abc-runner g --target localhost:9090 -n 100          # gRPC
+./abc-runner w --url ws://localhost:8080/ws -n 100     # WebSocket
+./abc-runner t --host localhost --port 8080 -n 100     # TCP
+./abc-runner u --host localhost --port 8080 -n 100     # UDP
 ```
 
 ## 命令参考
@@ -234,14 +269,20 @@ config/websocket.yaml
 
 详细文档请参阅以下资源：
 
-- [架构概述](docs/en/architecture/overview.md) - 系统架构和设计原则 | [架构概述](docs/zh/architecture/overview.md)
-- [组件文档](docs/en/architecture/components.md) - 详细组件文档 | [组件详解](docs/zh/architecture/components.md)
-- [快速入门指南](docs/en/getting-started/quickstart.md) - 快速开始 | [快速开始](docs/zh/getting-started/quickstart.md)
-- [Redis测试指南](docs/en/user-guide/redis.md) - Redis特定功能和用法 | [Redis测试指南](docs/zh/user-guide/redis.md)
-- [HTTP测试指南](docs/en/user-guide/http.md) - HTTP特定功能和用法 | [HTTP测试指南](docs/zh/user-guide/http.md)
-- [Kafka测试指南](docs/en/user-guide/kafka.md) - Kafka特定功能和用法 | [Kafka测试指南](docs/zh/user-guide/kafka.md)
-- [贡献指南](docs/en/developer-guide/contributing.md) - 贡献指南 | [贡献指南](docs/zh/developer-guide/contributing.md)
-- [扩展abc-runner](docs/en/developer-guide/extending.md) - 如何扩展工具 | [扩展abc-runner](docs/zh/developer-guide/extending.md)
+- [架构概述](docs/zh/architecture/overview.md) - 系统架构和设计原则
+- [组件详解](docs/zh/architecture/components.md) - 详细组件文档
+- [快速开始](docs/zh/getting-started/quickstart.md) - 快速开始
+- [Redis测试指南](docs/zh/user-guide/redis.md) - Redis特定功能和用法
+- [HTTP测试指南](docs/zh/user-guide/http.md) - HTTP特定功能和用法
+- [Kafka测试指南](docs/zh/user-guide/kafka.md) - Kafka特定功能和用法
+- [gRPC测试指南](docs/zh/user-guide/grpc.md) - gRPC特定功能和用法
+- [WebSocket测试指南](docs/zh/user-guide/websocket.md) - WebSocket特定功能和用法
+- [TCP测试指南](docs/zh/user-guide/tcp.md) - TCP特定功能和用法
+- [UDP测试指南](docs/zh/user-guide/udp.md) - UDP特定功能和用法
+- [配置指南](docs/zh/user-guide/configuration.md) - 配置管理
+- [报告系统指南](docs/zh/user-guide/reporting.md) - 性能报告生成和分析
+- [贡献指南](docs/zh/developer-guide/contributing.md) - 贡献指南
+- [扩展abc-runner](docs/zh/developer-guide/extending.md) - 如何扩展工具
 
 ## 许可证
 

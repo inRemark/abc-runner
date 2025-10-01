@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2025-01-02
+
+### 🚀 New Features
+
+- **Added comprehensive multi-protocol support**:
+  - gRPC protocol adapter with connection pooling and streaming support
+  - WebSocket protocol adapter for real-time communication testing
+  - TCP protocol adapter for raw TCP connection performance testing
+  - UDP protocol adapter for datagram transmission testing
+- **Enhanced server mode capabilities**:
+  - Multi-protocol server implementations for testing against live services
+  - Unified server management framework with health checks
+  - Configurable server endpoints and service discovery
+- **Advanced architecture improvements**:
+  - Dependency injection container for better modularity
+  - Unified configuration management system across all protocols
+  - Plugin-based adapter architecture for extensibility
+  - Auto-discovery mechanism for protocol-specific configurations
+
+### 🛠️ Improvements
+
+- **Enhanced configuration system**:
+  - Unified core configuration with protocol-specific extensions
+  - Improved configuration validation and error reporting
+  - Support for configuration file inheritance and overrides
+- **Better resource management**:
+  - Optimized connection pooling across all protocols
+  - Improved memory management and garbage collection
+  - Enhanced connection lifecycle management
+- **Expanded metrics and monitoring**:
+  - Advanced health checker with protocol-specific metrics
+  - Enhanced metrics collection and storage
+  - Improved reporting capabilities with structured output
+
+### 🐛 Bug Fixes
+
+- Fixed configuration loading issues with multiple protocol files
+- Resolved connection pool leaks in long-running tests
+- Fixed metrics aggregation for concurrent protocol testing
+- Corrected error handling in adapter factory initialization
+
+### ⚠️ Breaking Changes
+
+- Configuration file structure updated to support multi-protocol architecture
+- Command-line interface enhanced with new protocol-specific options
+- Metrics output format standardized across all protocols
+
+### 📚 Documentation
+
+- Updated README with comprehensive protocol support information
+- Added protocol-specific configuration examples
+- Enhanced command reference with new protocol options
+- Improved architecture documentation reflecting multi-protocol design
+
+### 🔧 Internal Changes
+
+- Refactored adapter architecture for better maintainability
+- Implemented unified interfaces for all protocol adapters
+- Enhanced error handling and logging throughout the codebase
+- Improved test coverage for new protocol implementations
+
 ## [0.2.0] - 2025-09-08
 
 ### 🚀 New Features

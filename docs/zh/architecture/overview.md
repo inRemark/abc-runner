@@ -4,7 +4,7 @@
 
 ## 系统架构
 
-abc-runner采用模块化、分层架构设计，具有清晰的组件边界和职责分离。
+abc-runner采用模块化、分层架构设计，具有清晰的组件边界和职责分离，支持七种协议：Redis、HTTP、Kafka、gRPC、WebSocket、TCP和UDP。
 
 ```mermaid
 graph TD
@@ -13,22 +13,34 @@ graph TD
     C --> |redis| D[Redis命令处理器]
     C --> |http| E[HTTP命令处理器]
     C --> |kafka| F[Kafka命令处理器]
-    D --> G[配置管理器]
-    E --> G
-    F --> G
-    G --> H[协议适配器]
-    H --> I[连接管理]
-    H --> J[操作注册]
-    H --> K[指标收集]
-    I --> L[Redis/HTTP/Kafka客户端]
-    J --> M[操作工厂]
-    K --> N[性能指标]
-    D --> O[增强版运行引擎]
-    E --> O
-    F --> O
-    O --> P[并发任务调度]
-    P --> Q[结果收集]
-    Q --> R[结果输出]
+    C --> |grpc| G[gRPC命令处理器]
+    C --> |websocket| H[WebSocket命令处理器]
+    C --> |tcp| I[TCP命令处理器]
+    C --> |udp| J[UDP命令处理器]
+    D --> K[配置管理器]
+    E --> K
+    F --> K
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L[协议适配器]
+    L --> M[连接管理]
+    L --> N[操作注册]
+    L --> O[指标收集]
+    M --> P[协议特定客户端]
+    N --> Q[操作工厂]
+    O --> R[性能指标]
+    D --> S[增强版运行引擎]
+    E --> S
+    F --> S
+    G --> S
+    H --> S
+    I --> S
+    J --> S
+    S --> T[并发任务调度]
+    T --> U[结果收集]
+    U --> V[结果输出]
 ```
 
 ## 核心组件
