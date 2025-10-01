@@ -401,6 +401,7 @@ func (adapter *GRPCAdapter) addAuthMetadata(ctx context.Context) context.Context
 }
 
 // recordMetrics 记录指标
+// recordMetrics 记录指标（仅作为适配器内部统计）
 func (adapter *GRPCAdapter) recordMetrics(operationType string, duration time.Duration, success bool) {
 	adapter.mu.Lock()
 	defer adapter.mu.Unlock()
@@ -414,13 +415,7 @@ func (adapter *GRPCAdapter) recordMetrics(operationType string, duration time.Du
 		adapter.failedCalls++
 	}
 
-	// 记录到指标收集器
-	if adapter.metricsCollector != nil {
-		result := &interfaces.OperationResult{
-			Success:  success,
-			Duration: duration,
-			IsRead:   false, // gRPC调用一般被视为写操作
-		}
-		adapter.metricsCollector.Record(result)
-	}
+	// 注意：不要在这里调用 adapter.metricsCollector.Record(result)
+	// 因为执行引擎会负责记录指标，避免重复计数
+	// 这里只做适配器内部的统计
 }

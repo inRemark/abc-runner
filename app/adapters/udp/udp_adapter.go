@@ -145,30 +145,20 @@ func (u *UDPAdapter) Execute(ctx context.Context, operation interfaces.Operation
 	case "packet_send":
 		result, err := u.executePacketSend(ctx, operation)
 		result.Duration = time.Since(startTime)
-		if u.metricsCollector != nil {
-			u.metricsCollector.Record(result)
-		}
+		// 注意：不要在这里调用 u.metricsCollector.Record(result)
+		// 因为执行引擎会负责记录指标，避免重复计数
 		return result, err
 	case "packet_receive":
 		result, err := u.executePacketReceive(ctx, operation)
 		result.Duration = time.Since(startTime)
-		if u.metricsCollector != nil {
-			u.metricsCollector.Record(result)
-		}
 		return result, err
 	case "echo_udp":
 		result, err := u.executeEchoUDP(ctx, operation)
 		result.Duration = time.Since(startTime)
-		if u.metricsCollector != nil {
-			u.metricsCollector.Record(result)
-		}
 		return result, err
 	case "multicast":
 		result, err := u.executeMulticast(ctx, operation)
 		result.Duration = time.Since(startTime)
-		if u.metricsCollector != nil {
-			u.metricsCollector.Record(result)
-		}
 		return result, err
 	default:
 		result.Error = fmt.Errorf("unsupported operation type: %s", operation.Type)

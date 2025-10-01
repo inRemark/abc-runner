@@ -244,6 +244,7 @@ func (u *UDPCommandHandler) parseArgs(args []string) (*udpConfig.UDPConfig, erro
 }
 
 // runPerformanceTest 运行性能测试
+// runPerformanceTest 运行UDP性能测试
 func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *udpConfig.UDPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 执行健康检查
 	if err := adapter.HealthCheck(ctx); err != nil {
@@ -261,17 +262,33 @@ func (u *UDPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 	fmt.Printf("📊 Sending %d packets with %d concurrent workers...\n",
 		config.BenchMark.Total, config.BenchMark.Parallels)
 
-	startTime := time.Now()
+	// 记录测试开始时间
+	testStartTime := time.Now()
 	result, err := engine.RunBenchmark(ctx, benchConfig)
-	duration := time.Since(startTime)
+	actualTestDuration := time.Since(testStartTime)
 
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
 
-	fmt.Printf("✅ Test completed in %v\n", duration)
+	fmt.Printf("✅ Test completed in %v (Actual: %v)\n", result.TotalDuration, actualTestDuration)
 	fmt.Printf("📈 Processed %d packets (%d successful, %d failed)\n",
 		result.CompletedJobs, result.SuccessJobs, result.FailedJobs)
+
+	if result.CompletedJobs > 0 {
+		// 计算正确的PPS（Packets Per Second）
+		actualPPS := float64(result.CompletedJobs) / actualTestDuration.Seconds()
+		fmt.Printf("📈 Actual PPS: %.2f packets/sec\n", actualPPS)
+	}
+
+	// 更新收集器的协议数据，包含实际测试时间
+	collector.UpdateProtocolMetrics(map[string]interface{}{
+		"protocol":         "udp",
+		"test_type":        "performance",
+		"actual_duration":  actualTestDuration,
+		"execution_result": result,
+		"test_case":        config.BenchMark.TestCase,
+	})
 
 	return nil
 }
@@ -317,8 +334,33 @@ func (u *UDPCommandHandler) runSimulationTest(config *udpConfig.UDPConfig, colle
 }
 
 // generateReport 生成报告
+// generateReport 生成UDP性能测试报告
 func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	snapshot := collector.Snapshot()
+
+	// 从协议数据中获取实际测试时间
+	var actualDuration time.Duration
+	if protocolData, ok := snapshot.Protocol["actual_duration"]; ok {
+		if duration, ok := protocolData.(time.Duration); ok {
+			actualDuration = duration
+		}
+	}
+
+	// 如果没有实际时间，使用默认时间
+	if actualDuration == 0 {
+		actualDuration = snapshot.Core.Duration
+	}
+
+	// 更新快照中的测试时间和吸吐量指标
+	snapshot.Core.Duration = actualDuration
+	if actualDuration > 0 {
+		// 重新计算吸吐量（基于实际测试时间）
+		total := snapshot.Core.Operations.Read + snapshot.Core.Operations.Write
+		seconds := actualDuration.Seconds()
+		snapshot.Core.Throughput.RPS = float64(total) / seconds
+		snapshot.Core.Throughput.ReadRPS = float64(snapshot.Core.Operations.Read) / seconds
+		snapshot.Core.Throughput.WriteRPS = float64(snapshot.Core.Operations.Write) / seconds
+	}
 
 	fmt.Printf("\n📊 UDP Performance Test Results:\n")
 	fmt.Printf("=====================================\n")
@@ -343,8 +385,8 @@ func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  P95: %v\n", core.Latency.P95)
 	fmt.Printf("  P99: %v\n", core.Latency.P99)
 
-	// 吞吐量指标
-	fmt.Printf("\nThroughput Metrics:\n")
+	// 吸吐量指标（使用修正后的数值）
+	fmt.Printf("\nThroughput Metrics (Corrected):\n")
 	fmt.Printf("  Packets Per Second: %.2f\n", core.Throughput.RPS)
 	fmt.Printf("  Send PPS: %.2f\n", core.Throughput.WriteRPS)
 	fmt.Printf("  Receive PPS: %.2f\n", core.Throughput.ReadRPS)
@@ -361,7 +403,7 @@ func (u *UDPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  Goroutines: %d\n", snapshot.System.GoroutineCount)
 	fmt.Printf("  GC Count: %d\n", snapshot.System.GCStats.NumGC)
 
-	fmt.Printf("\nTest Duration: %v\n", core.Duration)
+	fmt.Printf("\nTest Duration: %v (Actual: %v)\n", core.Duration, actualDuration)
 	fmt.Printf("=====================================\n")
 
 	// 简化的文件报告

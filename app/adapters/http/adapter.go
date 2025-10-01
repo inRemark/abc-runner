@@ -115,10 +115,8 @@ func (h *HttpAdapter) Execute(ctx context.Context, operation interfaces.Operatio
 		h.incrementSuccessOperations()
 	}
 
-	// 记录到指标收集器
-	if result != nil && h.metricsCollector != nil {
-		h.metricsCollector.Record(result)
-	}
+	// 注意：不要在这里调用 h.metricsCollector.Record(result)
+	// 因为执行引擎会负责记录指标，避免重复计数
 
 	return result, err
 }

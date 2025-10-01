@@ -87,6 +87,7 @@ func (k *KafkaAdapter) Connect(ctx context.Context, config interfaces.Config) er
 }
 
 // Execute 执行操作并返回结果
+// Execute 执行Kafka操作
 func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !k.isConnected {
 		return nil, fmt.Errorf("kafka adapter not connected")
@@ -99,10 +100,8 @@ func (k *KafkaAdapter) Execute(ctx context.Context, operation interfaces.Operati
 	if result != nil {
 		result.Duration = time.Since(startTime)
 
-		// 记录操作到指标收集器
-		if k.metricsCollector != nil {
-			k.metricsCollector.Record(result)
-		}
+		// 注意：不要在这里调用 k.metricsCollector.Record(result)
+		// 因为执行引擎会负责记录指标，避免重复计数
 	}
 
 	return result, err

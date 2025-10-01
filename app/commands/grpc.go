@@ -216,6 +216,7 @@ func (h *GRPCCommandHandler) parseArgs(args []string) (*config.GRPCConfig, error
 }
 
 // runPerformanceTest 运行性能测试
+// runPerformanceTest 运行gRPC性能测试
 func (h *GRPCCommandHandler) runPerformanceTest(
 	ctx context.Context,
 	adapter interfaces.ProtocolAdapter,
@@ -235,11 +236,17 @@ func (h *GRPCCommandHandler) runPerformanceTest(
 		config.BenchMark.Parallels*10, // result buffer
 	)
 
+	// 记录测试开始时间
+	testStartTime := time.Now()
+
 	// 运行基准测试
 	result, err := engine.RunBenchmark(ctx, &config.BenchMark)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
+
+	// 计算实际测试时间
+	actualTestDuration := time.Since(testStartTime)
 
 	// 输出执行结果
 	fmt.Printf("\n📊 Execution Results:\n")
@@ -248,20 +255,70 @@ func (h *GRPCCommandHandler) runPerformanceTest(
 	fmt.Printf("Success Jobs: %d\n", result.SuccessJobs)
 	fmt.Printf("Failed Jobs: %d\n", result.FailedJobs)
 	fmt.Printf("Total Duration: %v\n", result.TotalDuration)
-	fmt.Printf("Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.TotalJobs)*100)
+	fmt.Printf("Actual Test Duration: %v\n", actualTestDuration)
+	if result.TotalJobs > 0 {
+		fmt.Printf("Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.TotalJobs)*100)
+		// 计算正确的RPS（基于实际测试时间）
+		actualRPS := float64(result.CompletedJobs) / actualTestDuration.Seconds()
+		fmt.Printf("Actual RPS: %.2f calls/sec\n", actualRPS)
+	}
+
+	// 更新收集器的协议数据，包含实际测试时间
+	if baseCollector, ok := metricsCollector.(*metrics.BaseCollector[map[string]interface{}]); ok {
+		baseCollector.UpdateProtocolMetrics(map[string]interface{}{
+			"protocol":         "grpc",
+			"test_type":        "performance",
+			"actual_duration":  actualTestDuration,
+			"execution_result": result,
+			"service":          config.GRPCSpecific.ServiceName,
+			"method":           config.GRPCSpecific.MethodName,
+		})
+	}
 
 	return nil
 }
 
 // generateReport 生成报告
+// generateReport 生成gRPC性能测试报告
 func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultMetricsCollector) error {
 	snapshot := metricsCollector.Snapshot()
 	if snapshot == nil {
 		return fmt.Errorf("failed to get metrics snapshot")
 	}
 
+	// 尝试获取实际测试时间（仅当metricsCollector是BaseCollector时）
+	var actualDuration time.Duration
+	if baseCollector, ok := metricsCollector.(*metrics.BaseCollector[map[string]interface{}]); ok {
+		baseSnapshot := baseCollector.Snapshot()
+		if protocolData, ok := baseSnapshot.Protocol["actual_duration"]; ok {
+			if duration, ok := protocolData.(time.Duration); ok {
+				actualDuration = duration
+			}
+		}
+
+		// 如果没有实际时间，使用默认时间
+		if actualDuration == 0 {
+			actualDuration = baseSnapshot.Core.Duration
+		}
+
+		// 更新快照中的测试时间和吸吐量指标
+		baseSnapshot.Core.Duration = actualDuration
+		if actualDuration > 0 {
+			// 重新计算吸吐量（基于实际测试时间）
+			total := baseSnapshot.Core.Operations.Read + baseSnapshot.Core.Operations.Write
+			seconds := actualDuration.Seconds()
+			baseSnapshot.Core.Throughput.RPS = float64(total) / seconds
+			baseSnapshot.Core.Throughput.ReadRPS = float64(baseSnapshot.Core.Operations.Read) / seconds
+			baseSnapshot.Core.Throughput.WriteRPS = float64(baseSnapshot.Core.Operations.Write) / seconds
+		}
+
+		// 使用更新后的数据
+		snapshot = baseSnapshot
+	}
+
 	// 输出简单报告
-	fmt.Printf("\n📊 Performance Metrics:\n")
+	fmt.Printf("\n📊 gRPC Performance Metrics:\n")
+	fmt.Printf("=====================================\n")
 	fmt.Printf("Core Metrics:\n")
 	fmt.Printf("  Total Operations: %d\n", snapshot.Core.Operations.Total)
 	fmt.Printf("  Successful Operations: %d\n", snapshot.Core.Operations.Success)
@@ -271,7 +328,14 @@ func (h *GRPCCommandHandler) generateReport(metricsCollector interfaces.DefaultM
 	fmt.Printf("  Average: %v\n", snapshot.Core.Latency.Average)
 	fmt.Printf("  P95: %v\n", snapshot.Core.Latency.P95)
 	fmt.Printf("  P99: %v\n", snapshot.Core.Latency.P99)
-	fmt.Printf("Throughput: %.2f RPS\n", snapshot.Core.Throughput.RPS)
+	fmt.Printf("Throughput (Corrected): %.2f RPS\n", snapshot.Core.Throughput.RPS)
+
+	if actualDuration > 0 {
+		fmt.Printf("Test Duration: %v (Actual: %v)\n", snapshot.Core.Duration, actualDuration)
+	} else {
+		fmt.Printf("Test Duration: %v\n", snapshot.Core.Duration)
+	}
+	fmt.Printf("=====================================\n")
 
 	return nil
 }

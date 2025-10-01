@@ -97,6 +97,7 @@ func (r *RedisAdapter) Connect(ctx context.Context, config interfaces.Config) er
 }
 
 // Execute 执行操作 - 使用operations.go工厂模式
+// Execute 执行Redis操作
 func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !r.IsConnected() {
 		return nil, fmt.Errorf("Redis adapter is not connected")
@@ -124,10 +125,8 @@ func (r *RedisAdapter) Execute(ctx context.Context, operation interfaces.Operati
 		r.incrementSuccessOperations()
 	}
 
-	// 记录到指标收集器
-	if result != nil && r.metricsCollector != nil {
-		r.metricsCollector.Record(result)
-	}
+	// 注意：不要在这里调用 r.metricsCollector.Record(result)
+	// 因为执行引擎会负责记录指标，避免重复计数
 
 	return result, err
 }

@@ -21,7 +21,7 @@ type WebSocketAdapter struct {
 	// 核心组件（与Redis/HTTP/TCP保持一致）
 	connectionPool    *connection.WebSocketConnectionPool
 	operationRegistry *utils.OperationRegistry
-	config           *config.WebSocketConfig
+	config            *config.WebSocketConfig
 
 	// 指标收集器（统一依赖注入）
 	metricsCollector interfaces.DefaultMetricsCollector
@@ -94,6 +94,7 @@ func (w *WebSocketAdapter) Connect(ctx context.Context, cfg interfaces.Config) e
 }
 
 // Execute 执行操作 - 使用操作工厂模式
+// Execute 执行WebSocket操作
 func (w *WebSocketAdapter) Execute(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("WebSocket adapter is not connected")
@@ -121,10 +122,8 @@ func (w *WebSocketAdapter) Execute(ctx context.Context, operation interfaces.Ope
 		w.incrementSuccessOperations()
 	}
 
-	// 记录到指标收集器
-	if result != nil && w.metricsCollector != nil {
-		w.metricsCollector.Record(result)
-	}
+	// 注意：不要在这里调用 w.metricsCollector.Record(result)
+	// 因为执行引擎会负责记录指标，避免重复计数
 
 	return result, err
 }
@@ -133,7 +132,7 @@ func (w *WebSocketAdapter) Execute(ctx context.Context, operation interfaces.Ope
 func (w *WebSocketAdapter) executeWebSocketOperation(ctx context.Context, operation interfaces.Operation) (*interfaces.OperationResult, error) {
 	startTime := time.Now()
 	result := &interfaces.OperationResult{
-		IsRead: w.isReadOperation(operation.Type),
+		IsRead:   w.isReadOperation(operation.Type),
 		Metadata: make(map[string]interface{}),
 	}
 
@@ -377,14 +376,14 @@ func (w *WebSocketAdapter) ValidateOperation(operationType string) error {
 // isReadOperation 判断是否为读操作
 func (w *WebSocketAdapter) isReadOperation(operationType string) bool {
 	readOperations := map[string]bool{
-		"echo_test":    true,
-		"ping_pong":    true,
-		"subscribe":    true,
-		"send_text":    false,
-		"send_binary":  false,
-		"broadcast":    false,
+		"echo_test":     true,
+		"ping_pong":     true,
+		"subscribe":     true,
+		"send_text":     false,
+		"send_binary":   false,
+		"broadcast":     false,
 		"large_message": false,
-		"stress_test":  false,
+		"stress_test":   false,
 	}
 
 	return readOperations[operationType]

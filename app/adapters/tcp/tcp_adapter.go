@@ -127,9 +127,8 @@ func (t *TCPAdapter) Execute(ctx context.Context, operation interfaces.Operation
 	result.Metadata["execution_time_ms"] = float64(result.Duration.Nanoseconds()) / 1e6
 
 	// 记录指标
-	if t.metricsCollector != nil {
-		t.metricsCollector.Record(result)
-	}
+	// 注意：不要在这里调用 t.metricsCollector.Record(result)
+	// 因为执行引擎会负责记录指标，避免重复计数
 
 	return result, err
 }

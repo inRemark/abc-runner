@@ -215,6 +215,7 @@ func (k *KafkaCommandHandler) runSimulationTest(config *kafkaConfig.KafkaAdapter
 }
 
 // runConcurrentTest 使用ExecutionEngine运行并发测试
+// runConcurrentTest 使用ExecutionEngine运行并发测试
 func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *kafkaConfig.KafkaAdapterConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	fmt.Printf("📊 Running concurrent Kafka performance test with ExecutionEngine...\n")
 
@@ -231,11 +232,17 @@ func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	engine.SetMaxWorkers(100)         // 设置最大工作协程数
 	engine.SetBufferSizes(1000, 1000) // 设置缓冲区大小
 
+	// 记录测试开始时间
+	testStartTime := time.Now()
+
 	// 运行基准测试
 	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
+
+	// 计算实际测试时间
+	actualTestDuration := time.Since(testStartTime)
 
 	// 输出执行结果
 	fmt.Printf("✅ Concurrent Kafka test completed\n")
@@ -244,9 +251,21 @@ func (k *KafkaCommandHandler) runConcurrentTest(ctx context.Context, adapter int
 	fmt.Printf("   Success: %d\n", result.SuccessJobs)
 	fmt.Printf("   Failed: %d\n", result.FailedJobs)
 	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	fmt.Printf("   Actual Test Duration: %v\n", actualTestDuration)
 	if result.CompletedJobs > 0 {
 		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
+		// 计算正确的QPS（基于实际测试时间）
+		actualQPS := float64(result.CompletedJobs) / actualTestDuration.Seconds()
+		fmt.Printf("   Actual QPS: %.2f messages/sec\n", actualQPS)
 	}
+
+	// 更新收集器的协议数据，包含实际测试时间
+	collector.UpdateProtocolMetrics(map[string]interface{}{
+		"protocol":         "kafka",
+		"test_type":        "performance",
+		"actual_duration":  actualTestDuration,
+		"execution_result": result,
+	})
 
 	return nil
 }
@@ -315,9 +334,34 @@ func (k *KafkaCommandHandler) runConsumerTest(ctx context.Context, adapter inter
 }
 
 // generateReport 生成报告
+// generateReport 生成报告
 func (k *KafkaCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 获取指标快照
 	snapshot := collector.Snapshot()
+
+	// 从协议数据中获取实际测试时间
+	var actualDuration time.Duration
+	if protocolData, ok := snapshot.Protocol["actual_duration"]; ok {
+		if duration, ok := protocolData.(time.Duration); ok {
+			actualDuration = duration
+		}
+	}
+
+	// 如果没有实际时间，使用默认时间
+	if actualDuration == 0 {
+		actualDuration = snapshot.Core.Duration
+	}
+
+	// 更新快照中的测试时间和吸吐量指标
+	snapshot.Core.Duration = actualDuration
+	if actualDuration > 0 {
+		// 重新计算吸吐量（基于实际测试时间）
+		total := snapshot.Core.Operations.Read + snapshot.Core.Operations.Write
+		seconds := actualDuration.Seconds()
+		snapshot.Core.Throughput.RPS = float64(total) / seconds
+		snapshot.Core.Throughput.ReadRPS = float64(snapshot.Core.Operations.Read) / seconds
+		snapshot.Core.Throughput.WriteRPS = float64(snapshot.Core.Operations.Write) / seconds
+	}
 
 	// 转换为结构化报告
 	report := reporting.ConvertFromMetricsSnapshot(snapshot)

@@ -212,6 +212,7 @@ func (t *TCPCommandHandler) runPerformanceTest(ctx context.Context, adapter inte
 }
 
 // runConcurrentTest 使用ExecutionEngine运行并发测试
+// runConcurrentTest 使用ExecutionEngine运行并发测试
 func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter interfaces.ProtocolAdapter, config *tcpConfig.TCPConfig, collector *metrics.BaseCollector[map[string]interface{}]) error {
 	// 创建基准配置适配器
 	benchmarkConfig := tcpConfig.NewBenchmarkConfigAdapter(config.GetBenchmark())
@@ -226,11 +227,17 @@ func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter inter
 	engine.SetMaxWorkers(200)         // 提高最大工作协程数支持TCP并发
 	engine.SetBufferSizes(2000, 2000) // 增大缓冲区减少任务调度延迟
 
+	// 记录测试开始时间
+	testStartTime := time.Now()
+
 	// 运行基准测试
 	result, err := engine.RunBenchmark(ctx, benchmarkConfig)
 	if err != nil {
 		return fmt.Errorf("benchmark execution failed: %w", err)
 	}
+
+	// 计算实际测试时间
+	actualTestDuration := time.Since(testStartTime)
 
 	// 输出执行结果
 	fmt.Printf("✅ Concurrent TCP test completed\n")
@@ -240,10 +247,22 @@ func (t *TCPCommandHandler) runConcurrentTest(ctx context.Context, adapter inter
 	fmt.Printf("   Success: %d\n", result.SuccessJobs)
 	fmt.Printf("   Failed: %d\n", result.FailedJobs)
 	fmt.Printf("   Duration: %v\n", result.TotalDuration)
+	fmt.Printf("   Actual Test Duration: %v\n", actualTestDuration)
 	if result.CompletedJobs > 0 {
 		fmt.Printf("   Success Rate: %.2f%%\n", float64(result.SuccessJobs)/float64(result.CompletedJobs)*100)
-		fmt.Printf("   Throughput: %.2f ops/sec\n", float64(result.CompletedJobs)/result.TotalDuration.Seconds())
+		// 计算正确的QPS（基于实际测试时间）
+		actualQPS := float64(result.CompletedJobs) / actualTestDuration.Seconds()
+		fmt.Printf("   Actual QPS: %.2f connections/sec\n", actualQPS)
 	}
+
+	// 更新收集器的协议数据，包含实际测试时间
+	collector.UpdateProtocolMetrics(map[string]interface{}{
+		"protocol":         "tcp",
+		"test_type":        "performance",
+		"actual_duration":  actualTestDuration,
+		"execution_result": result,
+		"test_case":        config.BenchMark.TestCase,
+	})
 
 	return nil
 }
@@ -286,8 +305,33 @@ func (t *TCPCommandHandler) runSimulationTest(config *tcpConfig.TCPConfig, colle
 }
 
 // generateReport 生成报告
+// generateReport 生成TCP性能测试报告
 func (t *TCPCommandHandler) generateReport(collector *metrics.BaseCollector[map[string]interface{}]) error {
 	snapshot := collector.Snapshot()
+
+	// 从协议数据中获取实际测试时间
+	var actualDuration time.Duration
+	if protocolData, ok := snapshot.Protocol["actual_duration"]; ok {
+		if duration, ok := protocolData.(time.Duration); ok {
+			actualDuration = duration
+		}
+	}
+
+	// 如果没有实际时间，使用默认时间
+	if actualDuration == 0 {
+		actualDuration = snapshot.Core.Duration
+	}
+
+	// 更新快照中的测试时间和吸吐量指标
+	snapshot.Core.Duration = actualDuration
+	if actualDuration > 0 {
+		// 重新计算吸吐量（基于实际测试时间）
+		total := snapshot.Core.Operations.Read + snapshot.Core.Operations.Write
+		seconds := actualDuration.Seconds()
+		snapshot.Core.Throughput.RPS = float64(total) / seconds
+		snapshot.Core.Throughput.ReadRPS = float64(snapshot.Core.Operations.Read) / seconds
+		snapshot.Core.Throughput.WriteRPS = float64(snapshot.Core.Operations.Write) / seconds
+	}
 
 	fmt.Printf("\n📊 TCP Performance Test Results:\n")
 	fmt.Printf("=====================================\n")
@@ -312,8 +356,8 @@ func (t *TCPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  P95: %v\n", core.Latency.P95)
 	fmt.Printf("  P99: %v\n", core.Latency.P99)
 
-	// 吞吐量指标
-	fmt.Printf("\nThroughput Metrics:\n")
+	// 吸吐量指标（使用修正后的数值）
+	fmt.Printf("\nThroughput Metrics (Corrected):\n")
 	fmt.Printf("  RPS: %.2f\n", core.Throughput.RPS)
 	fmt.Printf("  Read RPS: %.2f\n", core.Throughput.ReadRPS)
 	fmt.Printf("  Write RPS: %.2f\n", core.Throughput.WriteRPS)
@@ -330,7 +374,7 @@ func (t *TCPCommandHandler) generateReport(collector *metrics.BaseCollector[map[
 	fmt.Printf("  Goroutines: %d\n", snapshot.System.GoroutineCount)
 	fmt.Printf("  GC Count: %d\n", snapshot.System.GCStats.NumGC)
 
-	fmt.Printf("\nTest Duration: %v\n", core.Duration)
+	fmt.Printf("\nTest Duration: %v (Actual: %v)\n", core.Duration, actualDuration)
 	fmt.Printf("=====================================\n")
 
 	// 简化的文件报告
