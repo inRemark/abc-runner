@@ -15,7 +15,7 @@ GO_CLEAN=$(GO) clean
 GO_DEPS=$(GO) mod tidy
 
 # 版本信息
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 
@@ -84,7 +84,11 @@ test-cover:
 .PHONY: integration-test
 integration-test:
 	@echo "Running integration tests..."
-	$(GO_TEST) -v ./test/integration/...
+	@if [ -d "./test/integration" ]; then \
+		$(GO_TEST) -v ./test/integration/...; \
+	else \
+		echo "No integration tests found (./test/integration directory does not exist)"; \
+	fi
 
 # 清理
 .PHONY: clean
