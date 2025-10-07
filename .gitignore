@@ -18,6 +18,7 @@ gopath/
 .DS_Store
 .backup
 .qoder
+.cursor
 vendor
 logs
 bin/*
