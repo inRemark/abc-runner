@@ -29,3 +29,5 @@ backup-refactor-archive
 servers/bin/
 app/core/di/di.md
 docs/development
+docs/protocols
+docs/v0.3.0
